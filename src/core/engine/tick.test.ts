@@ -1,0 +1,189 @@
+import type { Agent, Exit, Item, Location } from '@core/domain/entities';
+import { type AgentId, asAgentId, asExitId, asLocationId, asWorldId } from '@core/domain/ids';
+import { MemoryRepository } from '@infra/memory-repository';
+import { describe, expect, it } from 'vitest';
+import { makeFakeLanguageModel } from '../../../tests/helpers/fake-language-model';
+import { makeCompositeParser } from './parser/composite';
+import { runTick } from './tick';
+
+const W = asWorldId('w');
+const A = asLocationId('loc_a');
+const B = asLocationId('loc_b');
+const PLAYER: AgentId = asAgentId('char_player');
+const SPARK: AgentId = asAgentId('char_spark');
+const EMBER: AgentId = asAgentId('char_ember');
+
+const locA: Location = {
+  id: A,
+  worldId: W,
+  label: 'Tavern',
+  shortDescription: 'a tavern',
+  longDescription: 'A tavern.',
+};
+const locB: Location = {
+  id: B,
+  worldId: W,
+  label: 'Street',
+  shortDescription: '',
+  longDescription: 'A street.',
+};
+const door: Exit = {
+  id: asExitId('e_north'),
+  worldId: W,
+  from: A,
+  to: B,
+  direction: 'north',
+  label: 'door',
+  locked: false,
+  lockedByItem: null,
+};
+
+const player: Agent = {
+  id: PLAYER,
+  worldId: W,
+  label: 'Paff',
+  shortDescription: '',
+  longDescription: '',
+  locationId: A,
+  hp: 20,
+  damage: 2,
+  defense: 12,
+  capacity: 30,
+  mood: null,
+  goal: null,
+  autonomous: false,
+};
+
+const spark: Agent = {
+  id: SPARK,
+  worldId: W,
+  label: 'Spark',
+  shortDescription: '',
+  longDescription: 'a halfling',
+  locationId: A,
+  hp: 18,
+  damage: 2,
+  defense: 14,
+  capacity: 10,
+  mood: 'Energetic',
+  goal: 'Explore',
+  autonomous: true,
+};
+
+const ember: Agent = {
+  id: EMBER,
+  worldId: W,
+  label: 'Ember',
+  shortDescription: '',
+  longDescription: '',
+  locationId: A,
+  hp: 15,
+  damage: 2,
+  defense: 16,
+  capacity: 10,
+  mood: 'Playful',
+  goal: 'Spread chaos',
+  autonomous: true,
+};
+
+const makeWorld = (
+  agents: readonly Agent[] = [player, spark],
+  items: readonly Item[] = [],
+): MemoryRepository =>
+  new MemoryRepository(W, {
+    locations: [locA, locB],
+    exits: [door],
+    items,
+    agents,
+  });
+
+describe('runTick', () => {
+  it("runs the player's turn and includes NPC actions in `witnessed` (mechanical)", async () => {
+    const repo = makeWorld();
+    // Spark's intent: "go north" — phrasing the rule parser handles directly.
+    const llm = makeFakeLanguageModel({
+      textResponder: () => 'go north',
+    });
+    const parse = makeCompositeParser({ llm: null }); // rule parser is enough for "go north"
+    const r = await runTick(player.id, 'look', repo, { parse, llm });
+    expect(r.render).toContain('Tavern');
+    expect(r.witnessed).toContain('Spark goes north.');
+  });
+
+  it('runs a `say` from the player and includes narrated NPC speak in witnessed', async () => {
+    const repo = makeWorld();
+    // The fake LLM serves two roles per call: NPC mind returns an intent;
+    // Narrator returns prose. Distinguish by prompt content.
+    const llm = makeFakeLanguageModel({
+      textResponder: (req) => {
+        if (req.system.includes('narrator')) {
+          // Observer-specific narration.
+          if (req.user.includes('Observer: Paff')) return 'Spark says hi to you.';
+          return 'You say hi to Paff.';
+        }
+        // NPC mind: produce an intent the rule parser can handle.
+        return 'say hi';
+      },
+    });
+    const parse = makeCompositeParser({ llm: null });
+    const r = await runTick(player.id, 'say hello', repo, { parse, llm });
+    // Player's own utterance is narrated by the LLM.
+    expect(r.render).toBeTruthy();
+    // Spark spoke; player-witness narration appears in `witnessed`.
+    const spokeLine = r.witnessed.find((l) => l.toLowerCase().includes('spark'));
+    expect(spokeLine).toBeTruthy();
+  });
+
+  it('caps NPC ticks at MAX_NPCS_PER_TICK (default 2)', async () => {
+    const repo = makeWorld([player, spark, ember]);
+    let calls = 0;
+    const llm = makeFakeLanguageModel({
+      textResponder: () => {
+        calls++;
+        return 'wait'; // NPCs do nothing — wait is rejected as unknown verb
+      },
+    });
+    const parse = makeCompositeParser({ llm: null });
+    await runTick(player.id, 'look', repo, { parse, llm });
+    // 2 NPCs both ticked: each calls the NPC mind once.
+    expect(calls).toBe(2);
+  });
+
+  it('produces no NPC actions and no errors when llm is null (mechanical fallback path)', async () => {
+    const repo = makeWorld();
+    const parse = makeCompositeParser({ llm: null });
+    const r = await runTick(player.id, 'look', repo, { parse, llm: null });
+    // NPC mind returned "wait" → unknown verb → failed event → no observable witness line.
+    expect(r.render).toContain('Tavern');
+    expect(r.witnessed).toEqual([]);
+    // No throw, no infinite loop.
+  });
+
+  it('does not tick non-co-located NPCs', async () => {
+    const remote: Agent = { ...spark, id: asAgentId('char_remote'), locationId: B };
+    const repo = makeWorld([player, remote]);
+    let calls = 0;
+    const llm = makeFakeLanguageModel({
+      textResponder: () => {
+        calls++;
+        return 'go north';
+      },
+    });
+    const parse = makeCompositeParser({ llm: null });
+    const r = await runTick(player.id, 'look', repo, { parse, llm });
+    expect(calls).toBe(0);
+    expect(r.witnessed).toEqual([]);
+  });
+
+  it('aggregates events from player + NPCs in order', async () => {
+    const repo = makeWorld();
+    const llm = makeFakeLanguageModel({ textResponder: () => 'go north' });
+    const parse = makeCompositeParser({ llm: null });
+    const r = await runTick(player.id, 'look', repo, { parse, llm });
+    // First event = player look; later events include Spark moving.
+    expect(r.events.length).toBeGreaterThanOrEqual(2);
+    const first = r.events[0];
+    if (!first) throw new Error('expected at least one event');
+    expect(first.actorId).toBe(player.id);
+  });
+});

@@ -82,6 +82,27 @@ export function renderSpeakMechanical(
   return `${actorName} ${verb} to ${targetName}: "${event.utterance}"`;
 }
 
+/**
+ * Mechanical templates for an *observer watching another agent* perform a
+ * mechanical action. Used when an autonomous NPC takes a turn and we need to
+ * tell the player what they saw.
+ */
+export function renderMoveObserved(actor: Agent, dir: Direction): string {
+  return `${actor.label} goes ${dir}.`;
+}
+
+export function renderTakeObserved(actor: Agent, item: Item): string {
+  return `${actor.label} picks up ${item.label}.`;
+}
+
+export function renderDropObserved(actor: Agent, item: Item): string {
+  return `${actor.label} drops ${item.label}.`;
+}
+
+export function renderLookObserved(actor: Agent): string {
+  return `${actor.label} looks around.`;
+}
+
 export function renderAttackMechanical(
   event: Extract<DomainEvent, { kind: 'attack' }>,
   actor: Agent,
