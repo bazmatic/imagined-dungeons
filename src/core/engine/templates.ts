@@ -1,5 +1,6 @@
 import type { ParseError } from '@core/domain/actions';
-import type { Direction, Item } from '@core/domain/entities';
+import type { Agent, Direction, Item } from '@core/domain/entities';
+import type { DomainEvent } from '@core/domain/events';
 import type { PerceptionView } from './perception';
 
 const list = (items: readonly { label: string }[]): string => items.map((i) => i.label).join(', ');
@@ -62,4 +63,33 @@ export function renderParseError(err: ParseError): string {
 
 export function renderActionError(reason: string): string {
   return reason;
+}
+
+/**
+ * Mechanical fallback for a `speak` event from a given observer's perspective.
+ * Used when no LLM is available, or when the LLM call fails.
+ */
+export function renderSpeakMechanical(
+  event: Extract<DomainEvent, { kind: 'speak' }>,
+  actor: Agent,
+  target: Agent,
+  observer: Agent,
+): string {
+  const actorName = observer.id === actor.id ? 'You' : actor.label;
+  const verb = observer.id === actor.id ? 'say' : 'says';
+  const targetName = observer.id === target.id ? 'you' : target.label;
+  return `${actorName} ${verb} to ${targetName}: "${event.utterance}"`;
+}
+
+export function renderAttackMechanical(
+  event: Extract<DomainEvent, { kind: 'attack' }>,
+  actor: Agent,
+  target: Agent,
+  observer: Agent,
+): string {
+  const actorName = observer.id === actor.id ? 'You' : actor.label;
+  const verb = observer.id === actor.id ? 'attack' : 'attacks';
+  const targetName = observer.id === target.id ? 'you' : target.label;
+  const result = event.outcome === 'hit' ? 'Hit!' : 'Miss.';
+  return `${actorName} ${verb} ${targetName}. ${result}`;
 }

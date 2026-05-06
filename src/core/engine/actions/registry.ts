@@ -1,10 +1,12 @@
 import type { Action } from '@core/domain/actions';
 import type { Result } from '@core/domain/result';
 import type { Repository } from '../repository';
+import { handleAttack } from './attack';
 import { handleDrop } from './drop';
 import { handleInventory } from './inventory';
 import { handleLook } from './look';
 import { handleMove } from './move';
+import { handleSpeak } from './speak';
 import { handleTake } from './take';
 import type { ActionOutcome } from './types';
 
@@ -23,5 +25,9 @@ export async function dispatch(
       return handleDrop(action, repo);
     case 'inventory':
       return handleInventory(action, repo);
+    case 'speak':
+      return handleSpeak(action, repo);
+    case 'attack':
+      return handleAttack(action, repo);
   }
 }
