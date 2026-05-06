@@ -78,6 +78,11 @@ export class MemoryRepository implements Repository {
     this.items.set(id, { ...i, owner: to });
   }
 
+  async setAgentHp(id: AgentId, hp: number): Promise<void> {
+    const a = await this.getAgent(id);
+    this.agents.set(id, { ...a, hp });
+  }
+
   async appendEvent(event: DomainEvent): Promise<void> {
     this.events.push(event);
   }

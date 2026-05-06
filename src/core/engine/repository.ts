@@ -13,6 +13,7 @@ export interface Repository {
   exitsFrom(loc: LocationId): Promise<readonly Exit[]>;
   moveAgent(agent: AgentId, to: LocationId): Promise<void>;
   transferItem(item: ItemId, to: Owner): Promise<void>;
+  setAgentHp(id: AgentId, hp: number): Promise<void>;
   appendEvent(event: DomainEvent): Promise<void>;
   recentEvents(limit: number): Promise<readonly DomainEvent[]>;
 }

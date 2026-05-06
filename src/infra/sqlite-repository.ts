@@ -142,8 +142,12 @@ export class SqliteRepository implements Repository {
       .where(eq(schema.items.id, id));
   }
 
+  async setAgentHp(id: AgentId, hp: number): Promise<void> {
+    await this.db.update(schema.agents).set({ hp }).where(eq(schema.agents.id, id));
+  }
+
   async appendEvent(event: DomainEvent): Promise<void> {
-    const { id, worldId, actorId, kind, witnesses, createdAt, ...rest } = event;
+    const { id, worldId, actorId, kind, witnesses, createdAt, narrations, ...rest } = event;
     await this.db.insert(schema.events).values({
       id,
       worldId,
@@ -152,23 +156,25 @@ export class SqliteRepository implements Repository {
       witnesses: [...witnesses],
       createdAt,
       payload: rest,
+      narrations: narrations ? { ...narrations } : null,
     });
   }
 
   async recentEvents(limit: number): Promise<readonly DomainEvent[]> {
     const rows = await this.db.select().from(schema.events).orderBy(schema.events.createdAt);
     const slice = rows.slice(-limit);
-    return slice.map(
-      (r) =>
-        ({
-          id: asEventId(r.id),
-          worldId: this.worldId,
-          actorId: asAgentId(r.actorId),
-          kind: r.kind as DomainEvent['kind'],
-          witnesses: (r.witnesses as string[]).map(asAgentId),
-          createdAt: r.createdAt,
-          ...(r.payload as object),
-        }) as DomainEvent,
-    );
+    return slice.map((r) => {
+      const narrations = r.narrations as Record<string, string> | null;
+      return {
+        id: asEventId(r.id),
+        worldId: this.worldId,
+        actorId: asAgentId(r.actorId),
+        kind: r.kind as DomainEvent['kind'],
+        witnesses: (r.witnesses as string[]).map(asAgentId),
+        createdAt: r.createdAt,
+        ...(narrations ? { narrations } : {}),
+        ...(r.payload as object),
+      } as DomainEvent;
+    });
   }
 }
