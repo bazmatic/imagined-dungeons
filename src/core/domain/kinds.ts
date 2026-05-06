@@ -56,6 +56,25 @@ export const AttackOutcome = {
 } as const;
 export type AttackOutcome = (typeof AttackOutcome)[keyof typeof AttackOutcome];
 
+/**
+ * Reasons why the NPC mind fell back to a deterministic intent rather than
+ * calling the language model. Centralised here so log lines and any future
+ * structured fallback metadata share a single source of truth.
+ */
+export const NpcMindFallback = {
+  NoLlm: 'no_llm',
+  LlmError: 'llm_error',
+  EmptyResponse: 'empty_response',
+} as const;
+export type NpcMindFallback = (typeof NpcMindFallback)[keyof typeof NpcMindFallback];
+
+/**
+ * The deterministic intent string an NPC produces when the LLM is unavailable
+ * or errors. Kept as a constant so any code path that has to recognise the
+ * fallback (tests, future scheduling heuristics) avoids string literals.
+ */
+export const NpcFallbackIntent = 'wait';
+
 export const Direction = {
   North: 'north',
   South: 'south',
