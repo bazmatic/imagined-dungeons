@@ -1,0 +1,50 @@
+import type { ParseError } from '@core/domain/actions';
+import type { Agent, Item } from '@core/domain/entities';
+import type { LanguageModel } from '../language-model';
+import { llmInterpret } from '../llm-interpret';
+import { type ParseResult, parse as ruleParseDefault } from '../parser';
+import type { PerceptionView } from '../perception';
+
+export type RuleParse = (
+  text: string,
+  actor: Agent,
+  view: PerceptionView,
+  inventory: readonly Item[],
+) => ParseResult;
+
+export type ParseFn = (
+  text: string,
+  actor: Agent,
+  view: PerceptionView,
+  inventory: readonly Item[],
+) => Promise<ParseResult>;
+
+export interface CompositeParserDeps {
+  readonly llm: LanguageModel | null;
+  readonly ruleParse?: RuleParse;
+}
+
+const FALLBACK_KINDS: ReadonlySet<ParseError['kind']> = new Set<ParseError['kind']>([
+  'unknown_verb',
+  'no_such_target',
+  'unknown_direction',
+  'missing_argument',
+]);
+
+const shouldFallback = (e: ParseError): boolean => FALLBACK_KINDS.has(e.kind);
+
+export function makeCompositeParser(deps: CompositeParserDeps): ParseFn {
+  const ruleParse = deps.ruleParse ?? ruleParseDefault;
+  return async function parse(text, actor, view, inventory) {
+    const ruleResult = ruleParse(text, actor, view, inventory);
+    if ('actorId' in ruleResult) return ruleResult;
+    if (!shouldFallback(ruleResult)) return ruleResult;
+    if (!deps.llm) return ruleResult;
+    try {
+      const action = await llmInterpret(text, actor, view, inventory, deps.llm);
+      return action ?? ruleResult;
+    } catch {
+      return ruleResult;
+    }
+  };
+}
