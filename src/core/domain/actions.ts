@@ -6,7 +6,9 @@ export type Action =
   | { kind: 'look'; actorId: AgentId; targetItemId: ItemId | null }
   | { kind: 'take'; actorId: AgentId; itemId: ItemId }
   | { kind: 'drop'; actorId: AgentId; itemId: ItemId }
-  | { kind: 'inventory'; actorId: AgentId };
+  | { kind: 'inventory'; actorId: AgentId }
+  | { kind: 'speak'; actorId: AgentId; targetAgentId: AgentId; utterance: string }
+  | { kind: 'attack'; actorId: AgentId; targetAgentId: AgentId };
 
 export type ParseError =
   | { kind: 'empty' }
