@@ -7,6 +7,7 @@ import {
   validatePlayerAction,
 } from './llm-output';
 import { buildSystemPrompt, buildUserPrompt } from './llm-prompt';
+import { resolveItem } from './parser';
 import type { PerceptionView } from './perception';
 
 export async function llmInterpret(
@@ -26,12 +27,24 @@ export async function llmInterpret(
   switch (validated.kind) {
     case 'move':
       return { kind: 'move', actorId: actor.id, direction: validated.direction };
-    case 'look':
-      return { kind: 'look', actorId: actor.id, targetRef: validated.targetRef };
-    case 'take':
-      return { kind: 'take', actorId: actor.id, itemRef: validated.itemRef };
-    case 'drop':
-      return { kind: 'drop', actorId: actor.id, itemRef: validated.itemRef };
+    case 'look': {
+      if (validated.targetRef === null) {
+        return { kind: 'look', actorId: actor.id, targetItemId: null };
+      }
+      const r = resolveItem(validated.targetRef, [...view.items, ...inventory]);
+      if (!r.ok) return null;
+      return { kind: 'look', actorId: actor.id, targetItemId: r.item.id };
+    }
+    case 'take': {
+      const r = resolveItem(validated.itemRef, view.items);
+      if (!r.ok) return null;
+      return { kind: 'take', actorId: actor.id, itemId: r.item.id };
+    }
+    case 'drop': {
+      const r = resolveItem(validated.itemRef, inventory);
+      if (!r.ok) return null;
+      return { kind: 'drop', actorId: actor.id, itemId: r.item.id };
+    }
     case 'inventory':
       return { kind: 'inventory', actorId: actor.id };
     case 'unknown':
