@@ -2,6 +2,7 @@ import type { Agent, Exit, Item, Location } from '@core/domain/entities';
 import { asAgentId, asExitId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
 import { MemoryRepository } from '@infra/memory-repository';
 import { describe, expect, it } from 'vitest';
+import type { ParseFn } from './parser/composite';
 import { runTurn } from './turn';
 
 const W = asWorldId('w');
@@ -91,5 +92,19 @@ describe('runTurn', () => {
     });
     const r = await runTurn(paff.id, 'north', repo);
     expect(r.render).toMatch(/can't go that way/i);
+  });
+});
+
+describe('runTurn with injected parse', () => {
+  it('uses the injected parse function instead of the default rule-based parser', async () => {
+    const repo = new MemoryRepository(W, {
+      locations: [locA],
+      exits: [],
+      items: [],
+      agents: [paff],
+    });
+    const fakeParse: ParseFn = async () => ({ kind: 'inventory', actorId: paff.id });
+    const r = await runTurn(paff.id, 'literal-garbage', repo, fakeParse);
+    expect(r.render.toLowerCase()).toContain('carrying');
   });
 });
