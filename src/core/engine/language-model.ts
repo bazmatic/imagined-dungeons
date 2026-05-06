@@ -25,6 +25,12 @@ export interface LanguageModelResponse {
   readonly parsed: unknown;
 }
 
+export interface LanguageModelTextRequest {
+  readonly system: string;
+  readonly user: string;
+}
+
 export interface LanguageModel {
   complete(req: LanguageModelRequest): Promise<LanguageModelResponse>;
+  completeText(req: LanguageModelTextRequest): Promise<string>;
 }

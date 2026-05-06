@@ -21,6 +21,21 @@ function readConfig(): OpenAIConfig | null {
   return baseUrl && baseUrl.length > 0 ? { apiKey, model, baseUrl } : { apiKey, model };
 }
 
+async function attemptText(
+  client: OpenAI,
+  model: string,
+  req: { system: string; user: string },
+): Promise<string> {
+  const completion = await client.chat.completions.create({
+    model,
+    messages: [
+      { role: 'system', content: req.system },
+      { role: 'user', content: req.user },
+    ],
+  });
+  return completion.choices[0]?.message?.content ?? '';
+}
+
 async function attempt(
   client: OpenAI,
   model: string,
@@ -64,6 +79,17 @@ export function makeOpenAILanguageModel(): LanguageModel | null {
       } catch (firstError) {
         try {
           return await attempt(client, cfg.model, req);
+        } catch {
+          throw firstError;
+        }
+      }
+    },
+    async completeText(req) {
+      try {
+        return await attemptText(client, cfg.model, req);
+      } catch (firstError) {
+        try {
+          return await attemptText(client, cfg.model, req);
         } catch {
           throw firstError;
         }

@@ -17,6 +17,11 @@ describe('LanguageModel port', () => {
         expect(req.schema).toBeDefined();
         return { raw: '{}', parsed: {} };
       },
+      async completeText(req) {
+        expect(req.system).toBeTypeOf('string');
+        expect(req.user).toBeTypeOf('string');
+        return '';
+      },
     };
     const r = await fake.complete({
       system: 's',
