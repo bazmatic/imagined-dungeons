@@ -6,6 +6,7 @@ export default defineConfig({
   test: {
     globals: false,
     include: ['tests/**/*.test.ts', 'src/**/*.test.ts'],
+    exclude: ['**/node_modules/**', '**/*.smoke.test.ts'],
     environment: 'node',
   },
 });
