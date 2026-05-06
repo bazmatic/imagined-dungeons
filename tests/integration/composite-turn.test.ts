@@ -120,6 +120,53 @@ describe('composite parser through runTurn', () => {
     expect(r.render.toLowerCase()).not.toContain('combat');
   });
 
+  it('routes "look around me" through the LLM and renders the room view', async () => {
+    // The bug repro: previously the rule-based parser returned a successful
+    // look action with targetRef "around me", and the handler then failed
+    // with no_such_target — the LLM was never invoked. With ref resolution
+    // pulled into the parser, "around me" is now an unresolved item ref at
+    // parse time, so the composite parser falls back to the LLM.
+    const repo = new MemoryRepository(W, {
+      locations: [locA],
+      exits: [],
+      items: [map],
+      agents: [paff],
+    });
+    const llm = makeFakeLanguageModel({
+      responder: () => ({
+        raw: '{"kind":"look","targetRef":null}',
+        parsed: { kind: 'look', targetRef: null },
+      }),
+    });
+    const parse = makeCompositeParser({ llm });
+    const r = await runTurn(paff.id, 'look around me', repo, parse);
+    expect(llm.calls).toHaveLength(1);
+    expect(llm.calls[0]?.user).toContain('look around me');
+    expect(r.render).toContain('Tavern');
+    expect(r.render).toContain('A tavern.');
+    expect(r.render).toContain('fire map');
+    expect(r.events).toHaveLength(1);
+  });
+
+  it('routes a take with an unresolved ref through the LLM', async () => {
+    const repo = new MemoryRepository(W, {
+      locations: [locA],
+      exits: [],
+      items: [map],
+      agents: [paff],
+    });
+    const llm = makeFakeLanguageModel({
+      responder: () => ({
+        raw: '{"kind":"take","itemRef":"fire map"}',
+        parsed: { kind: 'take', itemRef: 'fire map' },
+      }),
+    });
+    const parse = makeCompositeParser({ llm });
+    const r = await runTurn(paff.id, 'take the elusive whatsit', repo, parse);
+    expect(llm.calls).toHaveLength(1);
+    expect(r.render.toLowerCase()).toBe('taken: fire map.');
+  });
+
   it('never calls the LLM when the rule-based parser succeeds', async () => {
     const repo = new MemoryRepository(W, {
       locations: [locA, locB],
