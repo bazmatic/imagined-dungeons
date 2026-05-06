@@ -3,6 +3,7 @@ import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 export const worlds = sqliteTable('worlds', {
   id: text('id').primaryKey(),
   label: text('label').notNull(),
+  rngSeed: integer('rng_seed').notNull().default(1),
 });
 
 export const locations = sqliteTable('locations', {

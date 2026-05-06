@@ -1,0 +1,1 @@
+ALTER TABLE `worlds` ADD `rng_seed` integer DEFAULT 1 NOT NULL;

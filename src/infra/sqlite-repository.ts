@@ -160,6 +160,23 @@ export class SqliteRepository implements Repository {
     });
   }
 
+  async getRngSeed(): Promise<number> {
+    const rows = await this.db
+      .select({ rngSeed: schema.worlds.rngSeed })
+      .from(schema.worlds)
+      .where(eq(schema.worlds.id, this.worldId));
+    const row = rows[0];
+    if (!row) throw new Error(`world not found: ${this.worldId}`);
+    return row.rngSeed;
+  }
+
+  async setRngSeed(seed: number): Promise<void> {
+    await this.db
+      .update(schema.worlds)
+      .set({ rngSeed: seed >>> 0 })
+      .where(eq(schema.worlds.id, this.worldId));
+  }
+
   async recentEvents(limit: number): Promise<readonly DomainEvent[]> {
     const rows = await this.db.select().from(schema.events).orderBy(schema.events.createdAt);
     const slice = rows.slice(-limit);

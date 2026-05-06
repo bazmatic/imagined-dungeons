@@ -8,6 +8,7 @@ export interface SeedData {
   readonly exits: readonly Exit[];
   readonly items: readonly Item[];
   readonly agents: readonly Agent[];
+  readonly rngSeed?: number;
 }
 
 const sameOwner = (a: Owner, b: Owner): boolean => a.kind === b.kind && a.id === b.id;
@@ -19,6 +20,7 @@ export class MemoryRepository implements Repository {
   private readonly items = new Map<ItemId, Item>();
   private readonly agents = new Map<AgentId, Agent>();
   private readonly events: DomainEvent[] = [];
+  private rngSeed: number;
 
   constructor(worldId: WorldId, seed: SeedData) {
     this.worldId = worldId;
@@ -26,6 +28,7 @@ export class MemoryRepository implements Repository {
     for (const e of seed.exits) this.exits.set(e.id, e);
     for (const i of seed.items) this.items.set(i.id, i);
     for (const a of seed.agents) this.agents.set(a.id, a);
+    this.rngSeed = seed.rngSeed ?? 1;
   }
 
   async getWorldId(): Promise<WorldId> {
@@ -89,5 +92,13 @@ export class MemoryRepository implements Repository {
 
   async recentEvents(limit: number): Promise<readonly DomainEvent[]> {
     return this.events.slice(-limit);
+  }
+
+  async getRngSeed(): Promise<number> {
+    return this.rngSeed;
+  }
+
+  async setRngSeed(seed: number): Promise<void> {
+    this.rngSeed = seed >>> 0;
   }
 }

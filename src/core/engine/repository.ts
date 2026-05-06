@@ -16,4 +16,8 @@ export interface Repository {
   setAgentHp(id: AgentId, hp: number): Promise<void>;
   appendEvent(event: DomainEvent): Promise<void>;
   recentEvents(limit: number): Promise<readonly DomainEvent[]>;
+  /** Read the current world RNG seed. */
+  getRngSeed(): Promise<number>;
+  /** Persist a new RNG seed for the world (after one or more rolls). */
+  setRngSeed(seed: number): Promise<void>;
 }
