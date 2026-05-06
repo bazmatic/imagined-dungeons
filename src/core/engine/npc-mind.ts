@@ -1,0 +1,145 @@
+import type { Agent, Item, Location } from '@core/domain/entities';
+import type { DomainEvent } from '@core/domain/events';
+import type { AgentId } from '@core/domain/ids';
+import { AttackOutcome, EventKind, NpcFallbackIntent, OwnerKind } from '@core/domain/kinds';
+import type { LanguageModel } from './language-model';
+import { recallFor } from './memory';
+import { type PerceptionView, perceive } from './perception';
+import type { Repository } from './repository';
+
+/**
+ * The NPC mind role (abstract-design §10, "special case of the interpreter").
+ *
+ * Input  = personality + memory + perceived surroundings.
+ * Output = a short natural-language intent in the first person.
+ *
+ * The intent is *not* a structured action. It is fed back into the existing
+ * composite parser so NPCs and players share the same closed action vocabulary
+ * (slice-2 interpreter). This keeps the simulation tractable and ensures every
+ * actor goes through the same validate/apply pipeline.
+ *
+ * When `llm` is null or the call throws, the function falls back to the
+ * deterministic `NpcFallbackIntent` ("wait"). This satisfies §12's
+ * "bounded model usage per turn" — even if the model is offline, NPC ticks are
+ * cheap, safe, and preserve test determinism.
+ */
+
+const SYSTEM_PROMPT = (npc: Agent): string => {
+  const lines: string[] = [];
+  lines.push(`You are ${npc.label}, an autonomous character in a fantasy text adventure.`);
+  if (npc.longDescription && npc.longDescription.length > 0) {
+    lines.push(npc.longDescription);
+  }
+  if (npc.mood) lines.push(`Current mood: ${npc.mood}.`);
+  if (npc.goal) lines.push(`Long-term goal: ${npc.goal}.`);
+  lines.push('Decide what you want to do this turn given what you can perceive right now.');
+  lines.push('Reply with one short sentence in the first person describing your intended action.');
+  lines.push('Do not narrate. Do not address the reader.');
+  lines.push("Do not invent items, exits, or characters that aren't listed in the user message.");
+  lines.push(
+    'If nothing meaningful presents itself, say that you wait, watch, or hold your ground.',
+  );
+  return lines.join('\n');
+};
+
+const join = (xs: readonly string[]): string => (xs.length === 0 ? 'none' : xs.join(', '));
+
+function summariseEvent(event: DomainEvent): string {
+  switch (event.kind) {
+    case EventKind.Move:
+      return `${event.actorId} went ${event.direction}`;
+    case EventKind.Take:
+      return `${event.actorId} took ${event.itemId}`;
+    case EventKind.Drop:
+      return `${event.actorId} dropped ${event.itemId}`;
+    case EventKind.Look:
+      return `${event.actorId} looked around`;
+    case EventKind.Inventory:
+      return `${event.actorId} checked inventory`;
+    case EventKind.Failed:
+      return `${event.actorId} attempted: ${event.attempted}`;
+    case EventKind.Speak:
+      return `${event.actorId} said "${event.utterance}" to ${event.targetAgentId}`;
+    case EventKind.Attack:
+      return `${event.actorId} attacked ${event.targetAgentId} (${event.outcome}${event.outcome === AttackOutcome.Hit ? `, ${event.damageDealt} dmg` : ''})`;
+  }
+}
+
+interface NpcMindContext {
+  readonly actor: Agent;
+  readonly view: PerceptionView;
+  readonly inventory: readonly Item[];
+  readonly memory: readonly DomainEvent[];
+  readonly location: Location;
+}
+
+function buildUserPrompt(ctx: NpcMindContext): string {
+  const { view, inventory, memory } = ctx;
+  const items = view.items.map((i) => i.label);
+  const agents = view.agents.map((a) => {
+    if (a.mood) return `${a.label} (mood: ${a.mood})`;
+    return a.label;
+  });
+  const exits = view.exits.map((e) =>
+    e.label && e.label !== e.direction ? `${e.direction} (${e.label})` : e.direction,
+  );
+  const inv = inventory.map((i) => i.label);
+  const lines: string[] = [];
+  lines.push(`Location: ${view.location.label}`);
+  if (view.location.shortDescription) lines.push(`Surroundings: ${view.location.shortDescription}`);
+  lines.push(`Visible items: ${join(items)}`);
+  lines.push(`Other characters here: ${join(agents)}`);
+  lines.push(`Exits: ${join(exits)}`);
+  lines.push(`You are carrying: ${join(inv)}`);
+  if (memory.length > 0) {
+    lines.push('');
+    lines.push('What you have witnessed recently:');
+    for (const m of memory) lines.push(`- ${summariseEvent(m)}`);
+  }
+  return lines.join('\n');
+}
+
+export interface NpcMindOptions {
+  /** Cap on recent-memory entries fed into the prompt. */
+  readonly memoryLimit?: number;
+}
+
+const DEFAULT_MEMORY_LIMIT = 8;
+
+export async function decideNpcIntent(
+  actorId: AgentId,
+  repo: Repository,
+  llm: LanguageModel | null,
+  opts: NpcMindOptions = {},
+): Promise<string> {
+  if (!llm) return NpcFallbackIntent;
+
+  const memoryLimit = opts.memoryLimit ?? DEFAULT_MEMORY_LIMIT;
+  const actor = await repo.getAgent(actorId);
+  const view = await perceive(actorId, repo);
+  const inventory = await repo.itemsOwnedBy({ kind: OwnerKind.Agent, id: actorId });
+  const memory = await recallFor(actorId, repo, memoryLimit);
+  const ctx: NpcMindContext = {
+    actor,
+    view,
+    inventory,
+    memory,
+    location: view.location,
+  };
+
+  try {
+    const prose = await llm.completeText({
+      system: SYSTEM_PROMPT(actor),
+      user: buildUserPrompt(ctx),
+    });
+    const trimmed = prose.trim();
+    if (trimmed.length === 0) {
+      console.warn(`[npc-mind] empty response for ${actor.label}; falling back to wait`);
+      return NpcFallbackIntent;
+    }
+    return trimmed;
+  } catch (err) {
+    console.warn(`[npc-mind] error deciding intent for ${actor.label}:`, err);
+    return NpcFallbackIntent;
+  }
+}
