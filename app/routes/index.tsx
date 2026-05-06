@@ -10,7 +10,7 @@ export const Route = createFileRoute('/')({
 
 interface Line {
   id: number;
-  kind: 'system' | 'user';
+  kind: 'system' | 'user' | 'witnessed';
   text: string;
 }
 
@@ -38,11 +38,23 @@ function Page() {
     setInput('');
     try {
       const r = await submitCommand({ data: { text } });
-      setLines((ls) => [...ls, { id: idRef.current++, kind: 'system', text: r.render }]);
+      setLines((ls) => {
+        const next: Line[] = [...ls, { id: idRef.current++, kind: 'system', text: r.render }];
+        for (const w of r.witnessed) {
+          next.push({ id: idRef.current++, kind: 'witnessed', text: w });
+        }
+        return next;
+      });
     } finally {
       setBusy(false);
     }
   }
+
+  const colorFor = (kind: Line['kind']): string => {
+    if (kind === 'user') return '#9aff9a';
+    if (kind === 'witnessed') return '#888888';
+    return '#cfcfcf';
+  };
 
   return (
     <main style={{ display: 'flex', flexDirection: 'column', height: '100vh', padding: 16 }}>
@@ -53,7 +65,11 @@ function Page() {
         {lines.map((l) => (
           <div
             key={l.id}
-            style={{ color: l.kind === 'user' ? '#9aff9a' : '#cfcfcf', marginBottom: 8 }}
+            style={{
+              color: colorFor(l.kind),
+              marginBottom: 8,
+              fontStyle: l.kind === 'witnessed' ? 'italic' : 'normal',
+            }}
           >
             {l.text}
           </div>

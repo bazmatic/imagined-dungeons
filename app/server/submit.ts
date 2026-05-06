@@ -1,4 +1,4 @@
-import { runTurn } from '@core/engine/turn';
+import { runTick } from '@core/engine/tick';
 import { createServerFn } from '@tanstack/react-start';
 import { PLAYER_ID, getNarratorLlm, getParse, getRepo } from './world';
 
@@ -13,6 +13,9 @@ export const submitCommand = createServerFn({ method: 'POST' })
     const repo = await getRepo();
     const parse = getParse();
     const llm = getNarratorLlm();
-    const result = await runTurn(PLAYER_ID, data.text, repo, { parse, llm });
-    return { render: result.render };
+    const result = await runTick(PLAYER_ID, data.text, repo, { parse, llm });
+    return {
+      render: result.render,
+      witnessed: [...result.witnessed],
+    };
   });
