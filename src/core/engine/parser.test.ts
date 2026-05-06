@@ -1,7 +1,7 @@
 import type { Agent, Exit, Item, Location } from '@core/domain/entities';
 import { asAgentId, asExitId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
 import { describe, expect, it } from 'vitest';
-import { parse } from './parser';
+import { parse, resolveAgent } from './parser';
 import type { PerceptionView } from './perception';
 
 const W = asWorldId('w');
@@ -68,11 +68,42 @@ const exitN: Exit = {
   lockedByItem: null,
 };
 
-const view = (items: Item[] = [map]): PerceptionView => ({
+const spark: Agent = {
+  id: asAgentId('char_spark'),
+  worldId: W,
+  label: 'Spark',
+  shortDescription: '',
+  longDescription: '',
+  locationId: asLocationId('loc_a'),
+  hp: 10,
+  damage: 1,
+  defense: 0,
+  capacity: 10,
+  mood: null,
+  goal: null,
+  autonomous: false,
+};
+const ember: Agent = {
+  id: asAgentId('char_ember'),
+  worldId: W,
+  label: 'Ember',
+  shortDescription: '',
+  longDescription: '',
+  locationId: asLocationId('loc_a'),
+  hp: 10,
+  damage: 1,
+  defense: 0,
+  capacity: 10,
+  mood: null,
+  goal: null,
+  autonomous: false,
+};
+
+const view = (items: Item[] = [map], agents: Agent[] = []): PerceptionView => ({
   actor: ACTOR,
   location: LOC,
   items,
-  agents: [],
+  agents,
   exits: [exitN],
 });
 
@@ -177,5 +208,110 @@ describe('parse', () => {
     // even if the actor is "carrying" a fire map, parser searches view for take
     const r = parse('take fire map', ACTOR, view([]), inv([map]));
     expect(r.kind).toBe('no_such_target');
+  });
+
+  it('"talk to spark, hello" parses to speak with utterance', () => {
+    const r = parse('talk to spark, hello', ACTOR, view([map], [spark]), inv());
+    if (r.kind !== 'speak') throw new Error('expected speak');
+    expect(r.targetAgentId).toBe(spark.id);
+    expect(r.utterance).toBe('hello');
+  });
+
+  it('"tell spark, hello there" parses to speak with full utterance', () => {
+    const r = parse('tell spark, hello there', ACTOR, view([map], [spark]), inv());
+    if (r.kind !== 'speak') throw new Error('expected speak');
+    expect(r.targetAgentId).toBe(spark.id);
+    expect(r.utterance).toBe('hello there');
+  });
+
+  it('"tell spark hello" without comma parses to speak with utterance', () => {
+    const r = parse('tell spark hello', ACTOR, view([map], [spark]), inv());
+    if (r.kind !== 'speak') throw new Error('expected speak');
+    expect(r.targetAgentId).toBe(spark.id);
+    expect(r.utterance).toBe('hello');
+  });
+
+  it('"speak to spark, are you well?" parses to speak', () => {
+    const r = parse('speak to spark, are you well?', ACTOR, view([map], [spark]), inv());
+    if (r.kind !== 'speak') throw new Error('expected speak');
+    expect(r.targetAgentId).toBe(spark.id);
+    expect(r.utterance).toBe('are you well?');
+  });
+
+  it('"say hello" with one other agent in the room targets that agent implicitly', () => {
+    const r = parse('say hello', ACTOR, view([map], [spark]), inv());
+    if (r.kind !== 'speak') throw new Error('expected speak');
+    expect(r.targetAgentId).toBe(spark.id);
+    expect(r.utterance).toBe('hello');
+  });
+
+  it('"say hello" with no other agents yields no_such_target', () => {
+    const r = parse('say hello', ACTOR, view([map], []), inv());
+    expect(r.kind).toBe('no_such_target');
+  });
+
+  it('"say hello" with two other agents yields ambiguous_target', () => {
+    const r = parse('say hello', ACTOR, view([map], [spark, ember]), inv());
+    if (r.kind !== 'ambiguous_target') throw new Error('expected ambiguous_target');
+    expect(r.candidates).toEqual(expect.arrayContaining(['Spark', 'Ember']));
+  });
+
+  it('"say" alone yields missing_argument', () => {
+    const r = parse('say', ACTOR, view([map], [spark]), inv());
+    if (r.kind !== 'missing_argument') throw new Error('expected missing_argument');
+    expect(r.verb).toBe('say');
+  });
+
+  it('"attack spark" yields attack action with resolved id', () => {
+    const r = parse('attack spark', ACTOR, view([map], [spark]), inv());
+    if (r.kind !== 'attack') throw new Error('expected attack');
+    expect(r.targetAgentId).toBe(spark.id);
+  });
+
+  it('"kill spark" and "fight spark" also parse to attack', () => {
+    const r1 = parse('kill spark', ACTOR, view([map], [spark]), inv());
+    const r2 = parse('fight spark', ACTOR, view([map], [spark]), inv());
+    if (r1.kind !== 'attack' || r2.kind !== 'attack') throw new Error();
+    expect(r1.targetAgentId).toBe(spark.id);
+    expect(r2.targetAgentId).toBe(spark.id);
+  });
+
+  it('"attack" with no target yields missing_argument', () => {
+    const r = parse('attack', ACTOR, view([map], [spark]), inv());
+    if (r.kind !== 'missing_argument') throw new Error('expected missing_argument');
+    expect(r.verb).toBe('attack');
+  });
+
+  it('"attack ghost" with no such agent yields no_such_target', () => {
+    const r = parse('attack ghost', ACTOR, view([map], [spark]), inv());
+    if (r.kind !== 'no_such_target') throw new Error('expected no_such_target');
+    expect(r.ref).toBe('ghost');
+  });
+});
+
+describe('resolveAgent', () => {
+  it('resolves an exact label match', () => {
+    const r = resolveAgent('Spark', [spark, ember]);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.agent.id).toBe(spark.id);
+  });
+
+  it('resolves case-insensitively via prefix', () => {
+    const r = resolveAgent('spa', [spark, ember]);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.agent.id).toBe(spark.id);
+  });
+
+  it('returns ambiguous_target on multiple prefix matches', () => {
+    const sparky: Agent = { ...spark, id: asAgentId('char_sparky'), label: 'Sparky' };
+    const r = resolveAgent('spa', [spark, sparky]);
+    if (r.ok) throw new Error('expected error');
+    expect(r.error.kind).toBe('ambiguous_target');
+  });
+
+  it('returns no_such_target when nothing matches', () => {
+    const r = resolveAgent('ghost', [spark]);
+    if (r.ok) throw new Error('expected error');
+    expect(r.error.kind).toBe('no_such_target');
   });
 });
