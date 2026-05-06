@@ -11,7 +11,15 @@ describe('PLAYER_ACTION_SCHEMA', () => {
     const props = Object.keys(PLAYER_ACTION_SCHEMA.properties ?? {});
     expect(new Set(PLAYER_ACTION_SCHEMA.required)).toEqual(new Set(props));
     expect(props).toEqual(
-      expect.arrayContaining(['kind', 'direction', 'targetRef', 'itemRef', 'reason']),
+      expect.arrayContaining([
+        'kind',
+        'direction',
+        'targetRef',
+        'itemRef',
+        'targetAgentRef',
+        'utterance',
+        'reason',
+      ]),
     );
   });
 });
@@ -91,8 +99,45 @@ describe('validatePlayerAction', () => {
     expect(validatePlayerAction(null)).toEqual({ kind: 'invalid' });
     expect(validatePlayerAction('move south')).toEqual({ kind: 'invalid' });
     expect(validatePlayerAction({})).toEqual({ kind: 'invalid' });
+    // Missing targetAgentRef on attack:
     expect(validatePlayerAction({ kind: 'attack', target: 'spark' })).toEqual({ kind: 'invalid' });
     expect(validatePlayerAction({ kind: 'move' })).toEqual({ kind: 'invalid' });
     expect(validatePlayerAction({ kind: 'unknown' })).toEqual({ kind: 'invalid' });
+  });
+
+  it('accepts speak with non-empty targetAgentRef and utterance', () => {
+    expect(
+      validatePlayerAction({
+        kind: 'speak',
+        targetAgentRef: 'spark',
+        utterance: 'hello',
+      }),
+    ).toEqual({ kind: 'speak', targetAgentRef: 'spark', utterance: 'hello' });
+  });
+
+  it('rejects speak with missing or empty fields', () => {
+    expect(validatePlayerAction({ kind: 'speak', targetAgentRef: '', utterance: 'hi' })).toEqual({
+      kind: 'invalid',
+    });
+    expect(validatePlayerAction({ kind: 'speak', targetAgentRef: 'spark', utterance: '' })).toEqual(
+      {
+        kind: 'invalid',
+      },
+    );
+    expect(validatePlayerAction({ kind: 'speak' })).toEqual({ kind: 'invalid' });
+  });
+
+  it('accepts attack with non-empty targetAgentRef', () => {
+    expect(validatePlayerAction({ kind: 'attack', targetAgentRef: 'spark' })).toEqual({
+      kind: 'attack',
+      targetAgentRef: 'spark',
+    });
+  });
+
+  it('rejects attack with missing or empty targetAgentRef', () => {
+    expect(validatePlayerAction({ kind: 'attack', targetAgentRef: '' })).toEqual({
+      kind: 'invalid',
+    });
+    expect(validatePlayerAction({ kind: 'attack' })).toEqual({ kind: 'invalid' });
   });
 });

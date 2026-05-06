@@ -39,7 +39,23 @@ const map: Item = {
   weight: 1,
   hidden: false,
 };
-const view = { actor: paff, location: tavern, items: [map], agents: [], exits: [] };
+const spark: Agent = {
+  id: asAgentId('char_spark'),
+  worldId: W,
+  label: 'Spark',
+  shortDescription: '',
+  longDescription: '',
+  locationId: A,
+  hp: 10,
+  damage: 1,
+  defense: 4,
+  capacity: 10,
+  mood: null,
+  goal: null,
+  autonomous: false,
+};
+
+const view = { actor: paff, location: tavern, items: [map], agents: [spark], exits: [] };
 
 const respond = (parsed: unknown): LanguageModelResponse => ({
   raw: JSON.stringify(parsed),
@@ -93,6 +109,36 @@ describe('llmInterpret', () => {
     });
     const r = await llmInterpret('attack spark', paff, view, [], llm);
     expect(r).toBeNull();
+  });
+
+  it('returns a speak Action with the resolved targetAgentId and utterance', async () => {
+    const llm = makeFakeLanguageModel({
+      responder: () =>
+        respond({ kind: 'speak', targetAgentRef: 'spark', utterance: 'hello there' }),
+    });
+    const r = await llmInterpret('talk to spark, hello there', paff, view, [], llm);
+    expect(r).toEqual({
+      kind: 'speak',
+      actorId: paff.id,
+      targetAgentId: spark.id,
+      utterance: 'hello there',
+    });
+  });
+
+  it('returns null when the speak targetAgentRef cannot be resolved', async () => {
+    const llm = makeFakeLanguageModel({
+      responder: () => respond({ kind: 'speak', targetAgentRef: 'ghost', utterance: 'hi' }),
+    });
+    const r = await llmInterpret('talk to ghost, hi', paff, view, [], llm);
+    expect(r).toBeNull();
+  });
+
+  it('returns an attack Action with the resolved targetAgentId', async () => {
+    const llm = makeFakeLanguageModel({
+      responder: () => respond({ kind: 'attack', targetAgentRef: 'spark' }),
+    });
+    const r = await llmInterpret('attack spark', paff, view, [], llm);
+    expect(r).toEqual({ kind: 'attack', actorId: paff.id, targetAgentId: spark.id });
   });
 
   it('passes the schema and a non-empty system+user prompt to the port', async () => {

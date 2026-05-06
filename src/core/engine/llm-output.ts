@@ -14,7 +14,7 @@ const DIRECTIONS: readonly Direction[] = [
   'down',
 ];
 
-const KINDS = ['move', 'look', 'take', 'drop', 'inventory', 'unknown'] as const;
+const KINDS = ['move', 'look', 'take', 'drop', 'inventory', 'speak', 'attack', 'unknown'] as const;
 type Kind = (typeof KINDS)[number];
 
 /**
@@ -27,12 +27,14 @@ type Kind = (typeof KINDS)[number];
 export const PLAYER_ACTION_SCHEMA: JsonSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['kind', 'direction', 'targetRef', 'itemRef', 'reason'],
+  required: ['kind', 'direction', 'targetRef', 'itemRef', 'targetAgentRef', 'utterance', 'reason'],
   properties: {
     kind: { enum: [...KINDS] },
     direction: { type: ['string', 'null'], enum: [...DIRECTIONS, null] },
     targetRef: { type: ['string', 'null'] },
     itemRef: { type: ['string', 'null'] },
+    targetAgentRef: { type: ['string', 'null'] },
+    utterance: { type: ['string', 'null'] },
     reason: { type: ['string', 'null'] },
   },
 };
@@ -49,6 +51,8 @@ export type ValidatedPlayerAction =
   | { readonly kind: 'take'; readonly itemRef: string }
   | { readonly kind: 'drop'; readonly itemRef: string }
   | { readonly kind: 'inventory' }
+  | { readonly kind: 'speak'; readonly targetAgentRef: string; readonly utterance: string }
+  | { readonly kind: 'attack'; readonly targetAgentRef: string }
   | { readonly kind: 'unknown'; readonly reason: string }
   | { readonly kind: 'invalid' };
 
@@ -91,6 +95,24 @@ export function validatePlayerAction(input: unknown): ValidatedPlayerAction {
     }
     case 'inventory':
       return { kind: 'inventory' };
+    case 'speak': {
+      const targetAgentRef = input.targetAgentRef;
+      const utterance = input.utterance;
+      if (typeof targetAgentRef !== 'string' || targetAgentRef.length === 0) {
+        return { kind: 'invalid' };
+      }
+      if (typeof utterance !== 'string' || utterance.length === 0) {
+        return { kind: 'invalid' };
+      }
+      return { kind: 'speak', targetAgentRef, utterance };
+    }
+    case 'attack': {
+      const targetAgentRef = input.targetAgentRef;
+      if (typeof targetAgentRef !== 'string' || targetAgentRef.length === 0) {
+        return { kind: 'invalid' };
+      }
+      return { kind: 'attack', targetAgentRef };
+    }
     case 'unknown': {
       const reason = input.reason;
       if (typeof reason !== 'string') return { kind: 'invalid' };

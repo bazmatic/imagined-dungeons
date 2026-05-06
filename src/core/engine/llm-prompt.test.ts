@@ -56,7 +56,16 @@ const exitSouth: Exit = {
 describe('buildSystemPrompt', () => {
   it('mentions every action variant by name', () => {
     const s = buildSystemPrompt();
-    for (const verb of ['move', 'look', 'take', 'drop', 'inventory', 'unknown']) {
+    for (const verb of [
+      'move',
+      'look',
+      'take',
+      'drop',
+      'inventory',
+      'speak',
+      'attack',
+      'unknown',
+    ]) {
       expect(s).toContain(verb);
     }
   });

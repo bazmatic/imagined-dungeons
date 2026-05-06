@@ -7,7 +7,7 @@ import {
   validatePlayerAction,
 } from './llm-output';
 import { buildSystemPrompt, buildUserPrompt } from './llm-prompt';
-import { resolveItem } from './parser';
+import { resolveAgent, resolveItem } from './parser';
 import type { PerceptionView } from './perception';
 
 export async function llmInterpret(
@@ -47,6 +47,21 @@ export async function llmInterpret(
     }
     case 'inventory':
       return { kind: 'inventory', actorId: actor.id };
+    case 'speak': {
+      const r = resolveAgent(validated.targetAgentRef, view.agents);
+      if (!r.ok) return null;
+      return {
+        kind: 'speak',
+        actorId: actor.id,
+        targetAgentId: r.agent.id,
+        utterance: validated.utterance,
+      };
+    }
+    case 'attack': {
+      const r = resolveAgent(validated.targetAgentRef, view.agents);
+      if (!r.ok) return null;
+      return { kind: 'attack', actorId: actor.id, targetAgentId: r.agent.id };
+    }
     case 'unknown':
     case 'invalid':
       return null;
