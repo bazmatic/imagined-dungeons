@@ -1,9 +1,10 @@
 import { runTurn } from '@core/engine/turn';
 import { createServerFn } from '@tanstack/react-start';
-import { PLAYER_ID, getRepo } from './world';
+import { PLAYER_ID, getParse, getRepo } from './world';
 
 export const getInitialView = createServerFn({ method: 'GET' }).handler(async () => {
   const repo = await getRepo();
-  const result = await runTurn(PLAYER_ID, 'look', repo);
+  const parse = getParse();
+  const result = await runTurn(PLAYER_ID, 'look', repo, parse);
   return { render: result.render };
 });

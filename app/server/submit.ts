@@ -1,6 +1,6 @@
 import { runTurn } from '@core/engine/turn';
 import { createServerFn } from '@tanstack/react-start';
-import { PLAYER_ID, getRepo } from './world';
+import { PLAYER_ID, getParse, getRepo } from './world';
 
 export const submitCommand = createServerFn({ method: 'POST' })
   .inputValidator((d: unknown) => {
@@ -11,6 +11,7 @@ export const submitCommand = createServerFn({ method: 'POST' })
   })
   .handler(async ({ data }) => {
     const repo = await getRepo();
-    const result = await runTurn(PLAYER_ID, data.text, repo);
+    const parse = getParse();
+    const result = await runTurn(PLAYER_ID, data.text, repo, parse);
     return { render: result.render };
   });
