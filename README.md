@@ -4,17 +4,18 @@ A generative, multi-agent text adventure engine. The world's *structure* is stor
 
 This repository is the staged build-out of the design in [abstract-design.md](abstract-design.md), beginning with a fully deterministic core and adding generative layers one slice at a time.
 
-## Status — Slice 3 (current)
+## Status — Slice 4 (current)
 
-The deterministic core of slices 1–2 plus narrated action types. The closed action vocabulary now includes `speak` and `attack`, and a Narrator role produces observer-specific prose for those events. Mechanical actions (`move`/`look`/`take`/`drop`/`inventory`) stay mechanical.
+Slices 1–3 plus autonomous NPCs. After the player's turn resolves, eligible NPCs (those flagged `autonomous` and co-located with the player) take their own turns through the *same* engine pipeline: NPC mind → composite parser → dispatch → narrate. The closed action vocabulary is unchanged.
 
-- Engine: parse → validate → mutate → emit event → narrate (per witness) → render
-- Verbs: `move` / `look` / `take` / `drop` / `inventory` / `speak` (`say`, `tell`, `talk`) / `attack` (`kill`, `fight`)
-- LLM-backed Interpreter (slice 2) extended with `speak` and `attack`
-- LLM-backed Narrator with mechanical fallback templates when `OPENAI_API_KEY` is unset or the model errors
-- Combat is deterministic from `actor.damage` vs `target.defense` (no randomness in state transitions)
-- Per-witness narrations are persisted on `events.narrations`
-- 136 tests, TypeScript strict, biome clean
+- Engine: player turn → NPC scheduler → per-NPC (mind → parse → dispatch → narrate) → witnessed render
+- Tick cap: at most 2 NPC ticks per player turn (`MAX_NPCS_PER_TICK`).
+- NPC mind (`src/core/engine/npc-mind.ts`) — special case of the interpreter: returns a natural-language intent that re-enters the composite parser. Falls back to `"wait"` when the LLM is null or errors.
+- NPC scheduler (`src/core/engine/npc-scheduler.ts`) — co-location with the player + autonomous flag + `hp > 0`, sorted deterministically.
+- Per-agent memory recall (`src/core/engine/memory.ts`) — perception-gated slice of the global event log shared by Narrator and NPC mind.
+- Submit response is now `{ render: string, witnessed: string[] }`; UI dim-italics witnessed lines.
+- Spark and Uncle Bob are autonomous in the seeded world.
+- 171 tests, TypeScript strict, biome clean
 
 ## Stack
 
@@ -103,7 +104,7 @@ Per [abstract-design.md §14](abstract-design.md#14-what-to-build-first):
 - ✅ **Slice 1** — mechanical core (move/look/take/drop/inventory).
 - ✅ **Slice 2** — LLM-backed interpreter, falls back from the rule parser.
 - ✅ **Slice 3** — narrated action types (`speak`/`attack`) with an observer-specific Narrator.
-- **Slice 4** — autonomous NPCs taking turns.
+- ✅ **Slice 4** — autonomous NPCs taking turns (this slice).
 - **Slice 5** — consequences and durable `update_description`.
 - **Slice 6+** — combat depth, containers, search, locks-with-keys.
 
