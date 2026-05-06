@@ -78,4 +78,5 @@ export const events = sqliteTable('events', {
   payload: text('payload', { mode: 'json' }).notNull(),
   witnesses: text('witnesses', { mode: 'json' }).notNull(),
   createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  narrations: text('narrations', { mode: 'json' }),
 });
