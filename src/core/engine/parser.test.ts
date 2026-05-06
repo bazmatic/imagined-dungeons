@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest';
 import type { Agent, Exit, Item, Location } from '@core/domain/entities';
 import { asAgentId, asExitId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
-import type { PerceptionView } from './perception';
+import { describe, expect, it } from 'vitest';
 import { parse } from './parser';
+import type { PerceptionView } from './perception';
 
 const W = asWorldId('w');
 const ACTOR: Agent = {

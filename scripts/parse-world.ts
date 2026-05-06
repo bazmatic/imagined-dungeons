@@ -75,23 +75,23 @@ const md = readFileSync(SRC, 'utf8');
 const tables = tablesByHeading(md);
 
 // Locations
-const rawLocs = tables['Locations'] ?? [];
+const rawLocs = tables.Locations ?? [];
 const locations = rawLocs.map((r) => ({
-  id: backtickInner(r['ID'] ?? ''),
-  label: r['Name'] ?? '',
+  id: backtickInner(r.ID ?? ''),
+  label: r.Name ?? '',
   shortDescription: r['Short Description'] ?? '',
   longDescription: r['Long Description'] ?? '',
 }));
 
 // Exits
-const rawExits = tables['Exits'] ?? [];
+const rawExits = tables.Exits ?? [];
 const exits = rawExits.map((r) => ({
-  id: backtickInner(r['ID'] ?? ''),
-  from: backtickInner(r['From'] ?? ''),
-  to: backtickInner(r['To'] ?? ''),
-  direction: (r['Direction'] ?? '').toLowerCase(),
-  label: r['Name'] ?? '',
-  locked: boolish(r['Locked'] ?? ''),
+  id: backtickInner(r.ID ?? ''),
+  from: backtickInner(r.From ?? ''),
+  to: backtickInner(r.To ?? ''),
+  direction: (r.Direction ?? '').toLowerCase(),
+  label: r.Name ?? '',
+  locked: boolish(r.Locked ?? ''),
   lockedByItem: null as string | null,
 }));
 
@@ -99,7 +99,7 @@ const exits = rawExits.map((r) => ({
 const itemSections = ['Key Quest Items', 'Tools & Trinkets', "Captain Serena's Ship Items"];
 const items = itemSections.flatMap((sec) =>
   (tables[sec] ?? []).map((r) => {
-    const rawOwner = r['Location / Holder'] ?? r['Location'] ?? '';
+    const rawOwner = r['Location / Holder'] ?? r.Location ?? '';
     const ownerToken = backtickInner(rawOwner);
     const ownerKind: 'location' | 'agent' | 'item' = ownerToken.startsWith('loc_')
       ? 'location'
@@ -108,30 +108,34 @@ const items = itemSections.flatMap((sec) =>
         : ownerToken.startsWith('item_')
           ? 'item'
           : 'location';
+    // hidden may be in its own column (Hidden) or expressed inline
+    // as "(hidden)" in the Location/Holder cell.
+    const hiddenColumn = boolish(r.Hidden ?? 'No');
+    const inlineHidden = /\(hidden\)/i.test(rawOwner);
     return {
-      id: backtickInner(r['ID'] ?? ''),
-      label: stripBold(r['Name'] ?? ''),
-      shortDescription: r['Notes'] ?? '',
-      longDescription: r['Notes'] ?? '',
+      id: backtickInner(r.ID ?? ''),
+      label: stripBold(r.Name ?? ''),
+      shortDescription: r.Notes ?? '',
+      longDescription: r.Notes ?? '',
       ownerKind,
       ownerId: ownerToken,
-      weight: num(r['Weight'] ?? '1', 1),
-      hidden: boolish(r['Hidden'] ?? 'No'),
+      weight: num(r.Weight ?? '1', 1),
+      hidden: hiddenColumn || inlineHidden,
     };
   }),
 );
 
 // Agents: player + NPCs
 const playerRows = tables['Player Character'] ?? [];
-const npcRows = tables['NPCs'] ?? [];
+const npcRows = tables.NPCs ?? [];
 const player = playerRows.map((r) => ({
-  id: backtickInner(r['ID'] ?? ''),
-  label: stripBold(r['Name'] ?? ''),
-  locationId: backtickInner(r['Location'] ?? ''),
-  hp: num(r['HP'] ?? '', 10),
-  damage: num(r['DMG'] ?? '', 1),
-  defense: num(r['DEF'] ?? '', 10),
-  capacity: num(r['Capacity'] ?? '', 10),
+  id: backtickInner(r.ID ?? ''),
+  label: stripBold(r.Name ?? ''),
+  locationId: backtickInner(r.Location ?? ''),
+  hp: num(r.HP ?? '', 10),
+  damage: num(r.DMG ?? '', 1),
+  defense: num(r.DEF ?? '', 10),
+  capacity: num(r.Capacity ?? '', 10),
   mood: null as string | null,
   goal: null as string | null,
   autonomous: false,
@@ -140,19 +144,19 @@ const player = playerRows.map((r) => ({
 }));
 
 const npcs = npcRows
-  .filter((r) => backtickInner(r['ID'] ?? '') !== 'system')
+  .filter((r) => backtickInner(r.ID ?? '') !== 'system')
   // Lines like the row for `system` have empty location dashes — skip those too
-  .filter((r) => backtickInner(r['Location'] ?? '').startsWith('loc_'))
+  .filter((r) => backtickInner(r.Location ?? '').startsWith('loc_'))
   .map((r) => ({
-    id: backtickInner(r['ID'] ?? ''),
-    label: stripBold(r['Name'] ?? ''),
-    locationId: backtickInner(r['Location'] ?? ''),
-    hp: num(r['HP'] ?? '', 10),
-    damage: num(r['DMG'] ?? '', 1),
-    defense: num(r['DEF'] ?? '', 10),
+    id: backtickInner(r.ID ?? ''),
+    label: stripBold(r.Name ?? ''),
+    locationId: backtickInner(r.Location ?? ''),
+    hp: num(r.HP ?? '', 10),
+    damage: num(r.DMG ?? '', 1),
+    defense: num(r.DEF ?? '', 10),
     capacity: 10,
-    mood: r['Mood'] || null,
-    goal: r['Goal'] || null,
+    mood: r.Mood || null,
+    goal: r.Goal || null,
     autonomous: false,
     shortDescription: '',
     longDescription: '',

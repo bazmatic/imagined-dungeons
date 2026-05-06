@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
 import type { Agent, Item, Location } from '@core/domain/entities';
 import { asAgentId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
 import { MemoryRepository } from '@infra/memory-repository';
+import { describe, expect, it } from 'vitest';
 import { handleTake } from './take';
 
 const W = asWorldId('w');
@@ -67,10 +67,7 @@ describe('handleTake', () => {
       items: [map],
       agents: [paff],
     });
-    const r = await handleTake(
-      { kind: 'take', actorId: paff.id, itemRef: 'fire map' },
-      repo,
-    );
+    const r = await handleTake({ kind: 'take', actorId: paff.id, itemRef: 'fire map' }, repo);
     if (!r.ok) throw new Error();
     expect(r.value.render).toBe('Taken: fire map.');
     const owned = await repo.itemsOwnedBy({ kind: 'agent', id: paff.id });
@@ -84,10 +81,7 @@ describe('handleTake', () => {
       items: [],
       agents: [paff],
     });
-    const r = await handleTake(
-      { kind: 'take', actorId: paff.id, itemRef: 'fire map' },
-      repo,
-    );
+    const r = await handleTake({ kind: 'take', actorId: paff.id, itemRef: 'fire map' }, repo);
     if (r.ok) throw new Error();
     expect(r.error).toMatch(/fire map/);
   });
@@ -99,10 +93,7 @@ describe('handleTake', () => {
       items: [hidden],
       agents: [paff],
     });
-    const r = await handleTake(
-      { kind: 'take', actorId: paff.id, itemRef: 'wooden box' },
-      repo,
-    );
+    const r = await handleTake({ kind: 'take', actorId: paff.id, itemRef: 'wooden box' }, repo);
     expect(r.ok).toBe(false);
   });
 
@@ -113,10 +104,7 @@ describe('handleTake', () => {
       items: [heavy],
       agents: [paff],
     });
-    const r = await handleTake(
-      { kind: 'take', actorId: paff.id, itemRef: 'anvil' },
-      repo,
-    );
+    const r = await handleTake({ kind: 'take', actorId: paff.id, itemRef: 'anvil' }, repo);
     if (r.ok) throw new Error();
     expect(r.error).toMatch(/too heavy/i);
   });

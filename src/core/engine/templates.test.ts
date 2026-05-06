@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
 import type { Agent, Exit, Item, Location } from '@core/domain/entities';
 import { asAgentId, asExitId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
+import { describe, expect, it } from 'vitest';
 import {
   renderActionError,
   renderDropSelf,

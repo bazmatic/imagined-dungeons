@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
 import type { Agent, Item, Location } from '@core/domain/entities';
 import { asAgentId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
 import { MemoryRepository } from '@infra/memory-repository';
+import { describe, expect, it } from 'vitest';
 import { handleLook } from './look';
 
 const W = asWorldId('w');
@@ -47,10 +47,7 @@ describe('handleLook', () => {
       items: [map],
       agents: [paff],
     });
-    const r = await handleLook(
-      { kind: 'look', actorId: paff.id, targetRef: null },
-      repo,
-    );
+    const r = await handleLook({ kind: 'look', actorId: paff.id, targetRef: null }, repo);
     if (!r.ok) throw new Error();
     expect(r.value.render).toContain('The Goblet');
     expect(r.value.render).toContain('A tavern.');
@@ -64,10 +61,7 @@ describe('handleLook', () => {
       items: [map],
       agents: [paff],
     });
-    const r = await handleLook(
-      { kind: 'look', actorId: paff.id, targetRef: 'fire map' },
-      repo,
-    );
+    const r = await handleLook({ kind: 'look', actorId: paff.id, targetRef: 'fire map' }, repo);
     if (!r.ok) throw new Error();
     expect(r.value.render).toBe('A real-time map.');
   });
@@ -79,10 +73,7 @@ describe('handleLook', () => {
       items: [map],
       agents: [paff],
     });
-    const r = await handleLook(
-      { kind: 'look', actorId: paff.id, targetRef: 'unicorn' },
-      repo,
-    );
+    const r = await handleLook({ kind: 'look', actorId: paff.id, targetRef: 'unicorn' }, repo);
     if (r.ok) throw new Error();
     expect(r.error).toMatch(/unicorn/);
   });

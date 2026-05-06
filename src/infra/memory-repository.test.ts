@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
 import type { Agent, Item, Location } from '@core/domain/entities';
 import { asAgentId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
+import { describe, expect, it } from 'vitest';
 import { MemoryRepository } from './memory-repository';
 
 const W = asWorldId('w');

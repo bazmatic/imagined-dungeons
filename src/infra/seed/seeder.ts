@@ -16,9 +16,7 @@ export async function seedIfEmpty(db: DB): Promise<void> {
     .insert(schema.locations)
     .values(BURNING_DISTRICT.locations.map((l) => ({ ...l, worldId: W })));
 
-  await db
-    .insert(schema.agents)
-    .values(BURNING_DISTRICT.agents.map((a) => ({ ...a, worldId: W })));
+  await db.insert(schema.agents).values(BURNING_DISTRICT.agents.map((a) => ({ ...a, worldId: W })));
 
   // Insert items in two passes: those owned by location/agent first, then those owned by other items.
   const flatItems = BURNING_DISTRICT.items.filter((i) => i.ownerKind !== 'item');

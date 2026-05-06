@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
 import type { Agent, Exit, Location } from '@core/domain/entities';
 import { asAgentId, asExitId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
 import { MemoryRepository } from '@infra/memory-repository';
+import { describe, expect, it } from 'vitest';
 import { handleMove } from './move';
 
 const W = asWorldId('w');
@@ -65,10 +65,7 @@ describe('handleMove', () => {
       items: [],
       agents: [paff],
     });
-    const r = await handleMove(
-      { kind: 'move', actorId: paff.id, direction: 'north' },
-      repo,
-    );
+    const r = await handleMove({ kind: 'move', actorId: paff.id, direction: 'north' }, repo);
     expect(r.ok).toBe(true);
     if (!r.ok) throw new Error();
     expect(r.value.render).toBe('You go north.');
@@ -84,10 +81,7 @@ describe('handleMove', () => {
       items: [],
       agents: [paff],
     });
-    const r = await handleMove(
-      { kind: 'move', actorId: paff.id, direction: 'east' },
-      repo,
-    );
+    const r = await handleMove({ kind: 'move', actorId: paff.id, direction: 'east' }, repo);
     if (r.ok) throw new Error();
     expect(r.error).toMatch(/can't go that way/i);
   });
@@ -99,10 +93,7 @@ describe('handleMove', () => {
       items: [],
       agents: [paff],
     });
-    const r = await handleMove(
-      { kind: 'move', actorId: paff.id, direction: 'south' },
-      repo,
-    );
+    const r = await handleMove({ kind: 'move', actorId: paff.id, direction: 'south' }, repo);
     if (r.ok) throw new Error();
     expect(r.error).toContain('gate');
     expect(r.error).toMatch(/locked/i);

@@ -1,8 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { asAgentId, asEventId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
 import { type DbHandle, openDb } from '@infra/db';
 import * as schema from '@infra/schema';
 import { SqliteRepository } from '@infra/sqlite-repository';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 let handle: DbHandle;
 const W = asWorldId('w_test');

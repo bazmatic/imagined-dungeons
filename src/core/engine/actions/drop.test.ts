@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
 import type { Agent, Item, Location } from '@core/domain/entities';
 import { asAgentId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
 import { MemoryRepository } from '@infra/memory-repository';
+import { describe, expect, it } from 'vitest';
 import { handleDrop } from './drop';
 
 const W = asWorldId('w');
@@ -47,10 +47,7 @@ describe('handleDrop', () => {
       items: [heldMap],
       agents: [paff],
     });
-    const r = await handleDrop(
-      { kind: 'drop', actorId: paff.id, itemRef: 'fire map' },
-      repo,
-    );
+    const r = await handleDrop({ kind: 'drop', actorId: paff.id, itemRef: 'fire map' }, repo);
     if (!r.ok) throw new Error();
     expect(r.value.render).toBe('Dropped: fire map.');
     const onFloor = await repo.itemsOwnedBy({ kind: 'location', id: A });
@@ -64,10 +61,7 @@ describe('handleDrop', () => {
       items: [],
       agents: [paff],
     });
-    const r = await handleDrop(
-      { kind: 'drop', actorId: paff.id, itemRef: 'fire map' },
-      repo,
-    );
+    const r = await handleDrop({ kind: 'drop', actorId: paff.id, itemRef: 'fire map' }, repo);
     expect(r.ok).toBe(false);
   });
 });

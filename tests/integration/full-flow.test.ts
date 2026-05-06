@@ -1,9 +1,9 @@
-import { describe, expect, it } from 'vitest';
 import { asAgentId } from '@core/domain/ids';
 import { runTurn } from '@core/engine/turn';
 import { openDb } from '@infra/db';
 import { BURNING_DISTRICT_WORLD_ID, seedIfEmpty } from '@infra/seed/seeder';
 import { SqliteRepository } from '@infra/sqlite-repository';
+import { describe, expect, it } from 'vitest';
 
 const PAFF = asAgentId('char_39322');
 

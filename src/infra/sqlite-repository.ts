@@ -1,4 +1,3 @@
-import { and, eq } from 'drizzle-orm';
 import type { Agent, Direction, Exit, Item, Location, Owner } from '@core/domain/entities';
 import type { DomainEvent } from '@core/domain/events';
 import {
@@ -14,6 +13,7 @@ import {
   asLocationId,
 } from '@core/domain/ids';
 import type { Repository } from '@core/engine/repository';
+import { and, eq } from 'drizzle-orm';
 import type { DB } from './db';
 import * as schema from './schema';
 
@@ -23,10 +23,7 @@ const ownerOf = (kind: 'location' | 'agent' | 'item', id: string): Owner => {
   return { kind, id: asItemId(id) };
 };
 
-const toLocation = (
-  r: typeof schema.locations.$inferSelect,
-  worldId: WorldId,
-): Location => ({
+const toLocation = (r: typeof schema.locations.$inferSelect, worldId: WorldId): Location => ({
   id: asLocationId(r.id),
   worldId,
   label: r.label,
@@ -90,10 +87,7 @@ export class SqliteRepository implements Repository {
   }
 
   async getLocation(id: LocationId): Promise<Location> {
-    const rows = await this.db
-      .select()
-      .from(schema.locations)
-      .where(eq(schema.locations.id, id));
+    const rows = await this.db.select().from(schema.locations).where(eq(schema.locations.id, id));
     const row = rows[0];
     if (!row) throw new Error(`location not found: ${id}`);
     return toLocation(row, this.worldId);
@@ -138,10 +132,7 @@ export class SqliteRepository implements Repository {
   }
 
   async moveAgent(id: AgentId, to: LocationId): Promise<void> {
-    await this.db
-      .update(schema.agents)
-      .set({ locationId: to })
-      .where(eq(schema.agents.id, id));
+    await this.db.update(schema.agents).set({ locationId: to }).where(eq(schema.agents.id, id));
   }
 
   async transferItem(id: ItemId, to: Owner): Promise<void> {

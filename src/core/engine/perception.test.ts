@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
 import type { Agent, Exit, Item, Location } from '@core/domain/entities';
 import { asAgentId, asExitId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
 import { MemoryRepository } from '@infra/memory-repository';
+import { describe, expect, it } from 'vitest';
 import { perceive } from './perception';
 
 const W = asWorldId('w');
@@ -59,8 +59,16 @@ describe('perceive', () => {
     const repo = new MemoryRepository(W, {
       locations: [loc('loc_a'), loc('loc_b')],
       exits: [exit],
-      items: [item('item_x', 'loc_a'), item('item_hidden', 'loc_a', true), item('item_other', 'loc_b')],
-      agents: [agent('char_self', 'loc_a'), agent('char_other', 'loc_a'), agent('char_far', 'loc_b')],
+      items: [
+        item('item_x', 'loc_a'),
+        item('item_hidden', 'loc_a', true),
+        item('item_other', 'loc_b'),
+      ],
+      agents: [
+        agent('char_self', 'loc_a'),
+        agent('char_other', 'loc_a'),
+        agent('char_far', 'loc_b'),
+      ],
     });
     const view = await perceive(asAgentId('char_self'), repo);
     expect(view.items.map((i) => i.id)).toEqual(['item_x']);
