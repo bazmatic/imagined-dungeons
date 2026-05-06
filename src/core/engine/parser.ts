@@ -38,8 +38,8 @@ const resolveDirection = (raw: string): Direction | null => DIRECTION_ALIASES[ra
 export function parse(
   text: string,
   actor: Agent,
-  _view: PerceptionView,
-  _inventory: readonly Item[],
+  view: PerceptionView,
+  inventory: readonly Item[],
 ): ParseResult {
   const toks = tokens(text);
   if (toks.length === 0) return { kind: 'empty' };
@@ -67,8 +67,11 @@ export function parse(
     case 'look':
     case 'l': {
       const rest = stripStopWords(toks.slice(1));
-      if (rest.length === 0) return { kind: 'look', actorId: actor.id, targetRef: null };
-      return { kind: 'look', actorId: actor.id, targetRef: rest.join(' ') };
+      if (rest.length === 0) return { kind: 'look', actorId: actor.id, targetItemId: null };
+      const ref = rest.join(' ');
+      const r = resolveItem(ref, [...view.items, ...inventory]);
+      if (!r.ok) return r.error;
+      return { kind: 'look', actorId: actor.id, targetItemId: r.item.id };
     }
 
     case 'take':
@@ -76,13 +79,19 @@ export function parse(
     case 'pick': {
       const rest = stripStopWords(toks.slice(1).filter((t) => t !== 'up'));
       if (rest.length === 0) return { kind: 'missing_argument', verb: 'take' };
-      return { kind: 'take', actorId: actor.id, itemRef: rest.join(' ') };
+      const ref = rest.join(' ');
+      const r = resolveItem(ref, view.items);
+      if (!r.ok) return r.error;
+      return { kind: 'take', actorId: actor.id, itemId: r.item.id };
     }
 
     case 'drop': {
       const rest = stripStopWords(toks.slice(1));
       if (rest.length === 0) return { kind: 'missing_argument', verb: 'drop' };
-      return { kind: 'drop', actorId: actor.id, itemRef: rest.join(' ') };
+      const ref = rest.join(' ');
+      const r = resolveItem(ref, inventory);
+      if (!r.ok) return r.error;
+      return { kind: 'drop', actorId: actor.id, itemId: r.item.id };
     }
 
     case 'inventory':

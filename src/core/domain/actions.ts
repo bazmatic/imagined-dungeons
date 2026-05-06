@@ -1,11 +1,11 @@
 import type { Direction } from './entities';
-import type { AgentId } from './ids';
+import type { AgentId, ItemId } from './ids';
 
 export type Action =
   | { kind: 'move'; actorId: AgentId; direction: Direction }
-  | { kind: 'look'; actorId: AgentId; targetRef: string | null }
-  | { kind: 'take'; actorId: AgentId; itemRef: string }
-  | { kind: 'drop'; actorId: AgentId; itemRef: string }
+  | { kind: 'look'; actorId: AgentId; targetItemId: ItemId | null }
+  | { kind: 'take'; actorId: AgentId; itemId: ItemId }
+  | { kind: 'drop'; actorId: AgentId; itemId: ItemId }
   | { kind: 'inventory'; actorId: AgentId };
 
 export type ParseError =
