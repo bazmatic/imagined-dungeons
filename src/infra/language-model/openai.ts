@@ -48,7 +48,12 @@ async function attempt(
 
 export function makeOpenAILanguageModel(): LanguageModel | null {
   const cfg = readConfig();
-  if (!cfg) return null;
+  if (!cfg) {
+    console.info('[llm] OPENAI_API_KEY not set — LLM fallback disabled (rule-based parser only).');
+    return null;
+  }
+  const where = cfg.baseUrl ? ` via ${cfg.baseUrl}` : '';
+  console.info(`[llm] enabled: model=${cfg.model}${where}`);
   const client = new OpenAI(
     cfg.baseUrl ? { apiKey: cfg.apiKey, baseURL: cfg.baseUrl } : { apiKey: cfg.apiKey },
   );

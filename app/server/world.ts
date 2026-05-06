@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { type AgentId, asAgentId } from '@core/domain/ids';
 import { type ParseFn, makeCompositeParser } from '@core/engine/parser/composite';
 import { type DbHandle, openDb } from '@infra/db';

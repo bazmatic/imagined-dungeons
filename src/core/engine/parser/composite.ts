@@ -42,8 +42,14 @@ export function makeCompositeParser(deps: CompositeParserDeps): ParseFn {
     if (!deps.llm) return ruleResult;
     try {
       const action = await llmInterpret(text, actor, view, inventory, deps.llm);
-      return action ?? ruleResult;
-    } catch {
+      if (!action) {
+        console.info(`[llm] no action for input "${text}" — using rule-based ${ruleResult.kind}`);
+        return ruleResult;
+      }
+      console.info(`[llm] interpreted "${text}" as ${action.kind}`);
+      return action;
+    } catch (err) {
+      console.warn(`[llm] error interpreting "${text}":`, err);
       return ruleResult;
     }
   };
