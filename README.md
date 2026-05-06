@@ -55,7 +55,7 @@ Then open the URL it prints (typically `http://localhost:5173`). Type `look`, `n
 |---|---|
 | `pnpm dev` | Start the dev server |
 | `pnpm build` | Production build |
-| `pnpm test` | Run the test suite (47 tests) |
+| `pnpm test` | Run the test suite |
 | `pnpm typecheck` | `tsc --noEmit` |
 | `pnpm lint` | biome check |
 | `pnpm format` | biome format --write |
@@ -96,14 +96,16 @@ scripts/
 tests/integration/           — full-flow + repo + seeder tests
 ```
 
-## What slice 2 will add
+## Roadmap
 
 Per [abstract-design.md §14](abstract-design.md#14-what-to-build-first):
 
-- An LLM-backed **interpreter** replacing the verb-noun parser. The action vocabulary doesn't change; the parser is swapped behind the same input/output contract.
-- Narrated action types (`speak`, `attack`) wired into a Narrator that produces observer-specific prose.
-- One autonomous NPC.
-- A consequence pass that lets the world act in response to events, including durable description updates.
+- ✅ **Slice 1** — mechanical core (move/look/take/drop/inventory).
+- ✅ **Slice 2** — LLM-backed interpreter, falls back from the rule parser.
+- ✅ **Slice 3** — narrated action types (`speak`/`attack`) with an observer-specific Narrator.
+- **Slice 4** — autonomous NPCs taking turns.
+- **Slice 5** — consequences and durable `update_description`.
+- **Slice 6+** — combat depth, containers, search, locks-with-keys.
 
 Each slice is independently playable and ships behind no feature flag.
 
