@@ -33,16 +33,6 @@ const heavy: Item = {
   weight: 99,
   hidden: false,
 };
-const hidden: Item = {
-  id: asItemId('item_box'),
-  worldId: W,
-  label: 'wooden box',
-  shortDescription: '',
-  longDescription: '',
-  owner: { kind: 'location', id: A },
-  weight: 1,
-  hidden: true,
-};
 const paff: Agent = {
   id: asAgentId('char_p'),
   worldId: W,
@@ -67,34 +57,11 @@ describe('handleTake', () => {
       items: [map],
       agents: [paff],
     });
-    const r = await handleTake({ kind: 'take', actorId: paff.id, itemRef: 'fire map' }, repo);
+    const r = await handleTake({ kind: 'take', actorId: paff.id, itemId: map.id }, repo);
     if (!r.ok) throw new Error();
     expect(r.value.render).toBe('Taken: fire map.');
     const owned = await repo.itemsOwnedBy({ kind: 'agent', id: paff.id });
     expect(owned.map((i) => i.id)).toEqual(['item_map']);
-  });
-
-  it('refuses when the item is not in the room', async () => {
-    const repo = new MemoryRepository(W, {
-      locations: [loc],
-      exits: [],
-      items: [],
-      agents: [paff],
-    });
-    const r = await handleTake({ kind: 'take', actorId: paff.id, itemRef: 'fire map' }, repo);
-    if (r.ok) throw new Error();
-    expect(r.error).toMatch(/fire map/);
-  });
-
-  it('refuses to take a hidden item (treated as not present)', async () => {
-    const repo = new MemoryRepository(W, {
-      locations: [loc],
-      exits: [],
-      items: [hidden],
-      agents: [paff],
-    });
-    const r = await handleTake({ kind: 'take', actorId: paff.id, itemRef: 'wooden box' }, repo);
-    expect(r.ok).toBe(false);
   });
 
   it('refuses to take an item heavier than capacity', async () => {
@@ -104,7 +71,7 @@ describe('handleTake', () => {
       items: [heavy],
       agents: [paff],
     });
-    const r = await handleTake({ kind: 'take', actorId: paff.id, itemRef: 'anvil' }, repo);
+    const r = await handleTake({ kind: 'take', actorId: paff.id, itemId: heavy.id }, repo);
     if (r.ok) throw new Error();
     expect(r.error).toMatch(/too heavy/i);
   });

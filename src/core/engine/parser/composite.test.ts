@@ -128,7 +128,7 @@ describe('makeCompositeParser', () => {
       ruleParse: () => ({ kind: 'no_such_target', ref: 'fire map' }),
     });
     const r = await parse('grab fire map', paff, view, []);
-    expect(r).toEqual({ kind: 'take', actorId: paff.id, itemRef: 'fire map' });
+    expect(r).toEqual({ kind: 'take', actorId: paff.id, itemId: map.id });
   });
 
   it('falls back on unknown_direction', async () => {

@@ -47,21 +47,10 @@ describe('handleDrop', () => {
       items: [heldMap],
       agents: [paff],
     });
-    const r = await handleDrop({ kind: 'drop', actorId: paff.id, itemRef: 'fire map' }, repo);
+    const r = await handleDrop({ kind: 'drop', actorId: paff.id, itemId: heldMap.id }, repo);
     if (!r.ok) throw new Error();
     expect(r.value.render).toBe('Dropped: fire map.');
     const onFloor = await repo.itemsOwnedBy({ kind: 'location', id: A });
     expect(onFloor.map((i) => i.id)).toEqual(['item_map']);
-  });
-
-  it('refuses when actor is not holding the item', async () => {
-    const repo = new MemoryRepository(W, {
-      locations: [loc],
-      exits: [],
-      items: [],
-      agents: [paff],
-    });
-    const r = await handleDrop({ kind: 'drop', actorId: paff.id, itemRef: 'fire map' }, repo);
-    expect(r.ok).toBe(false);
   });
 });

@@ -37,6 +37,26 @@ const map: Item = {
   weight: 1,
   hidden: false,
 };
+const rustyKey: Item = {
+  id: asItemId('item_rusty'),
+  worldId: W,
+  label: 'rusty key',
+  shortDescription: '',
+  longDescription: '',
+  owner: { kind: 'location', id: LOC.id },
+  weight: 1,
+  hidden: false,
+};
+const silverKey: Item = {
+  id: asItemId('item_silver'),
+  worldId: W,
+  label: 'silver key',
+  shortDescription: '',
+  longDescription: '',
+  owner: { kind: 'location', id: LOC.id },
+  weight: 1,
+  hidden: false,
+};
 const exitN: Exit = {
   id: asExitId('e'),
   worldId: W,
@@ -92,19 +112,19 @@ describe('parse', () => {
   it('"look" with no target', () => {
     const r = parse('look', ACTOR, view(), inv());
     if (r.kind !== 'look') throw new Error();
-    expect(r.targetRef).toBeNull();
+    expect(r.targetItemId).toBeNull();
   });
 
-  it('"look at the fire map" strips article + preposition', () => {
+  it('"look at the fire map" resolves to the item id', () => {
     const r = parse('look at the fire map', ACTOR, view(), inv());
     if (r.kind !== 'look') throw new Error();
-    expect(r.targetRef).toBe('fire map');
+    expect(r.targetItemId).toBe(map.id);
   });
 
-  it('"take fire map" yields take action', () => {
+  it('"take fire map" yields take action with resolved id', () => {
     const r = parse('take fire map', ACTOR, view(), inv());
     if (r.kind !== 'take') throw new Error();
-    expect(r.itemRef).toBe('fire map');
+    expect(r.itemId).toBe(map.id);
   });
 
   it('"take" alone yields missing_argument', () => {
@@ -118,9 +138,44 @@ describe('parse', () => {
     expect(parse('inventory', ACTOR, view(), inv()).kind).toBe('inventory');
   });
 
-  it('"drop fire map" with map in inventory parses', () => {
+  it('"drop fire map" with map in inventory parses to a resolved id', () => {
     const r = parse('drop fire map', ACTOR, view([]), inv([map]));
     if (r.kind !== 'drop') throw new Error();
-    expect(r.itemRef).toBe('fire map');
+    expect(r.itemId).toBe(map.id);
+  });
+
+  it('"take fire map" with empty view yields no_such_target', () => {
+    const r = parse('take fire map', ACTOR, view([]), inv());
+    if (r.kind !== 'no_such_target') throw new Error();
+    expect(r.ref).toBe('fire map');
+  });
+
+  it('"drop fire map" with empty inventory yields no_such_target', () => {
+    const r = parse('drop fire map', ACTOR, view([]), inv());
+    if (r.kind !== 'no_such_target') throw new Error();
+    expect(r.ref).toBe('fire map');
+  });
+
+  it('"look unicorn" with no matching item yields no_such_target', () => {
+    const r = parse('look unicorn', ACTOR, view(), inv());
+    if (r.kind !== 'no_such_target') throw new Error();
+    expect(r.ref).toBe('unicorn');
+  });
+
+  it('"look around me" yields no_such_target (the bug repro)', () => {
+    const r = parse('look around me', ACTOR, view(), inv());
+    expect(r.kind).toBe('no_such_target');
+  });
+
+  it('"take key" with rusty + silver in view yields ambiguous_target', () => {
+    const r = parse('take key', ACTOR, view([rustyKey, silverKey]), inv());
+    if (r.kind !== 'ambiguous_target') throw new Error();
+    expect(r.candidates).toEqual(expect.arrayContaining(['rusty key', 'silver key']));
+  });
+
+  it('"take fire map" looks against view items, not inventory', () => {
+    // even if the actor is "carrying" a fire map, parser searches view for take
+    const r = parse('take fire map', ACTOR, view([]), inv([map]));
+    expect(r.kind).toBe('no_such_target');
   });
 });

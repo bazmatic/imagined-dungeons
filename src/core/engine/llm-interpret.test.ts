@@ -55,12 +55,28 @@ describe('llmInterpret', () => {
     expect(r).toEqual({ kind: 'move', actorId: paff.id, direction: 'south' });
   });
 
-  it('returns a take Action carrying the model itemRef verbatim', async () => {
+  it('resolves the model itemRef to an itemId for take', async () => {
     const llm = makeFakeLanguageModel({
       responder: () => respond({ kind: 'take', itemRef: 'fire map' }),
     });
     const r = await llmInterpret('grab the fire map', paff, view, [], llm);
-    expect(r).toEqual({ kind: 'take', actorId: paff.id, itemRef: 'fire map' });
+    expect(r).toEqual({ kind: 'take', actorId: paff.id, itemId: map.id });
+  });
+
+  it('returns null when the model returns an unresolvable itemRef', async () => {
+    const llm = makeFakeLanguageModel({
+      responder: () => respond({ kind: 'take', itemRef: 'unicorn' }),
+    });
+    const r = await llmInterpret('grab the unicorn', paff, view, [], llm);
+    expect(r).toBeNull();
+  });
+
+  it('returns a look with targetItemId=null for look(targetRef=null)', async () => {
+    const llm = makeFakeLanguageModel({
+      responder: () => respond({ kind: 'look', targetRef: null }),
+    });
+    const r = await llmInterpret('look around me', paff, view, [], llm);
+    expect(r).toEqual({ kind: 'look', actorId: paff.id, targetItemId: null });
   });
 
   it('returns null on the unknown variant', async () => {

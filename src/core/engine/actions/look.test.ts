@@ -47,34 +47,22 @@ describe('handleLook', () => {
       items: [map],
       agents: [paff],
     });
-    const r = await handleLook({ kind: 'look', actorId: paff.id, targetRef: null }, repo);
+    const r = await handleLook({ kind: 'look', actorId: paff.id, targetItemId: null }, repo);
     if (!r.ok) throw new Error();
     expect(r.value.render).toContain('The Goblet');
     expect(r.value.render).toContain('A tavern.');
     expect(r.value.render).toContain('fire map');
   });
 
-  it('with target = fire map, returns its long description', async () => {
+  it('with a resolved item id, returns its long description', async () => {
     const repo = new MemoryRepository(W, {
       locations: [loc],
       exits: [],
       items: [map],
       agents: [paff],
     });
-    const r = await handleLook({ kind: 'look', actorId: paff.id, targetRef: 'fire map' }, repo);
+    const r = await handleLook({ kind: 'look', actorId: paff.id, targetItemId: map.id }, repo);
     if (!r.ok) throw new Error();
     expect(r.value.render).toBe('A real-time map.');
-  });
-
-  it('with unknown target, returns no_such_target error', async () => {
-    const repo = new MemoryRepository(W, {
-      locations: [loc],
-      exits: [],
-      items: [map],
-      agents: [paff],
-    });
-    const r = await handleLook({ kind: 'look', actorId: paff.id, targetRef: 'unicorn' }, repo);
-    if (r.ok) throw new Error();
-    expect(r.error).toMatch(/unicorn/);
   });
 });
