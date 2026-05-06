@@ -1,15 +1,8 @@
 import type { Direction } from './entities';
 import type { AgentId, EventId, ItemId, LocationId, WorldId } from './ids';
+import { EventKind } from './kinds';
 
-export type EventKind =
-  | 'move'
-  | 'take'
-  | 'drop'
-  | 'look'
-  | 'inventory'
-  | 'failed'
-  | 'speak'
-  | 'attack';
+export { EventKind } from './kinds';
 
 export interface BaseEvent {
   readonly id: EventId;
@@ -36,4 +29,7 @@ export type DomainEvent =
       damageDealt: number;
     });
 
-export const NARRATED_EVENT_KINDS: ReadonlySet<EventKind> = new Set<EventKind>(['speak', 'attack']);
+export const NARRATED_EVENT_KINDS: ReadonlySet<EventKind> = new Set<EventKind>([
+  EventKind.Speak,
+  EventKind.Attack,
+]);

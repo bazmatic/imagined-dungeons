@@ -1,29 +1,7 @@
 import type { AgentId, ExitId, ItemId, LocationId, WorldId } from './ids';
+import type { Direction } from './kinds';
 
-export type Direction =
-  | 'north'
-  | 'south'
-  | 'east'
-  | 'west'
-  | 'northeast'
-  | 'northwest'
-  | 'southeast'
-  | 'southwest'
-  | 'up'
-  | 'down';
-
-export const ALL_DIRECTIONS: readonly Direction[] = [
-  'north',
-  'south',
-  'east',
-  'west',
-  'northeast',
-  'northwest',
-  'southeast',
-  'southwest',
-  'up',
-  'down',
-];
+export { ALL_DIRECTIONS, Direction } from './kinds';
 
 export type Owner =
   | { kind: 'location'; id: LocationId }
