@@ -4,6 +4,7 @@ import { openDb } from '@infra/db';
 import { BURNING_DISTRICT_WORLD_ID, seedIfEmpty } from '@infra/seed/seeder';
 import { SqliteRepository } from '@infra/sqlite-repository';
 import { describe, expect, it } from 'vitest';
+import { makeFakeLanguageModel } from '../helpers/fake-language-model';
 
 const PAFF = asAgentId('char_39322');
 
@@ -60,6 +61,65 @@ describe('full flow against seeded burning district', () => {
       expect(inv.render.toLowerCase()).toContain('fire map');
       const drop = await runTurn(PAFF, 'drop fire map', repo);
       expect(drop.render.toLowerCase()).toBe('dropped: fire map.');
+    } finally {
+      h.close();
+    }
+  });
+
+  it('"talk to spark, hello" runs end-to-end and persists narrations for every witness', async () => {
+    const h = openDb(':memory:');
+    try {
+      await seedIfEmpty(h.db);
+      const repo = new SqliteRepository(h.db, BURNING_DISTRICT_WORLD_ID);
+      const llm = makeFakeLanguageModel({
+        textResponder: (req) =>
+          req.user.includes('Observer: Paff')
+            ? 'You greet Spark warmly.'
+            : 'Paff offers you a warm greeting.',
+      });
+      const r = await runTurn(PAFF, 'say hello', repo, { llm });
+      expect(r.events).toHaveLength(1);
+      const event = r.events[0];
+      if (!event || event.kind !== 'speak') throw new Error('expected speak event');
+      expect(event.narrations).toBeDefined();
+      // Every witness has a narration.
+      for (const witnessId of event.witnesses) {
+        expect(event.narrations?.[witnessId]).toBeTruthy();
+      }
+      // Persisted with narrations.
+      const recent = await repo.recentEvents(5);
+      const persisted = recent[recent.length - 1];
+      if (!persisted || persisted.kind !== 'speak') throw new Error('expected persisted speak');
+      expect(persisted.narrations).toBeDefined();
+    } finally {
+      h.close();
+    }
+  });
+
+  it('"attack spark" runs end-to-end with a determined outcome and reduced HP on hit', async () => {
+    const h = openDb(':memory:');
+    try {
+      await seedIfEmpty(h.db);
+      const repo = new SqliteRepository(h.db, BURNING_DISTRICT_WORLD_ID);
+      const paff = await repo.getAgent(PAFF);
+      const here = await repo.agentsAt(paff.locationId);
+      const spark = here.find((a) => a.label === 'Spark');
+      if (!spark) throw new Error('Spark not seeded in starting room');
+      const r = await runTurn(PAFF, 'attack spark', repo);
+      expect(r.events).toHaveLength(1);
+      const event = r.events[0];
+      if (!event || event.kind !== 'attack') throw new Error('expected attack event');
+      const after = await repo.getAgent(spark.id);
+      if (event.outcome === 'hit') {
+        expect(after.hp).toBeLessThan(spark.hp);
+      } else {
+        expect(after.hp).toBe(spark.hp);
+      }
+      // The mechanical narration should be persisted on the event for both witnesses.
+      expect(event.narrations?.[PAFF]).toBeTruthy();
+      expect(event.narrations?.[spark.id]).toBeTruthy();
+      // The render returned to the actor matches the actor's narration.
+      expect(r.render).toBe(event.narrations?.[PAFF]);
     } finally {
       h.close();
     }

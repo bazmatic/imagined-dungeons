@@ -4,15 +4,17 @@ A generative, multi-agent text adventure engine. The world's *structure* is stor
 
 This repository is the staged build-out of the design in [abstract-design.md](abstract-design.md), beginning with a fully deterministic core and adding generative layers one slice at a time.
 
-## Status — Slice 1 (current)
+## Status — Slice 3 (current)
 
-A classic, fully mechanical text adventure for **The Burning District** — playable, type-safe, persistent, and serving as the foundation for every subsequent slice.
+The deterministic core of slices 1–2 plus narrated action types. The closed action vocabulary now includes `speak` and `attack`, and a Narrator role produces observer-specific prose for those events. Mechanical actions (`move`/`look`/`take`/`drop`/`inventory`) stay mechanical.
 
-- Engine: parse → validate → mutate → emit event → render
-- Verbs: `move` / `look` / `take` / `drop` / `inventory` (with the obvious aliases)
-- 16 locations, 31 exits, 20 items, 1 player + 14 inert NPCs, seeded from [burning-district-data.md](burning-district-data.md)
-- 47 tests, TypeScript strict, biome clean
-- No language model calls anywhere — that comes in slice 2
+- Engine: parse → validate → mutate → emit event → narrate (per witness) → render
+- Verbs: `move` / `look` / `take` / `drop` / `inventory` / `speak` (`say`, `tell`, `talk`) / `attack` (`kill`, `fight`)
+- LLM-backed Interpreter (slice 2) extended with `speak` and `attack`
+- LLM-backed Narrator with mechanical fallback templates when `OPENAI_API_KEY` is unset or the model errors
+- Combat is deterministic from `actor.damage` vs `target.defense` (no randomness in state transitions)
+- Per-witness narrations are persisted on `events.narrations`
+- 136 tests, TypeScript strict, biome clean
 
 ## Stack
 
