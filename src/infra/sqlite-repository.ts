@@ -12,14 +12,15 @@ import {
   asItemId,
   asLocationId,
 } from '@core/domain/ids';
+import { OwnerKind } from '@core/domain/kinds';
 import type { Repository } from '@core/engine/repository';
 import { and, eq } from 'drizzle-orm';
 import type { DB } from './db';
 import * as schema from './schema';
 
-const ownerOf = (kind: 'location' | 'agent' | 'item', id: string): Owner => {
-  if (kind === 'location') return { kind, id: asLocationId(id) };
-  if (kind === 'agent') return { kind, id: asAgentId(id) };
+const ownerOf = (kind: OwnerKind, id: string): Owner => {
+  if (kind === OwnerKind.Location) return { kind, id: asLocationId(id) };
+  if (kind === OwnerKind.Agent) return { kind, id: asAgentId(id) };
   return { kind, id: asItemId(id) };
 };
 
