@@ -16,7 +16,7 @@
     "lint": "biome check .",
     "format": "biome format --write .",
     "seed:gen": "tsx scripts/parse-world.ts",
-    "test:llm": "vitest run tests/integration/openai-smoke.test.ts"
+    "test:llm": "vitest run --config vitest.smoke.config.ts"
   },
   "dependencies": {
     "@tanstack/react-router": "^1.169.0",
