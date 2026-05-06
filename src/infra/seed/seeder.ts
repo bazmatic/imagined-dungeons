@@ -1,13 +1,35 @@
 import { type WorldId, asWorldId } from '@core/domain/ids';
+import { inArray } from 'drizzle-orm';
 import type { DB } from '../db';
 import * as schema from '../schema';
 import { BURNING_DISTRICT } from './burning-district';
 
 export const BURNING_DISTRICT_WORLD_ID: WorldId = asWorldId('w_burning_district');
 
+/**
+ * Slice 4 introduced autonomous NPCs but the seed module is regenerated only
+ * via `pnpm seed:gen`, and existing dev DBs were seeded before any NPC was
+ * flagged autonomous. This migration brings any already-seeded world up to
+ * the current `autonomous` roster without forcing a manual delete of
+ * `imagined-dungeons.db`.
+ *
+ * Idempotent: re-running it on an already-correct DB is a no-op.
+ */
+async function ensureAutonomousFlags(db: DB): Promise<void> {
+  const targetIds = BURNING_DISTRICT.agents.filter((a) => a.autonomous).map((a) => a.id);
+  if (targetIds.length === 0) return;
+  await db
+    .update(schema.agents)
+    .set({ autonomous: true })
+    .where(inArray(schema.agents.id, targetIds));
+}
+
 export async function seedIfEmpty(db: DB): Promise<void> {
   const existing = await db.select().from(schema.worlds);
-  if (existing.length > 0) return;
+  if (existing.length > 0) {
+    await ensureAutonomousFlags(db);
+    return;
+  }
 
   const W = BURNING_DISTRICT_WORLD_ID;
   await db.insert(schema.worlds).values({ id: W, label: 'The Burning District', rngSeed: 1 });

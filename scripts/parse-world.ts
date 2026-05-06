@@ -143,24 +143,42 @@ const player = playerRows.map((r) => ({
   longDescription: '',
 }));
 
+/**
+ * Initial autonomous-NPC roster (slice 4).
+ *
+ * Two NPCs tick under their own steam:
+ *   - Spark (`char_13498`) — the player meets them first in the Flaming Goblet,
+ *     so the autonomous-NPC behaviour is visible from turn one.
+ *   - Uncle Bob (`char_62103`) — placed in Burning Street, a high-traffic hub
+ *     connecting Tavern, Salvagers' Camp, Zezran's House, the Alley, and Ember
+ *     Avenue. The player is likely to encounter him often.
+ *
+ * The list is intentionally short to honour §12's "bounded model usage per
+ * turn" — most NPCs stay passive until later slices broaden the scheduler.
+ */
+const AUTONOMOUS_NPC_IDS: ReadonlySet<string> = new Set(['char_13498', 'char_62103']);
+
 const npcs = npcRows
   .filter((r) => backtickInner(r.ID ?? '') !== 'system')
   // Lines like the row for `system` have empty location dashes — skip those too
   .filter((r) => backtickInner(r.Location ?? '').startsWith('loc_'))
-  .map((r) => ({
-    id: backtickInner(r.ID ?? ''),
-    label: stripBold(r.Name ?? ''),
-    locationId: backtickInner(r.Location ?? ''),
-    hp: num(r.HP ?? '', 10),
-    damage: num(r.DMG ?? '', 1),
-    defense: num(r.DEF ?? '', 10),
-    capacity: 10,
-    mood: r.Mood || null,
-    goal: r.Goal || null,
-    autonomous: false,
-    shortDescription: '',
-    longDescription: '',
-  }));
+  .map((r) => {
+    const id = backtickInner(r.ID ?? '');
+    return {
+      id,
+      label: stripBold(r.Name ?? ''),
+      locationId: backtickInner(r.Location ?? ''),
+      hp: num(r.HP ?? '', 10),
+      damage: num(r.DMG ?? '', 1),
+      defense: num(r.DEF ?? '', 10),
+      capacity: 10,
+      mood: r.Mood || null,
+      goal: r.Goal || null,
+      autonomous: AUTONOMOUS_NPC_IDS.has(id),
+      shortDescription: '',
+      longDescription: '',
+    };
+  });
 
 const agents = [...player, ...npcs];
 
