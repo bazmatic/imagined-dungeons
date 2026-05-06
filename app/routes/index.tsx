@@ -21,11 +21,13 @@ function Page() {
   const [busy, setBusy] = useState(false);
   const idRef = useRef(1);
   const endRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: scroll-on-update is the intent
+  // biome-ignore lint/correctness/useExhaustiveDependencies: scroll + refocus on update is the intent
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [lines]);
+    if (!busy) inputRef.current?.focus();
+  }, [lines, busy]);
 
   async function handleSubmit(e: React.FormEvent): Promise<void> {
     e.preventDefault();
@@ -61,6 +63,9 @@ function Page() {
       <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 8, marginTop: 12 }}>
         <span style={{ alignSelf: 'center', color: '#9aff9a' }}>&gt;</span>
         <input
+          ref={inputRef}
+          // biome-ignore lint/a11y/noAutofocus: single-input game prompt — focus is the entire UX
+          autoFocus
           value={input}
           onChange={(e) => setInput(e.target.value)}
           disabled={busy}
