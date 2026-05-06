@@ -2,10 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { PLAYER_ACTION_SCHEMA, validatePlayerAction } from './llm-output';
 
 describe('PLAYER_ACTION_SCHEMA', () => {
-  it('is an object schema with strict additionalProperties', () => {
+  it('is a strict flat object compatible with OpenAI structured outputs', () => {
     expect(PLAYER_ACTION_SCHEMA.type).toBe('object');
     expect(PLAYER_ACTION_SCHEMA.additionalProperties).toBe(false);
-    expect(PLAYER_ACTION_SCHEMA.oneOf?.length).toBe(6);
+    // Strict mode forbids oneOf at the root.
+    expect(PLAYER_ACTION_SCHEMA.oneOf).toBeUndefined();
+    // Strict mode requires every property to also appear in `required`.
+    const props = Object.keys(PLAYER_ACTION_SCHEMA.properties ?? {});
+    expect(new Set(PLAYER_ACTION_SCHEMA.required)).toEqual(new Set(props));
+    expect(props).toEqual(
+      expect.arrayContaining(['kind', 'direction', 'targetRef', 'itemRef', 'reason']),
+    );
   });
 });
 

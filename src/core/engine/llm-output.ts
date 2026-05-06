@@ -14,63 +14,27 @@ const DIRECTIONS: readonly Direction[] = [
   'down',
 ];
 
+const KINDS = ['move', 'look', 'take', 'drop', 'inventory', 'unknown'] as const;
+type Kind = (typeof KINDS)[number];
+
+/**
+ * OpenAI strict structured-outputs mode forbids `oneOf` / `anyOf` and
+ * requires every property listed in `properties` to also be listed in
+ * `required`. So the schema is a single flat object with a `kind`
+ * discriminator and union-typed payload fields. Fields irrelevant to a
+ * given `kind` are sent as `null`; the validator ignores them.
+ */
 export const PLAYER_ACTION_SCHEMA: JsonSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['kind'],
-  oneOf: [
-    {
-      type: 'object',
-      additionalProperties: false,
-      required: ['kind', 'direction'],
-      properties: {
-        kind: { const: 'move' },
-        direction: { enum: DIRECTIONS },
-      },
-    },
-    {
-      type: 'object',
-      additionalProperties: false,
-      required: ['kind', 'targetRef'],
-      properties: {
-        kind: { const: 'look' },
-        targetRef: { type: ['string', 'null'] as const },
-      },
-    },
-    {
-      type: 'object',
-      additionalProperties: false,
-      required: ['kind', 'itemRef'],
-      properties: {
-        kind: { const: 'take' },
-        itemRef: { type: 'string' },
-      },
-    },
-    {
-      type: 'object',
-      additionalProperties: false,
-      required: ['kind', 'itemRef'],
-      properties: {
-        kind: { const: 'drop' },
-        itemRef: { type: 'string' },
-      },
-    },
-    {
-      type: 'object',
-      additionalProperties: false,
-      required: ['kind'],
-      properties: { kind: { const: 'inventory' } },
-    },
-    {
-      type: 'object',
-      additionalProperties: false,
-      required: ['kind', 'reason'],
-      properties: {
-        kind: { const: 'unknown' },
-        reason: { type: 'string' },
-      },
-    },
-  ],
+  required: ['kind', 'direction', 'targetRef', 'itemRef', 'reason'],
+  properties: {
+    kind: { enum: [...KINDS] },
+    direction: { type: ['string', 'null'], enum: [...DIRECTIONS, null] },
+    targetRef: { type: ['string', 'null'] },
+    itemRef: { type: ['string', 'null'] },
+    reason: { type: ['string', 'null'] },
+  },
 };
 
 export const PLAYER_ACTION_SCHEMA_NAME = 'PlayerActionResponse';
@@ -94,9 +58,14 @@ const isRecord = (v: unknown): v is Record<string, unknown> =>
 const isDirection = (v: unknown): v is Direction =>
   typeof v === 'string' && (DIRECTIONS as readonly string[]).includes(v);
 
+const isKind = (v: unknown): v is Kind =>
+  typeof v === 'string' && (KINDS as readonly string[]).includes(v);
+
 export function validatePlayerAction(input: unknown): ValidatedPlayerAction {
   if (!isRecord(input)) return { kind: 'invalid' };
   const { kind } = input;
+  if (!isKind(kind)) return { kind: 'invalid' };
+
   switch (kind) {
     case 'move': {
       const direction = input.direction;
@@ -127,7 +96,5 @@ export function validatePlayerAction(input: unknown): ValidatedPlayerAction {
       if (typeof reason !== 'string') return { kind: 'invalid' };
       return { kind: 'unknown', reason };
     }
-    default:
-      return { kind: 'invalid' };
   }
 }
