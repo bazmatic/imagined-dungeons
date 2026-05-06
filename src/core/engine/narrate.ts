@@ -2,6 +2,7 @@ import type { Agent, Location } from '@core/domain/entities';
 import type { DomainEvent } from '@core/domain/events';
 import { AttackOutcome, EventKind } from '@core/domain/kinds';
 import type { LanguageModel } from './language-model';
+import { recallFor } from './memory';
 import type { Repository } from './repository';
 import { renderAttackMechanical, renderSpeakMechanical } from './templates';
 
@@ -99,12 +100,9 @@ export async function narrate(
 
   if (!llm) return narrateMechanical(ctx);
 
-  // Minimal recent memory: last few events the observer witnessed.
-  const recent = await repo.recentEvents(10);
-  const memory = recent
-    .filter((e) => e.witnesses.some((w) => w === observer.id))
-    .slice(-3)
-    .map(summariseEvent);
+  // Per-agent memory (abstract-design §8): perception-gated, recent slice.
+  const recalled = await recallFor(observer.id, repo, 3);
+  const memory = recalled.map(summariseEvent);
 
   try {
     const prose = await llm.completeText({
