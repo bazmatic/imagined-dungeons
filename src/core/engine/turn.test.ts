@@ -108,3 +108,55 @@ describe('runTurn with injected parse', () => {
     expect(r.render.toLowerCase()).toContain('carrying');
   });
 });
+
+describe('runTurn with narrated events', () => {
+  const spark: Agent = {
+    id: asAgentId('char_spark'),
+    worldId: W,
+    label: 'Spark',
+    shortDescription: '',
+    longDescription: '',
+    locationId: A,
+    hp: 10,
+    damage: 1,
+    defense: 4,
+    capacity: 10,
+    mood: 'curious',
+    goal: 'observe',
+    autonomous: false,
+  };
+
+  it('populates per-witness narrations on a speak event (mechanical fallback)', async () => {
+    const repo = new MemoryRepository(W, {
+      locations: [locA, locB],
+      exits: [],
+      items: [],
+      agents: [paff, spark],
+    });
+    const r = await runTurn(paff.id, 'say hello', repo);
+    expect(r.events).toHaveLength(1);
+    const event = r.events[0];
+    if (!event || event.kind !== 'speak') throw new Error('expected speak event');
+    expect(event.narrations).toBeDefined();
+    expect(event.narrations?.[paff.id]).toContain('You say');
+    expect(event.narrations?.[spark.id]).toContain('Paff says');
+    // Render is the actor's narration.
+    expect(r.render).toBe(event.narrations?.[paff.id]);
+  });
+
+  it('persists the event with narrations exactly once', async () => {
+    const repo = new MemoryRepository(W, {
+      locations: [locA, locB],
+      exits: [],
+      items: [],
+      agents: [paff, spark],
+    });
+    await runTurn(paff.id, 'say hello', repo);
+    const events = await repo.recentEvents(10);
+    expect(events).toHaveLength(1);
+    const event = events[0];
+    if (!event || event.kind !== 'speak') throw new Error('expected speak');
+    expect(event.narrations?.[paff.id]).toBeTruthy();
+    expect(event.narrations?.[spark.id]).toBeTruthy();
+  });
+});
