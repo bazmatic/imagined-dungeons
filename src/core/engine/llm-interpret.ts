@@ -1,5 +1,6 @@
 import type { Action } from '@core/domain/actions';
 import type { Agent, Item } from '@core/domain/entities';
+import { ActionKind } from '@core/domain/kinds';
 import type { LanguageModel } from './language-model';
 import {
   PLAYER_ACTION_SCHEMA,
@@ -25,42 +26,42 @@ export async function llmInterpret(
   });
   const validated = validatePlayerAction(response.parsed);
   switch (validated.kind) {
-    case 'move':
-      return { kind: 'move', actorId: actor.id, direction: validated.direction };
-    case 'look': {
+    case ActionKind.Move:
+      return { kind: ActionKind.Move, actorId: actor.id, direction: validated.direction };
+    case ActionKind.Look: {
       if (validated.targetRef === null) {
-        return { kind: 'look', actorId: actor.id, targetItemId: null };
+        return { kind: ActionKind.Look, actorId: actor.id, targetItemId: null };
       }
       const r = resolveItem(validated.targetRef, [...view.items, ...inventory]);
       if (!r.ok) return null;
-      return { kind: 'look', actorId: actor.id, targetItemId: r.item.id };
+      return { kind: ActionKind.Look, actorId: actor.id, targetItemId: r.item.id };
     }
-    case 'take': {
+    case ActionKind.Take: {
       const r = resolveItem(validated.itemRef, view.items);
       if (!r.ok) return null;
-      return { kind: 'take', actorId: actor.id, itemId: r.item.id };
+      return { kind: ActionKind.Take, actorId: actor.id, itemId: r.item.id };
     }
-    case 'drop': {
+    case ActionKind.Drop: {
       const r = resolveItem(validated.itemRef, inventory);
       if (!r.ok) return null;
-      return { kind: 'drop', actorId: actor.id, itemId: r.item.id };
+      return { kind: ActionKind.Drop, actorId: actor.id, itemId: r.item.id };
     }
-    case 'inventory':
-      return { kind: 'inventory', actorId: actor.id };
-    case 'speak': {
+    case ActionKind.Inventory:
+      return { kind: ActionKind.Inventory, actorId: actor.id };
+    case ActionKind.Speak: {
       const r = resolveAgent(validated.targetAgentRef, view.agents);
       if (!r.ok) return null;
       return {
-        kind: 'speak',
+        kind: ActionKind.Speak,
         actorId: actor.id,
         targetAgentId: r.agent.id,
         utterance: validated.utterance,
       };
     }
-    case 'attack': {
+    case ActionKind.Attack: {
       const r = resolveAgent(validated.targetAgentRef, view.agents);
       if (!r.ok) return null;
-      return { kind: 'attack', actorId: actor.id, targetAgentId: r.agent.id };
+      return { kind: ActionKind.Attack, actorId: actor.id, targetAgentId: r.agent.id };
     }
     case 'unknown':
     case 'invalid':

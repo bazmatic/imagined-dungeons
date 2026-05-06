@@ -1,20 +1,17 @@
 import type { Direction } from '@core/domain/entities';
+import { ALL_DIRECTIONS, ActionKind } from '@core/domain/kinds';
 import type { JsonSchema } from './language-model';
 
-const DIRECTIONS: readonly Direction[] = [
-  'north',
-  'south',
-  'east',
-  'west',
-  'northeast',
-  'northwest',
-  'southeast',
-  'southwest',
-  'up',
-  'down',
-];
+const DIRECTIONS: readonly Direction[] = ALL_DIRECTIONS;
 
-const KINDS = ['move', 'look', 'take', 'drop', 'inventory', 'speak', 'attack', 'unknown'] as const;
+/**
+ * Kinds the LLM can emit. ActionKind plus an extra `unknown` for inputs the
+ * LLM cannot map. (`invalid` is internal to the validator and not part of the
+ * wire schema.)
+ */
+const UnknownKind = 'unknown' as const;
+const InvalidKind = 'invalid' as const;
+const KINDS = [...Object.values(ActionKind), UnknownKind] as const;
 type Kind = (typeof KINDS)[number];
 
 /**
@@ -66,57 +63,57 @@ const isKind = (v: unknown): v is Kind =>
   typeof v === 'string' && (KINDS as readonly string[]).includes(v);
 
 export function validatePlayerAction(input: unknown): ValidatedPlayerAction {
-  if (!isRecord(input)) return { kind: 'invalid' };
+  if (!isRecord(input)) return { kind: InvalidKind };
   const { kind } = input;
-  if (!isKind(kind)) return { kind: 'invalid' };
+  if (!isKind(kind)) return { kind: InvalidKind };
 
   switch (kind) {
-    case 'move': {
+    case ActionKind.Move: {
       const direction = input.direction;
-      if (!isDirection(direction)) return { kind: 'invalid' };
-      return { kind: 'move', direction };
+      if (!isDirection(direction)) return { kind: InvalidKind };
+      return { kind: ActionKind.Move, direction };
     }
-    case 'look': {
+    case ActionKind.Look: {
       const targetRef = input.targetRef;
       if (targetRef !== null && typeof targetRef !== 'string') {
-        return { kind: 'invalid' };
+        return { kind: InvalidKind };
       }
-      return { kind: 'look', targetRef };
+      return { kind: ActionKind.Look, targetRef };
     }
-    case 'take': {
+    case ActionKind.Take: {
       const itemRef = input.itemRef;
-      if (typeof itemRef !== 'string' || itemRef.length === 0) return { kind: 'invalid' };
-      return { kind: 'take', itemRef };
+      if (typeof itemRef !== 'string' || itemRef.length === 0) return { kind: InvalidKind };
+      return { kind: ActionKind.Take, itemRef };
     }
-    case 'drop': {
+    case ActionKind.Drop: {
       const itemRef = input.itemRef;
-      if (typeof itemRef !== 'string' || itemRef.length === 0) return { kind: 'invalid' };
-      return { kind: 'drop', itemRef };
+      if (typeof itemRef !== 'string' || itemRef.length === 0) return { kind: InvalidKind };
+      return { kind: ActionKind.Drop, itemRef };
     }
-    case 'inventory':
-      return { kind: 'inventory' };
-    case 'speak': {
+    case ActionKind.Inventory:
+      return { kind: ActionKind.Inventory };
+    case ActionKind.Speak: {
       const targetAgentRef = input.targetAgentRef;
       const utterance = input.utterance;
       if (typeof targetAgentRef !== 'string' || targetAgentRef.length === 0) {
-        return { kind: 'invalid' };
+        return { kind: InvalidKind };
       }
       if (typeof utterance !== 'string' || utterance.length === 0) {
-        return { kind: 'invalid' };
+        return { kind: InvalidKind };
       }
-      return { kind: 'speak', targetAgentRef, utterance };
+      return { kind: ActionKind.Speak, targetAgentRef, utterance };
     }
-    case 'attack': {
+    case ActionKind.Attack: {
       const targetAgentRef = input.targetAgentRef;
       if (typeof targetAgentRef !== 'string' || targetAgentRef.length === 0) {
-        return { kind: 'invalid' };
+        return { kind: InvalidKind };
       }
-      return { kind: 'attack', targetAgentRef };
+      return { kind: ActionKind.Attack, targetAgentRef };
     }
-    case 'unknown': {
+    case UnknownKind: {
       const reason = input.reason;
-      if (typeof reason !== 'string') return { kind: 'invalid' };
-      return { kind: 'unknown', reason };
+      if (typeof reason !== 'string') return { kind: InvalidKind };
+      return { kind: UnknownKind, reason };
     }
   }
 }

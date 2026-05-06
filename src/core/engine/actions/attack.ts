@@ -1,5 +1,6 @@
 import type { Action } from '@core/domain/actions';
 import type { DomainEvent } from '@core/domain/events';
+import { AttackOutcome, EventKind } from '@core/domain/kinds';
 import { Err, Ok, type Result } from '@core/domain/result';
 import { nextEventId } from '../ids-gen';
 import { perceive } from '../perception';
@@ -35,9 +36,9 @@ export async function handleAttack(
   const total = actor.damage + target.defense;
   const hit = total > 0 && rng.next() * total < actor.damage;
   let damageDealt = 0;
-  let outcome: 'hit' | 'miss' = 'miss';
+  let outcome: AttackOutcome = AttackOutcome.Miss;
   if (hit) {
-    outcome = 'hit';
+    outcome = AttackOutcome.Hit;
     damageDealt = rollD(rng, actor.damage);
     await repo.setAgentHp(target.id, target.hp - damageDealt);
   }
@@ -49,7 +50,7 @@ export async function handleAttack(
     id: nextEventId(),
     worldId: await repo.getWorldId(),
     actorId: action.actorId,
-    kind: 'attack',
+    kind: EventKind.Attack,
     witnesses,
     createdAt: new Date(),
     targetAgentId: action.targetAgentId,

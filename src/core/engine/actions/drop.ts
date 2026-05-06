@@ -1,5 +1,6 @@
 import type { Action } from '@core/domain/actions';
 import type { DomainEvent } from '@core/domain/events';
+import { EventKind, OwnerKind } from '@core/domain/kinds';
 import { Ok, type Result } from '@core/domain/result';
 import { nextEventId } from '../ids-gen';
 import type { Repository } from '../repository';
@@ -13,13 +14,13 @@ export async function handleDrop(
   const actor = await repo.getAgent(action.actorId);
   const item = await repo.getItem(action.itemId);
 
-  await repo.transferItem(item.id, { kind: 'location', id: actor.locationId });
+  await repo.transferItem(item.id, { kind: OwnerKind.Location, id: actor.locationId });
   const witnesses = (await repo.agentsAt(actor.locationId)).map((a) => a.id);
   const event: DomainEvent = {
     id: nextEventId(),
     worldId: await repo.getWorldId(),
     actorId: action.actorId,
-    kind: 'drop',
+    kind: EventKind.Drop,
     witnesses,
     createdAt: new Date(),
     itemId: item.id,

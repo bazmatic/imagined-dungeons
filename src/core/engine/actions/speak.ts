@@ -1,5 +1,6 @@
 import type { Action } from '@core/domain/actions';
 import type { DomainEvent } from '@core/domain/events';
+import { EventKind } from '@core/domain/kinds';
 import { Err, Ok, type Result } from '@core/domain/result';
 import { nextEventId } from '../ids-gen';
 import { perceive } from '../perception';
@@ -21,7 +22,7 @@ export async function handleSpeak(
     id: nextEventId(),
     worldId: await repo.getWorldId(),
     actorId: action.actorId,
-    kind: 'speak',
+    kind: EventKind.Speak,
     witnesses,
     createdAt: new Date(),
     targetAgentId: action.targetAgentId,

@@ -1,5 +1,6 @@
 import type { Action } from '@core/domain/actions';
 import type { DomainEvent } from '@core/domain/events';
+import { EventKind } from '@core/domain/kinds';
 import { Ok, type Result } from '@core/domain/result';
 import { nextEventId } from '../ids-gen';
 import { perceive } from '../perception';
@@ -24,7 +25,7 @@ export async function handleLook(
   if (action.targetItemId === null) {
     const event: DomainEvent = {
       ...baseEvent,
-      kind: 'look',
+      kind: EventKind.Look,
       locationId: view.location.id,
       targetItemId: null,
     };
@@ -35,7 +36,7 @@ export async function handleLook(
   const item = await repo.getItem(action.targetItemId);
   const event: DomainEvent = {
     ...baseEvent,
-    kind: 'look',
+    kind: EventKind.Look,
     locationId: view.location.id,
     targetItemId: item.id,
   };

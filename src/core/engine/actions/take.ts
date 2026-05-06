@@ -1,5 +1,6 @@
 import type { Action } from '@core/domain/actions';
 import type { DomainEvent } from '@core/domain/events';
+import { EventKind, OwnerKind } from '@core/domain/kinds';
 import { Err, Ok, type Result } from '@core/domain/result';
 import { nextEventId } from '../ids-gen';
 import { perceive } from '../perception';
@@ -14,19 +15,19 @@ export async function handleTake(
   const view = await perceive(action.actorId, repo);
   const item = await repo.getItem(action.itemId);
 
-  const carried = await repo.itemsOwnedBy({ kind: 'agent', id: action.actorId });
+  const carried = await repo.itemsOwnedBy({ kind: OwnerKind.Agent, id: action.actorId });
   const carriedWeight = carried.reduce((sum, i) => sum + i.weight, 0);
   if (carriedWeight + item.weight > view.actor.capacity) {
     return Err(`The ${item.label} is too heavy for you to carry right now.`);
   }
 
-  await repo.transferItem(item.id, { kind: 'agent', id: action.actorId });
+  await repo.transferItem(item.id, { kind: OwnerKind.Agent, id: action.actorId });
   const witnesses = (await repo.agentsAt(view.location.id)).map((a) => a.id);
   const event: DomainEvent = {
     id: nextEventId(),
     worldId: await repo.getWorldId(),
     actorId: action.actorId,
-    kind: 'take',
+    kind: EventKind.Take,
     witnesses,
     createdAt: new Date(),
     itemId: item.id,

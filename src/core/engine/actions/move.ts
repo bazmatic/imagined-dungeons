@@ -1,5 +1,6 @@
 import type { Action } from '@core/domain/actions';
 import type { DomainEvent } from '@core/domain/events';
+import { EventKind } from '@core/domain/kinds';
 import { Err, Ok, type Result } from '@core/domain/result';
 import { nextEventId } from '../ids-gen';
 import { perceive } from '../perception';
@@ -22,7 +23,7 @@ export async function handleMove(
     id: nextEventId(),
     worldId: await repo.getWorldId(),
     actorId: action.actorId,
-    kind: 'move',
+    kind: EventKind.Move,
     witnesses,
     createdAt: new Date(),
     from: view.location.id,

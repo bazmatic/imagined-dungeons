@@ -1,6 +1,7 @@
 import { NARRATED_EVENT_KINDS } from '@core/domain/events';
 import type { DomainEvent } from '@core/domain/events';
 import type { AgentId } from '@core/domain/ids';
+import { OwnerKind } from '@core/domain/kinds';
 import { dispatch } from './actions/registry';
 import type { LanguageModel } from './language-model';
 import { narrate } from './narrate';
@@ -36,7 +37,7 @@ export async function runTurn(
 
   const actor = await repo.getAgent(actorId);
   const view = await perceive(actorId, repo);
-  const inventory = await repo.itemsOwnedBy({ kind: 'agent', id: actorId });
+  const inventory = await repo.itemsOwnedBy({ kind: OwnerKind.Agent, id: actorId });
 
   const parsed = await parse(text, actor, view, inventory);
   if (!('actorId' in parsed)) {

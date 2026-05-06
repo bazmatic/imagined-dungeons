@@ -1,5 +1,6 @@
 import type { Action } from '@core/domain/actions';
 import type { DomainEvent } from '@core/domain/events';
+import { EventKind, OwnerKind } from '@core/domain/kinds';
 import { Ok, type Result } from '@core/domain/result';
 import { nextEventId } from '../ids-gen';
 import type { Repository } from '../repository';
@@ -10,12 +11,12 @@ export async function handleInventory(
   action: Extract<Action, { kind: 'inventory' }>,
   repo: Repository,
 ): Promise<Result<ActionOutcome, string>> {
-  const inventory = await repo.itemsOwnedBy({ kind: 'agent', id: action.actorId });
+  const inventory = await repo.itemsOwnedBy({ kind: OwnerKind.Agent, id: action.actorId });
   const event: DomainEvent = {
     id: nextEventId(),
     worldId: await repo.getWorldId(),
     actorId: action.actorId,
-    kind: 'inventory',
+    kind: EventKind.Inventory,
     witnesses: [action.actorId],
     createdAt: new Date(),
   };

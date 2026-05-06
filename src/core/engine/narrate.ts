@@ -1,5 +1,6 @@
 import type { Agent, Location } from '@core/domain/entities';
 import type { DomainEvent } from '@core/domain/events';
+import { AttackOutcome, EventKind } from '@core/domain/kinds';
 import type { LanguageModel } from './language-model';
 import type { Repository } from './repository';
 import { renderAttackMechanical, renderSpeakMechanical } from './templates';
@@ -37,10 +38,10 @@ function buildUserPrompt(ctx: NarrateContext, recentMemory: readonly string[]): 
   lines.push(`Location: ${location.label}`);
   lines.push(`Actor: ${actor.label}`);
   lines.push(`Target: ${target.label}`);
-  if (event.kind === 'speak') {
+  if (event.kind === EventKind.Speak) {
     lines.push('Action: speak');
     lines.push(`Utterance: "${event.utterance}"`);
-  } else if (event.kind === 'attack') {
+  } else if (event.kind === EventKind.Attack) {
     lines.push('Action: attack');
     lines.push(`Outcome: ${event.outcome}`);
     lines.push(`Damage dealt: ${event.damageDealt}`);
@@ -56,29 +57,30 @@ function buildUserPrompt(ctx: NarrateContext, recentMemory: readonly string[]): 
 
 function summariseEvent(event: DomainEvent): string {
   switch (event.kind) {
-    case 'move':
+    case EventKind.Move:
       return `${event.actorId} went ${event.direction}`;
-    case 'take':
+    case EventKind.Take:
       return `${event.actorId} took ${event.itemId}`;
-    case 'drop':
+    case EventKind.Drop:
       return `${event.actorId} dropped ${event.itemId}`;
-    case 'look':
+    case EventKind.Look:
       return `${event.actorId} looked around`;
-    case 'inventory':
+    case EventKind.Inventory:
       return `${event.actorId} checked inventory`;
-    case 'failed':
+    case EventKind.Failed:
       return `${event.actorId} attempted: ${event.attempted}`;
-    case 'speak':
+    case EventKind.Speak:
       return `${event.actorId} said "${event.utterance}" to ${event.targetAgentId}`;
-    case 'attack':
-      return `${event.actorId} attacked ${event.targetAgentId} (${event.outcome}${event.outcome === 'hit' ? `, ${event.damageDealt} dmg` : ''})`;
+    case EventKind.Attack:
+      return `${event.actorId} attacked ${event.targetAgentId} (${event.outcome}${event.outcome === AttackOutcome.Hit ? `, ${event.damageDealt} dmg` : ''})`;
   }
 }
 
 export function narrateMechanical(ctx: NarrateContext): string {
   const { event, observer, actor, target } = ctx;
-  if (event.kind === 'speak') return renderSpeakMechanical(event, actor, target, observer);
-  if (event.kind === 'attack') return renderAttackMechanical(event, actor, target, observer);
+  if (event.kind === EventKind.Speak) return renderSpeakMechanical(event, actor, target, observer);
+  if (event.kind === EventKind.Attack)
+    return renderAttackMechanical(event, actor, target, observer);
   // Other event kinds are not narrated; this is a defensive fallthrough.
   return '';
 }
@@ -89,7 +91,7 @@ export async function narrate(
   repo: Repository,
   llm: LanguageModel | null,
 ): Promise<string> {
-  if (event.kind !== 'speak' && event.kind !== 'attack') return '';
+  if (event.kind !== EventKind.Speak && event.kind !== EventKind.Attack) return '';
   const actor = await repo.getAgent(event.actorId);
   const target = await repo.getAgent(event.targetAgentId);
   const location = await repo.getLocation(actor.locationId);

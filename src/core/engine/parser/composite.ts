@@ -1,5 +1,6 @@
 import type { ParseError } from '@core/domain/actions';
 import type { Agent, Item } from '@core/domain/entities';
+import { ParseErrorKind } from '@core/domain/kinds';
 import type { LanguageModel } from '../language-model';
 import { llmInterpret } from '../llm-interpret';
 import { type ParseResult, parse as ruleParseDefault } from '../parser';
@@ -25,10 +26,10 @@ export interface CompositeParserDeps {
 }
 
 const FALLBACK_KINDS: ReadonlySet<ParseError['kind']> = new Set<ParseError['kind']>([
-  'unknown_verb',
-  'no_such_target',
-  'unknown_direction',
-  'missing_argument',
+  ParseErrorKind.UnknownVerb,
+  ParseErrorKind.NoSuchTarget,
+  ParseErrorKind.UnknownDirection,
+  ParseErrorKind.MissingArgument,
 ]);
 
 const shouldFallback = (e: ParseError): boolean => FALLBACK_KINDS.has(e.kind);

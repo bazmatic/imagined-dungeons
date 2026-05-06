@@ -1,6 +1,7 @@
 import type { ParseError } from '@core/domain/actions';
 import type { Agent, Direction, Item } from '@core/domain/entities';
 import type { DomainEvent } from '@core/domain/events';
+import { AttackOutcome, ParseErrorKind } from '@core/domain/kinds';
 import type { PerceptionView } from './perception';
 
 const list = (items: readonly { label: string }[]): string => items.map((i) => i.label).join(', ');
@@ -46,17 +47,17 @@ export function renderInventory(items: readonly Item[]): string {
 
 export function renderParseError(err: ParseError): string {
   switch (err.kind) {
-    case 'empty':
+    case ParseErrorKind.Empty:
       return 'Please type a command.';
-    case 'unknown_verb':
+    case ParseErrorKind.UnknownVerb:
       return `I don't know the verb "${err.verb}".`;
-    case 'missing_argument':
+    case ParseErrorKind.MissingArgument:
       return `The verb "${err.verb}" needs something to act on.`;
-    case 'unknown_direction':
+    case ParseErrorKind.UnknownDirection:
       return `"${err.raw}" isn't a direction I understand.`;
-    case 'no_such_target':
+    case ParseErrorKind.NoSuchTarget:
       return `You don't see any "${err.ref}" here.`;
-    case 'ambiguous_target':
+    case ParseErrorKind.AmbiguousTarget:
       return `Which do you mean — ${err.candidates.join(' or ')}?`;
   }
 }
@@ -90,7 +91,7 @@ export function renderAttackMechanical(
   const actorName = observer.id === actor.id ? 'You' : actor.label;
   const verb = observer.id === actor.id ? 'attack' : 'attacks';
   const targetName = observer.id === target.id ? 'you' : target.label;
-  if (event.outcome === 'hit') {
+  if (event.outcome === AttackOutcome.Hit) {
     const targetSubject = observer.id === target.id ? 'You take' : `${target.label} takes`;
     return `${actorName} ${verb} ${targetName}. Hit! ${targetSubject} ${event.damageDealt} damage.`;
   }

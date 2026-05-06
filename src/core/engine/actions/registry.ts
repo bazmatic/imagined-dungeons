@@ -1,4 +1,5 @@
 import type { Action } from '@core/domain/actions';
+import { ActionKind } from '@core/domain/kinds';
 import type { Result } from '@core/domain/result';
 import type { Repository } from '../repository';
 import { handleAttack } from './attack';
@@ -15,19 +16,19 @@ export async function dispatch(
   repo: Repository,
 ): Promise<Result<ActionOutcome, string>> {
   switch (action.kind) {
-    case 'move':
+    case ActionKind.Move:
       return handleMove(action, repo);
-    case 'look':
+    case ActionKind.Look:
       return handleLook(action, repo);
-    case 'take':
+    case ActionKind.Take:
       return handleTake(action, repo);
-    case 'drop':
+    case ActionKind.Drop:
       return handleDrop(action, repo);
-    case 'inventory':
+    case ActionKind.Inventory:
       return handleInventory(action, repo);
-    case 'speak':
+    case ActionKind.Speak:
       return handleSpeak(action, repo);
-    case 'attack':
+    case ActionKind.Attack:
       return handleAttack(action, repo);
   }
 }

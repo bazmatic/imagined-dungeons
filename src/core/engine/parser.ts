@@ -1,28 +1,29 @@
 import type { Action, ParseError } from '@core/domain/actions';
-import type { Agent, Direction, Item } from '@core/domain/entities';
+import type { Agent, Item } from '@core/domain/entities';
+import { ActionKind, Direction, ParseErrorKind } from '@core/domain/kinds';
 import type { PerceptionView } from './perception';
 
 const DIRECTION_ALIASES: Readonly<Record<string, Direction>> = {
-  n: 'north',
-  s: 'south',
-  e: 'east',
-  w: 'west',
-  ne: 'northeast',
-  nw: 'northwest',
-  se: 'southeast',
-  sw: 'southwest',
-  u: 'up',
-  d: 'down',
-  north: 'north',
-  south: 'south',
-  east: 'east',
-  west: 'west',
-  northeast: 'northeast',
-  northwest: 'northwest',
-  southeast: 'southeast',
-  southwest: 'southwest',
-  up: 'up',
-  down: 'down',
+  n: Direction.North,
+  s: Direction.South,
+  e: Direction.East,
+  w: Direction.West,
+  ne: Direction.Northeast,
+  nw: Direction.Northwest,
+  se: Direction.Southeast,
+  sw: Direction.Southwest,
+  u: Direction.Up,
+  d: Direction.Down,
+  north: Direction.North,
+  south: Direction.South,
+  east: Direction.East,
+  west: Direction.West,
+  northeast: Direction.Northeast,
+  northwest: Direction.Northwest,
+  southeast: Direction.Southeast,
+  southwest: Direction.Southwest,
+  up: Direction.Up,
+  down: Direction.Down,
 };
 
 const STOP_WORDS = new Set(['the', 'a', 'an', 'at', 'to', 'on']);
@@ -42,83 +43,84 @@ export function parse(
   inventory: readonly Item[],
 ): ParseResult {
   const toks = tokens(text);
-  if (toks.length === 0) return { kind: 'empty' };
+  if (toks.length === 0) return { kind: ParseErrorKind.Empty };
 
   const first = toks[0];
-  if (!first) return { kind: 'empty' };
+  if (!first) return { kind: ParseErrorKind.Empty };
 
   // Bare direction → move
   const bareDir = resolveDirection(first);
   if (bareDir && toks.length === 1) {
-    return { kind: 'move', actorId: actor.id, direction: bareDir };
+    return { kind: ActionKind.Move, actorId: actor.id, direction: bareDir };
   }
 
   switch (first) {
     case 'go':
     case 'move': {
-      if (toks.length < 2) return { kind: 'missing_argument', verb: first };
+      if (toks.length < 2) return { kind: ParseErrorKind.MissingArgument, verb: first };
       const raw = toks.slice(1).join(' ');
       const second = toks[1];
       const dir = second ? resolveDirection(second) : null;
-      if (!dir) return { kind: 'unknown_direction', raw };
-      return { kind: 'move', actorId: actor.id, direction: dir };
+      if (!dir) return { kind: ParseErrorKind.UnknownDirection, raw };
+      return { kind: ActionKind.Move, actorId: actor.id, direction: dir };
     }
 
     case 'look':
     case 'l': {
       const rest = stripStopWords(toks.slice(1));
-      if (rest.length === 0) return { kind: 'look', actorId: actor.id, targetItemId: null };
+      if (rest.length === 0)
+        return { kind: ActionKind.Look, actorId: actor.id, targetItemId: null };
       const ref = rest.join(' ');
       const r = resolveItem(ref, [...view.items, ...inventory]);
       if (!r.ok) return r.error;
-      return { kind: 'look', actorId: actor.id, targetItemId: r.item.id };
+      return { kind: ActionKind.Look, actorId: actor.id, targetItemId: r.item.id };
     }
 
     case 'take':
     case 'get':
     case 'pick': {
       const rest = stripStopWords(toks.slice(1).filter((t) => t !== 'up'));
-      if (rest.length === 0) return { kind: 'missing_argument', verb: 'take' };
+      if (rest.length === 0) return { kind: ParseErrorKind.MissingArgument, verb: 'take' };
       const ref = rest.join(' ');
       const r = resolveItem(ref, view.items);
       if (!r.ok) return r.error;
-      return { kind: 'take', actorId: actor.id, itemId: r.item.id };
+      return { kind: ActionKind.Take, actorId: actor.id, itemId: r.item.id };
     }
 
     case 'drop': {
       const rest = stripStopWords(toks.slice(1));
-      if (rest.length === 0) return { kind: 'missing_argument', verb: 'drop' };
+      if (rest.length === 0) return { kind: ParseErrorKind.MissingArgument, verb: 'drop' };
       const ref = rest.join(' ');
       const r = resolveItem(ref, inventory);
       if (!r.ok) return r.error;
-      return { kind: 'drop', actorId: actor.id, itemId: r.item.id };
+      return { kind: ActionKind.Drop, actorId: actor.id, itemId: r.item.id };
     }
 
     case 'inventory':
     case 'i':
     case 'inv':
-      return { kind: 'inventory', actorId: actor.id };
+      return { kind: ActionKind.Inventory, actorId: actor.id };
 
     case 'say': {
       // "say <utterance>" — utterance is everything after "say".
       // Optional implicit target: only one other agent in the room.
       const rest = toks.slice(1).join(' ').trim();
-      if (rest.length === 0) return { kind: 'missing_argument', verb: 'say' };
+      if (rest.length === 0) return { kind: ParseErrorKind.MissingArgument, verb: 'say' };
       // No comma form: target is the (sole) other agent in the room, if exactly one.
       if (view.agents.length === 0) {
-        return { kind: 'no_such_target', ref: '' };
+        return { kind: ParseErrorKind.NoSuchTarget, ref: '' };
       }
       if (view.agents.length > 1) {
         return {
-          kind: 'ambiguous_target',
+          kind: ParseErrorKind.AmbiguousTarget,
           ref: '',
           candidates: view.agents.map((a) => a.label),
         };
       }
       const target = view.agents[0];
-      if (!target) return { kind: 'no_such_target', ref: '' };
+      if (!target) return { kind: ParseErrorKind.NoSuchTarget, ref: '' };
       return {
-        kind: 'speak',
+        kind: ActionKind.Speak,
         actorId: actor.id,
         targetAgentId: target.id,
         utterance: text.trim().replace(/^say\s+/i, ''),
@@ -135,7 +137,7 @@ export function parse(
       const original = text.trim();
       // Find the original-cased remainder after the first whitespace.
       const afterVerb = original.replace(/^\S+\s*/, '').replace(/^to\s+/i, '');
-      if (afterVerb.length === 0) return { kind: 'missing_argument', verb: first };
+      if (afterVerb.length === 0) return { kind: ParseErrorKind.MissingArgument, verb: first };
 
       // Split on the first comma; everything before is target ref, after is utterance.
       const commaIdx = afterVerb.indexOf(',');
@@ -163,12 +165,12 @@ export function parse(
         }
       }
 
-      if (targetRef.length === 0) return { kind: 'missing_argument', verb: first };
+      if (targetRef.length === 0) return { kind: ParseErrorKind.MissingArgument, verb: first };
       const r = resolveAgent(targetRef, view.agents);
       if (!r.ok) return r.error;
-      if (utterance.length === 0) return { kind: 'missing_argument', verb: first };
+      if (utterance.length === 0) return { kind: ParseErrorKind.MissingArgument, verb: first };
       return {
-        kind: 'speak',
+        kind: ActionKind.Speak,
         actorId: actor.id,
         targetAgentId: r.agent.id,
         utterance,
@@ -179,19 +181,19 @@ export function parse(
     case 'kill':
     case 'fight': {
       const rest = stripStopWords(toks.slice(1));
-      if (rest.length === 0) return { kind: 'missing_argument', verb: first };
+      if (rest.length === 0) return { kind: ParseErrorKind.MissingArgument, verb: first };
       const ref = rest.join(' ');
       const r = resolveAgent(ref, view.agents);
       if (!r.ok) return r.error;
-      return { kind: 'attack', actorId: actor.id, targetAgentId: r.agent.id };
+      return { kind: ActionKind.Attack, actorId: actor.id, targetAgentId: r.agent.id };
     }
   }
 
   if (bareDir) {
-    return { kind: 'unknown_direction', raw: toks.join(' ') };
+    return { kind: ParseErrorKind.UnknownDirection, raw: toks.join(' ') };
   }
 
-  return { kind: 'unknown_verb', verb: first };
+  return { kind: ParseErrorKind.UnknownVerb, verb: first };
 }
 
 /**
@@ -212,7 +214,11 @@ export function resolveItem(
   if (exact.length > 1) {
     return {
       ok: false,
-      error: { kind: 'ambiguous_target', ref, candidates: exact.map((c) => c.label) },
+      error: {
+        kind: ParseErrorKind.AmbiguousTarget,
+        ref,
+        candidates: exact.map((c) => c.label),
+      },
     };
   }
   const prefix = candidates.filter((c) => c.label.toLowerCase().startsWith(needle));
@@ -223,7 +229,11 @@ export function resolveItem(
   if (prefix.length > 1) {
     return {
       ok: false,
-      error: { kind: 'ambiguous_target', ref, candidates: prefix.map((c) => c.label) },
+      error: {
+        kind: ParseErrorKind.AmbiguousTarget,
+        ref,
+        candidates: prefix.map((c) => c.label),
+      },
     };
   }
   const contains = candidates.filter((c) => c.label.toLowerCase().includes(needle));
@@ -234,10 +244,14 @@ export function resolveItem(
   if (contains.length > 1) {
     return {
       ok: false,
-      error: { kind: 'ambiguous_target', ref, candidates: contains.map((c) => c.label) },
+      error: {
+        kind: ParseErrorKind.AmbiguousTarget,
+        ref,
+        candidates: contains.map((c) => c.label),
+      },
     };
   }
-  return { ok: false, error: { kind: 'no_such_target', ref } };
+  return { ok: false, error: { kind: ParseErrorKind.NoSuchTarget, ref } };
 }
 
 /**
@@ -257,7 +271,11 @@ export function resolveAgent(
   if (exact.length > 1) {
     return {
       ok: false,
-      error: { kind: 'ambiguous_target', ref, candidates: exact.map((c) => c.label) },
+      error: {
+        kind: ParseErrorKind.AmbiguousTarget,
+        ref,
+        candidates: exact.map((c) => c.label),
+      },
     };
   }
   const prefix = candidates.filter((c) => c.label.toLowerCase().startsWith(needle));
@@ -268,7 +286,11 @@ export function resolveAgent(
   if (prefix.length > 1) {
     return {
       ok: false,
-      error: { kind: 'ambiguous_target', ref, candidates: prefix.map((c) => c.label) },
+      error: {
+        kind: ParseErrorKind.AmbiguousTarget,
+        ref,
+        candidates: prefix.map((c) => c.label),
+      },
     };
   }
   const contains = candidates.filter((c) => c.label.toLowerCase().includes(needle));
@@ -279,8 +301,12 @@ export function resolveAgent(
   if (contains.length > 1) {
     return {
       ok: false,
-      error: { kind: 'ambiguous_target', ref, candidates: contains.map((c) => c.label) },
+      error: {
+        kind: ParseErrorKind.AmbiguousTarget,
+        ref,
+        candidates: contains.map((c) => c.label),
+      },
     };
   }
-  return { ok: false, error: { kind: 'no_such_target', ref } };
+  return { ok: false, error: { kind: ParseErrorKind.NoSuchTarget, ref } };
 }
