@@ -90,6 +90,9 @@ export function renderAttackMechanical(
   const actorName = observer.id === actor.id ? 'You' : actor.label;
   const verb = observer.id === actor.id ? 'attack' : 'attacks';
   const targetName = observer.id === target.id ? 'you' : target.label;
-  const result = event.outcome === 'hit' ? 'Hit!' : 'Miss.';
-  return `${actorName} ${verb} ${targetName}. ${result}`;
+  if (event.outcome === 'hit') {
+    const targetSubject = observer.id === target.id ? 'You take' : `${target.label} takes`;
+    return `${actorName} ${verb} ${targetName}. Hit! ${targetSubject} ${event.damageDealt} damage.`;
+  }
+  return `${actorName} ${verb} ${targetName}. Miss.`;
 }

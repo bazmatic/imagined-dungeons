@@ -10,9 +10,7 @@ export async function seedIfEmpty(db: DB): Promise<void> {
   if (existing.length > 0) return;
 
   const W = BURNING_DISTRICT_WORLD_ID;
-  await db
-    .insert(schema.worlds)
-    .values({ id: W, label: 'The Burning District', rngSeed: 1 });
+  await db.insert(schema.worlds).values({ id: W, label: 'The Burning District', rngSeed: 1 });
 
   await db
     .insert(schema.locations)

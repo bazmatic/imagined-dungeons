@@ -29,6 +29,11 @@ export type DomainEvent =
   | (BaseEvent & { kind: 'inventory' })
   | (BaseEvent & { kind: 'failed'; attempted: string; reason: string })
   | (BaseEvent & { kind: 'speak'; targetAgentId: AgentId; utterance: string })
-  | (BaseEvent & { kind: 'attack'; targetAgentId: AgentId; outcome: 'hit' | 'miss' });
+  | (BaseEvent & {
+      kind: 'attack';
+      targetAgentId: AgentId;
+      outcome: 'hit' | 'miss';
+      damageDealt: number;
+    });
 
 export const NARRATED_EVENT_KINDS: ReadonlySet<EventKind> = new Set<EventKind>(['speak', 'attack']);

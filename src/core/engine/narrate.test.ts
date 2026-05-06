@@ -106,7 +106,7 @@ describe('narrate', () => {
     expect(prose).toBe('You say to Spark: "hello there"');
   });
 
-  it('renders attack hit/miss with the right shape mechanically', async () => {
+  it('renders attack hit/miss with damage info mechanically', async () => {
     const hit: Extract<DomainEvent, { kind: 'attack' }> = {
       id: asEventId('e2'),
       worldId: W,
@@ -116,10 +116,17 @@ describe('narrate', () => {
       createdAt: new Date(),
       targetAgentId: spark.id,
       outcome: 'hit',
+      damageDealt: 3,
     };
     const repo = repoOf();
-    expect(await narrate(hit, paff, repo, null)).toBe('You attack Spark. Hit!');
-    const miss: Extract<DomainEvent, { kind: 'attack' }> = { ...hit, outcome: 'miss' };
+    expect(await narrate(hit, paff, repo, null)).toBe(
+      'You attack Spark. Hit! Spark takes 3 damage.',
+    );
+    const miss: Extract<DomainEvent, { kind: 'attack' }> = {
+      ...hit,
+      outcome: 'miss',
+      damageDealt: 0,
+    };
     expect(await narrate(miss, spark, repo, null)).toBe('Paff attacks you. Miss.');
   });
 });

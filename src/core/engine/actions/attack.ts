@@ -4,19 +4,20 @@ import { Err, Ok, type Result } from '@core/domain/result';
 import { nextEventId } from '../ids-gen';
 import { perceive } from '../perception';
 import type { Repository } from '../repository';
+import { makeRng, rollD } from '../rng';
 import type { ActionOutcome } from './types';
 
 /**
- * Deterministic combat outcome.
+ * Probabilistic combat outcome, deterministic given the world's RNG seed.
  *
- * We compare the actor's `damage` to a threshold derived from the target's
- * `defense`. No randomness — the same inputs always produce the same result,
- * which keeps state transitions reproducible (per abstract-design §12).
+ * - To-hit: draw `roll = rng.next() * (damage + defense)`. Hit iff `roll < damage`.
+ *   That gives a hit probability of `damage / (damage + defense)`.
+ * - Damage on hit: uniform integer in [1, actor.damage] (rollD).
+ *
+ * State transitions stay reproducible (abstract-design §12) because the seed
+ * is part of world state — same seed + same inputs -> same outcome. The seed
+ * is advanced and persisted after every attack.
  */
-export function resolveAttackOutcome(actorDamage: number, targetDefense: number): 'hit' | 'miss' {
-  return actorDamage >= Math.ceil(targetDefense / 4) ? 'hit' : 'miss';
-}
-
 export async function handleAttack(
   action: Extract<Action, { kind: 'attack' }>,
   repo: Repository,
@@ -28,10 +29,20 @@ export async function handleAttack(
     return Err(`${target.label} isn't here.`);
   }
 
-  const outcome = resolveAttackOutcome(actor.damage, target.defense);
-  if (outcome === 'hit') {
-    await repo.setAgentHp(target.id, target.hp - actor.damage);
+  const seed = await repo.getRngSeed();
+  const rng = makeRng(seed);
+
+  const total = actor.damage + target.defense;
+  const hit = total > 0 && rng.next() * total < actor.damage;
+  let damageDealt = 0;
+  let outcome: 'hit' | 'miss' = 'miss';
+  if (hit) {
+    outcome = 'hit';
+    damageDealt = rollD(rng, actor.damage);
+    await repo.setAgentHp(target.id, target.hp - damageDealt);
   }
+
+  await repo.setRngSeed(rng.seed);
 
   const witnesses = (await repo.agentsAt(view.location.id)).map((a) => a.id);
   const event: DomainEvent = {
@@ -43,6 +54,7 @@ export async function handleAttack(
     createdAt: new Date(),
     targetAgentId: action.targetAgentId,
     outcome,
+    damageDealt,
   };
   // Placeholder render — runTurn replaces this with the actor's narration.
   return Ok({ render: '…', event });

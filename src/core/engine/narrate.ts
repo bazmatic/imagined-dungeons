@@ -43,6 +43,7 @@ function buildUserPrompt(ctx: NarrateContext, recentMemory: readonly string[]): 
   } else if (event.kind === 'attack') {
     lines.push('Action: attack');
     lines.push(`Outcome: ${event.outcome}`);
+    lines.push(`Damage dealt: ${event.damageDealt}`);
     lines.push(`Target HP after: ${target.hp}`);
   }
   if (recentMemory.length > 0) {
@@ -70,7 +71,7 @@ function summariseEvent(event: DomainEvent): string {
     case 'speak':
       return `${event.actorId} said "${event.utterance}" to ${event.targetAgentId}`;
     case 'attack':
-      return `${event.actorId} attacked ${event.targetAgentId} (${event.outcome})`;
+      return `${event.actorId} attacked ${event.targetAgentId} (${event.outcome}${event.outcome === 'hit' ? `, ${event.damageDealt} dmg` : ''})`;
   }
 }
 
