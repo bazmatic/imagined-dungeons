@@ -70,6 +70,8 @@ Two design rules:
 
 - **Closed set.** The model proposes calls into this vocabulary; it cannot invent new verbs. This is what keeps the simulation tractable.
 - **Validated and applied by deterministic code.** The model says "take the lantern"; code checks the lantern is reachable, transfers ownership, emits an event. The model never writes to the database directly.
+- **Parsing means: text → fully-resolved, dispatch-ready action.** The reachability and visibility checks belong in the parser, not the action handler. If "take unicorn" succeeds at parse time and only fails when the handler discovers no such item, then a composite parser whose LLM fallback fires on parse failure never gets a chance — the user sees a stiff "you don't see any unicorn here" instead of the model helpfully reinterpreting the input. Resolve nouns against the actor's perception during parsing; treat unresolved references as parse errors.
+- **Closed vocabulary, speaker-specific subsets.** The vocabulary is closed; the slices of it available to each speaker are not. Players and NPCs emit the action verbs (move, look, take, drop, speak, attack, …). The consequence engine emits those *plus* world-only verbs like `update_description` (and any future `spawn`, `reveal`). The interpreter's structured-output schema is therefore a strict subset of the action vocabulary, never the full set — world-only actions live in the same vocabulary but are absent from the player and NPC interpreters' schemas.
 
 ---
 
@@ -108,6 +110,8 @@ Three model passes per turn: **interpret**, **consequences**, **narrate**. NPC t
 
 A turn ends when no further actions are pending and all witnesses have been narrated to.
 
+**"No action" is a legitimate orchestrator outcome.** An NPC tick may produce no action at all — the model's most natural phrasing for "I have nothing to do" is some flavour of "wait". This does *not* belong in the closed action vocabulary: there is no event, no state change, no narration to dispatch. The orchestrator (turn loop, NPC tick) recognises wait/do-nothing phrasings as a no-op and skips dispatch entirely. The closed vocabulary is for things that change the world; not-changing-the-world is the orchestrator's concern.
+
 ---
 
 ## 6. Looking, Witnessing, and Narration
@@ -137,6 +141,14 @@ Some events warrant prose: combat blows, spoken dialogue, dramatic actions, mome
 - who they are (personality, current mood)
 
 The narrated `output_text` is stored on the event, so it becomes part of the historical record the model reasons over later. Witnessing is the part of the system where two characters can legitimately experience the same moment differently.
+
+Person of narration is determined by the observer's role in the event, not chosen freely:
+
+- When the observer **is the actor**, narrate in second person ("You swing at…").
+- When the observer **is the target**, narrate in second person addressed to them ("Spark says to you…").
+- Otherwise, third person using names ("Paff swings at the goblin.").
+
+This isn't optional polish. Without it, the same event narrates as third person to the actor too — which reads as the Narrator describing the player to themselves.
 
 Whether an event is mechanically rendered or model-narrated is a property of the action type, not a per-event decision. `move` and `drop` are mechanical; `attack` and `speak` are narrated. Keep the boundary clear.
 
@@ -205,6 +217,13 @@ Consequences must terminate. Cap recursion depth or require each consequent pass
 
 All roles can be the same model behind the same interface; they differ only in prompt and expected output shape. A clean implementation has one `LanguageModel` interface with these methods, swappable per provider.
 
+The port itself, however, carries at least two completion modes:
+
+- **Structured completion** — returns a validated structured action set against a supplied schema. Used by the Interpreter and the Consequence engine.
+- **Plain-text completion** — returns a paragraph of prose. Used by the Narrator.
+
+One provider, one connection, one model selection — but two shapes on the wire.
+
 
 ## 11. Interface
 
@@ -217,6 +236,7 @@ Clients are dumb terminals. They send text, receive narrated events, render them
 ## 12. Implementation-Independent Constraints
 
 - **Determinism where possible.** State transitions, validation, and event emission must be reproducible given the same inputs. Only the model calls are nondeterministic.
+- **Seeded randomness is part of state.** Where randomness is genuinely needed (combat to-hit, damage variance), use a seedable PRNG whose seed is persisted on the world, not regenerated per turn. Advance the seed deterministically; the new seed is itself state. Replay from the same seeded state produces the same outcome — so the seed is part of "the same inputs" above, not an exception to determinism.
 - **Append-only history.** Events are the audit log and the substrate from which agent memory is derived. Never edit them.
 - **Perception-gated memory.** Each agent sees only what they could perceive. Model calls made on an agent's behalf are conditioned on that agent's memory, never on the global event log directly.
 - **Closed action vocabulary.** Resist the urge to let the model "do anything." The vocabulary is the contract.
