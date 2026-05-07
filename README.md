@@ -4,18 +4,16 @@ A generative, multi-agent text adventure engine. The world's *structure* is stor
 
 This repository is the staged build-out of the design in [abstract-design.md](abstract-design.md), beginning with a fully deterministic core and adding generative layers one slice at a time.
 
-## Status — Slice 4 (current)
+## Status — Slice 5 (current)
 
-Slices 1–3 plus autonomous NPCs. After the player's turn resolves, eligible NPCs (those flagged `autonomous` and co-located with the player) take their own turns through the *same* engine pipeline: NPC mind → composite parser → dispatch → narrate. The closed action vocabulary is unchanged.
+Slices 1–4 plus the consequence engine. After the player's turn and after autonomous NPC ticks, a fourth model role — the consequence engine — surveys the events that just happened and decides whether the world's stored descriptions should change to reflect them durably. Description updates are issued as `update_description` actions by a synthetic `system` agent through the same dispatch pipeline as everything else.
 
-- Engine: player turn → NPC scheduler → per-NPC (mind → parse → dispatch → narrate) → witnessed render
-- Tick cap: at most 2 NPC ticks per player turn (`MAX_NPCS_PER_TICK`).
-- NPC mind (`src/core/engine/npc-mind.ts`) — special case of the interpreter: returns a natural-language intent that re-enters the composite parser. Falls back to `"wait"` when the LLM is null or errors.
-- NPC scheduler (`src/core/engine/npc-scheduler.ts`) — co-location with the player + autonomous flag + `hp > 0`, sorted deterministically.
-- Per-agent memory recall (`src/core/engine/memory.ts`) — perception-gated slice of the global event log shared by Narrator and NPC mind.
-- Submit response is now `{ render: string, witnessed: string[] }`; UI dim-italics witnessed lines.
-- Spark and Uncle Bob are autonomous in the seeded world.
-- 171 tests, TypeScript strict, biome clean
+- Engine: player turn → consequence pass → NPC ticks → consequence pass → witnessed render
+- Bounded use: 1 LLM call per consequence pass; max 3 actions per pass; recursion depth capped at 1 (so at most 2 consequence calls per tick).
+- The closed action vocabulary now includes `update_description`, but it is reserved for the consequence engine — player and NPC interpreters cannot emit it by design.
+- Conservative prompt: routine moves/looks/inventory checks never produce consequences. Only events that genuinely change the room (taking a key item, combat damage, etc.) prompt a description update.
+- Mechanical fallback: with `OPENAI_API_KEY` unset, the consequence pass returns `[]` and behaviour is identical to slice 4.
+- 183 tests, TypeScript strict, biome clean
 
 ## Stack
 
@@ -104,8 +102,8 @@ Per [abstract-design.md §14](abstract-design.md#14-what-to-build-first):
 - ✅ **Slice 1** — mechanical core (move/look/take/drop/inventory).
 - ✅ **Slice 2** — LLM-backed interpreter, falls back from the rule parser.
 - ✅ **Slice 3** — narrated action types (`speak`/`attack`) with an observer-specific Narrator.
-- ✅ **Slice 4** — autonomous NPCs taking turns (this slice).
-- **Slice 5** — consequences and durable `update_description`.
+- ✅ **Slice 4** — autonomous NPCs taking turns.
+- ✅ **Slice 5** — consequence engine + durable `update_description`.
 - **Slice 6+** — combat depth, containers, search, locks-with-keys.
 
 Each slice is independently playable and ships behind no feature flag.
