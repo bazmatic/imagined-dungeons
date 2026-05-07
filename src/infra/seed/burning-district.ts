@@ -594,8 +594,8 @@ export const BURNING_DISTRICT = {
       "mood": null,
       "goal": null,
       "autonomous": false,
-      "shortDescription": "",
-      "longDescription": ""
+      "shortDescription": "A youth with a fierce determination in his eyes. Nephew of the wizard Bob, he believes his uncle was involved in creating the Burning District and seeks to stop the eternal fire.",
+      "longDescription": "A youth with a fierce determination in his eyes. Nephew of the wizard Bob, he believes his uncle was involved in creating the Burning District and seeks to stop the eternal fire."
     },
     {
       "id": "char_84751",
@@ -608,8 +608,8 @@ export const BURNING_DISTRICT = {
       "mood": "Cautious",
       "goal": "Return to the sea",
       "autonomous": false,
-      "shortDescription": "",
-      "longDescription": ""
+      "shortDescription": "A tall tiefling with red skin and sharp horns, wearing a coat of fish scales. Veteran sailor whose ship is undergoing repairs. Has valuable information about Zezran and the elemental plane of water.",
+      "longDescription": "A tall tiefling with red skin and sharp horns, wearing a coat of fish scales. Veteran sailor whose ship is undergoing repairs. Has valuable information about Zezran and the elemental plane of water."
     },
     {
       "id": "char_62103",
@@ -622,8 +622,8 @@ export const BURNING_DISTRICT = {
       "mood": "Anxious",
       "goal": "Obtain the Phoenix Heart for himself",
       "autonomous": true,
-      "shortDescription": "",
-      "longDescription": ""
+      "shortDescription": "Cantankerous old man in a singed wizard's robe. Former colleague of Zezran, involved in creating the Phoenix Heart and the subsequent burning of the district. Hides a guilty secret.",
+      "longDescription": "Cantankerous old man in a singed wizard's robe. Former colleague of Zezran, involved in creating the Phoenix Heart and the subsequent burning of the district. Hides a guilty secret."
     },
     {
       "id": "char_15987",
@@ -636,8 +636,8 @@ export const BURNING_DISTRICT = {
       "mood": "Desperate",
       "goal": "Redeem herself and restore her family's honor",
       "autonomous": false,
-      "shortDescription": "",
-      "longDescription": ""
+      "shortDescription": "Elf with a haunted look, clothes singed and tattered. Last of a renowned elven family, seeking to clear her name.",
+      "longDescription": "Elf with a haunted look, clothes singed and tattered. Last of a renowned elven family, seeking to clear her name."
     },
     {
       "id": "char_70451",
@@ -650,8 +650,8 @@ export const BURNING_DISTRICT = {
       "mood": "Playful",
       "goal": "Spread chaos and laughter",
       "autonomous": false,
-      "shortDescription": "",
-      "longDescription": ""
+      "shortDescription": "Small flickering humanoid of living flame. Born from the magical fires; loves tricks and misdirection.",
+      "longDescription": "Small flickering humanoid of living flame. Born from the magical fires; loves tricks and misdirection."
     },
     {
       "id": "char_28934",
@@ -664,8 +664,8 @@ export const BURNING_DISTRICT = {
       "mood": "Melancholy",
       "goal": "Preserve the history of the district",
       "autonomous": false,
-      "shortDescription": "",
-      "longDescription": ""
+      "shortDescription": "Humanoid of tightly packed ash with glowing ember eyes. Mourns the lost city.",
+      "longDescription": "Humanoid of tightly packed ash with glowing ember eyes. Mourns the lost city."
     },
     {
       "id": "char_53679",
@@ -678,8 +678,8 @@ export const BURNING_DISTRICT = {
       "mood": "Anxious",
       "goal": "Find a way to control the district's flames",
       "autonomous": false,
-      "shortDescription": "",
-      "longDescription": ""
+      "shortDescription": "Lithe human with hair that shifts between shades of red and orange. Performer with unique fire manipulation.",
+      "longDescription": "Lithe human with hair that shifts between shades of red and orange. Performer with unique fire manipulation."
     },
     {
       "id": "char_91245",
@@ -692,8 +692,8 @@ export const BURNING_DISTRICT = {
       "mood": "Determined",
       "goal": "Rebuild a new community from the ashes",
       "autonomous": false,
-      "shortDescription": "",
-      "longDescription": ""
+      "shortDescription": "Stocky dwarf with soot-stained skin and a smoldering beard. Former smith, now leads salvagers.",
+      "longDescription": "Stocky dwarf with soot-stained skin and a smoldering beard. Former smith, now leads salvagers."
     },
     {
       "id": "char_47802",
@@ -706,8 +706,8 @@ export const BURNING_DISTRICT = {
       "mood": "Intense",
       "goal": "Harness the power of the Burning District",
       "autonomous": false,
-      "shortDescription": "",
-      "longDescription": ""
+      "shortDescription": "Tall woman with fiery red hair and flickering eyes. Powerful pyromancer.",
+      "longDescription": "Tall woman with fiery red hair and flickering eyes. Powerful pyromancer."
     },
     {
       "id": "char_36510",
@@ -720,8 +720,8 @@ export const BURNING_DISTRICT = {
       "mood": "Pessimistic",
       "goal": "Find a way to escape the Burning District",
       "autonomous": false,
-      "shortDescription": "",
-      "longDescription": ""
+      "shortDescription": "Muscular human with burn scars and tattered firefighter gear. Believes the district is beyond saving.",
+      "longDescription": "Muscular human with burn scars and tattered firefighter gear. Believes the district is beyond saving."
     },
     {
       "id": "char_82367",
@@ -734,8 +734,8 @@ export const BURNING_DISTRICT = {
       "mood": "Curious",
       "goal": "Find interesting objects buried in the ash",
       "autonomous": false,
-      "shortDescription": "",
-      "longDescription": ""
+      "shortDescription": "Small dog-like creature of ash and embers, Ashen's loyal companion.",
+      "longDescription": "Small dog-like creature of ash and embers, Ashen's loyal companion."
     },
     {
       "id": "char_59731",
@@ -748,8 +748,8 @@ export const BURNING_DISTRICT = {
       "mood": "Protective",
       "goal": "Free her children from the Phoenix Heart",
       "autonomous": false,
-      "shortDescription": "",
-      "longDescription": ""
+      "shortDescription": "Massive majestic fire elemental, mother of the trapped elementals. Guards the Phoenix Heart.",
+      "longDescription": "Massive majestic fire elemental, mother of the trapped elementals. Guards the Phoenix Heart."
     },
     {
       "id": "char_13498",
@@ -762,8 +762,8 @@ export const BURNING_DISTRICT = {
       "mood": "Energetic",
       "goal": "Map out all safe routes in the district",
       "autonomous": true,
-      "shortDescription": "",
-      "longDescription": ""
+      "shortDescription": "Young halfling with hair that crackles with static electricity. Swift messenger.",
+      "longDescription": "Young halfling with hair that crackles with static electricity. Swift messenger."
     },
     {
       "id": "char_75024",
@@ -776,8 +776,8 @@ export const BURNING_DISTRICT = {
       "mood": "Stoic",
       "goal": "Protect the fire salvagers",
       "autonomous": false,
-      "shortDescription": "",
-      "longDescription": ""
+      "shortDescription": "Large humanoid of compressed ash and burning embers, created by Cinder.",
+      "longDescription": "Large humanoid of compressed ash and burning embers, created by Cinder."
     },
     {
       "id": "char_20876",
@@ -790,8 +790,8 @@ export const BURNING_DISTRICT = {
       "mood": "Majestic",
       "goal": "Inspire hope in the district's inhabitants",
       "autonomous": false,
-      "shortDescription": "",
-      "longDescription": ""
+      "shortDescription": "Magnificent bird with feathers of dancing flames. Symbol of hope.",
+      "longDescription": "Magnificent bird with feathers of dancing flames. Symbol of hope."
     }
   ]
 } as const;

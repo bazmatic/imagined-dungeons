@@ -66,8 +66,10 @@ describe('runTick against the seeded burning district', () => {
       const repo = new SqliteRepository(h.db, BURNING_DISTRICT_CAMPAIGN.worldId);
       const parse = makeCompositeParser({ llm: null });
       const r = await runTick(PAFF, 'look at spark', repo, { parse, llm: null });
-      // Spark's seeded long/short are empty, so the fallback template fires.
-      expect(r.render).toContain('Spark');
+      // Spark's seeded backstory mentions hair that crackles with static
+      // electricity; the mood ("Energetic") is appended by the template.
+      expect(r.render.toLowerCase()).toContain('halfling');
+      expect(r.render.toLowerCase()).toContain('energetic');
     } finally {
       h.close();
     }

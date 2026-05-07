@@ -125,23 +125,52 @@ const items = itemSections.flatMap((sec) =>
   }),
 );
 
+// Backstories: a bullet list under "#### Backstories", one line per NPC
+// formatted "- **<Label>** — <description>". Build a label → description map.
+const npcBackstoryByLabel = (() => {
+  const out = new Map<string, string>();
+  const lines = md.split('\n');
+  let inBackstories = false;
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (line.startsWith('#### Backstories')) {
+      inBackstories = true;
+      continue;
+    }
+    if (inBackstories && line.startsWith('## ')) break; // next major section
+    if (!inBackstories) continue;
+    const m = line.match(/^-\s+\*\*([^*]+)\*\*\s*[—–-]\s*(.+)$/);
+    if (m?.[1] && m[2]) out.set(m[1].trim(), m[2].trim());
+  }
+  return out;
+})();
+
+// Player blockquote: `> *Mood* — <description>` immediately after the player table.
+const playerBlurb = (() => {
+  const m = md.match(/^>\s*\*([^*]+)\*\s*[—–-]\s*(.+)$/m);
+  return m?.[2] ? m[2].trim() : '';
+})();
+
 // Agents: player + NPCs
 const playerRows = tables['Player Character'] ?? [];
 const npcRows = tables.NPCs ?? [];
-const player = playerRows.map((r) => ({
-  id: backtickInner(r.ID ?? ''),
-  label: stripBold(r.Name ?? ''),
-  locationId: backtickInner(r.Location ?? ''),
-  hp: num(r.HP ?? '', 10),
-  damage: num(r.DMG ?? '', 1),
-  defense: num(r.DEF ?? '', 10),
-  capacity: num(r.Capacity ?? '', 10),
-  mood: null as string | null,
-  goal: null as string | null,
-  autonomous: false,
-  shortDescription: '',
-  longDescription: '',
-}));
+const player = playerRows.map((r) => {
+  const label = stripBold(r.Name ?? '');
+  return {
+    id: backtickInner(r.ID ?? ''),
+    label,
+    locationId: backtickInner(r.Location ?? ''),
+    hp: num(r.HP ?? '', 10),
+    damage: num(r.DMG ?? '', 1),
+    defense: num(r.DEF ?? '', 10),
+    capacity: num(r.Capacity ?? '', 10),
+    mood: null as string | null,
+    goal: null as string | null,
+    autonomous: false,
+    shortDescription: playerBlurb,
+    longDescription: playerBlurb,
+  };
+});
 
 /**
  * Initial autonomous-NPC roster (slice 4).
@@ -164,9 +193,11 @@ const npcs = npcRows
   .filter((r) => backtickInner(r.Location ?? '').startsWith('loc_'))
   .map((r) => {
     const id = backtickInner(r.ID ?? '');
+    const label = stripBold(r.Name ?? '');
+    const backstory = npcBackstoryByLabel.get(label) ?? '';
     return {
       id,
-      label: stripBold(r.Name ?? ''),
+      label,
       locationId: backtickInner(r.Location ?? ''),
       hp: num(r.HP ?? '', 10),
       damage: num(r.DMG ?? '', 1),
@@ -175,8 +206,8 @@ const npcs = npcRows
       mood: r.Mood || null,
       goal: r.Goal || null,
       autonomous: AUTONOMOUS_NPC_IDS.has(id),
-      shortDescription: '',
-      longDescription: '',
+      shortDescription: backstory,
+      longDescription: backstory,
     };
   });
 

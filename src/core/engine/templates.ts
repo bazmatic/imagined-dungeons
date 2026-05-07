@@ -34,9 +34,17 @@ export function renderLookTarget(item: Item): string {
  * never gets an empty string back.
  */
 export function renderLookAgent(agent: Agent): string {
-  if (agent.longDescription && agent.longDescription.length > 0) return agent.longDescription;
-  if (agent.shortDescription && agent.shortDescription.length > 0) return agent.shortDescription;
-  return `You see ${agent.label}.`;
+  const parts: string[] = [];
+  const desc =
+    agent.longDescription && agent.longDescription.length > 0
+      ? agent.longDescription
+      : agent.shortDescription && agent.shortDescription.length > 0
+        ? agent.shortDescription
+        : '';
+  parts.push(desc.length > 0 ? desc : `You see ${agent.label}.`);
+  if (agent.mood) parts.push(`They seem ${agent.mood.toLowerCase()}.`);
+  if (agent.hp <= 0) parts.push('They are unconscious.');
+  return parts.join(' ');
 }
 
 /**
