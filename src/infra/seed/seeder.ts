@@ -1,5 +1,5 @@
-import { type WorldId, asWorldId } from '@core/domain/ids';
-import { inArray } from 'drizzle-orm';
+import { SYSTEM_AGENT_ID, type WorldId, asWorldId } from '@core/domain/ids';
+import { eq, inArray } from 'drizzle-orm';
 import type { DB } from '../db';
 import * as schema from '../schema';
 import { BURNING_DISTRICT } from './burning-district';
@@ -24,10 +24,50 @@ async function ensureAutonomousFlags(db: DB): Promise<void> {
     .where(inArray(schema.agents.id, targetIds));
 }
 
+/**
+ * Slice 5 introduces the synthetic `system` agent (abstract-design §4, §10) —
+ * the actor for actions issued by "the world" (the consequence engine).
+ * Inserted at the player's starting location so it has a valid foreign key;
+ * `autonomous=false` keeps the NPC scheduler from picking it up.
+ */
+async function ensureSystemAgent(db: DB, worldId: WorldId): Promise<void> {
+  const existing = await db
+    .select({ id: schema.agents.id })
+    .from(schema.agents)
+    .where(eq(schema.agents.id, SYSTEM_AGENT_ID));
+  if (existing.length > 0) return;
+
+  // Pick any extant location for the world — we just need a valid FK target.
+  const locs = await db
+    .select({ id: schema.locations.id })
+    .from(schema.locations)
+    .where(eq(schema.locations.worldId, worldId))
+    .limit(1);
+  const homeLoc = locs[0]?.id;
+  if (!homeLoc) return;
+
+  await db.insert(schema.agents).values({
+    id: SYSTEM_AGENT_ID,
+    worldId,
+    label: 'System',
+    shortDescription: '',
+    longDescription: '',
+    locationId: homeLoc,
+    hp: 0,
+    damage: 0,
+    defense: 0,
+    capacity: 0,
+    mood: null,
+    goal: 'Referee for the game',
+    autonomous: false,
+  });
+}
+
 export async function seedIfEmpty(db: DB): Promise<void> {
   const existing = await db.select().from(schema.worlds);
   if (existing.length > 0) {
     await ensureAutonomousFlags(db);
+    await ensureSystemAgent(db, BURNING_DISTRICT_WORLD_ID);
     return;
   }
 
@@ -62,4 +102,6 @@ export async function seedIfEmpty(db: DB): Promise<void> {
       lockedByItemId: e.lockedByItem,
     })),
   );
+
+  await ensureSystemAgent(db, W);
 }
