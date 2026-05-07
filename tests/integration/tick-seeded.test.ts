@@ -140,6 +140,68 @@ describe('runTick against the seeded burning district', () => {
     }
   });
 
+  it('the consequence engine can set Spark.shortTermIntent and the next tick exposes it in the prompt', async () => {
+    const h = openDb(':memory:');
+    try {
+      await seedIfEmpty(h.db, BURNING_DISTRICT_CAMPAIGN);
+      const repo = new SqliteRepository(h.db, BURNING_DISTRICT_CAMPAIGN.worldId);
+
+      // Capture the system prompts the NPC mind sees so we can assert on them.
+      const sparkSystemPrompts: string[] = [];
+
+      const llm = makeFakeLanguageModel({
+        textResponder: (req) => {
+          if (req.system.toLowerCase().includes('narrator')) {
+            return 'Spark nods.';
+          }
+          // NPC mind — record only Spark's prompts (the system block names the NPC).
+          if (req.system.includes('Spark')) sparkSystemPrompts.push(req.system);
+          return 'wait';
+        },
+        responder: (req) => {
+          // The consequence engine. Only fire on the player's tick (the first
+          // call with the player's "say" event in the user prompt) — set
+          // Spark's shortTermIntent. Subsequent calls (post-NPC pass) return
+          // an empty list.
+          if (req.user.toLowerCase().includes('spark')) {
+            return {
+              raw: '',
+              parsed: {
+                consequences: [
+                  {
+                    kind: 'update_description',
+                    targetKind: 'agent',
+                    targetRef: 'Spark',
+                    shortDescription: null,
+                    longDescription: null,
+                    mood: null,
+                    shortTermIntent: 'take the fire map to the docks',
+                  },
+                ],
+              },
+            };
+          }
+          return { raw: '', parsed: { consequences: [] } };
+        },
+      });
+      const parse = makeCompositeParser({ llm: null });
+
+      // Tick 1: player commits Spark to a task. Consequence engine sets the intent.
+      await runTick(PAFF, 'say hello to spark', repo, { parse, llm });
+      const sparkAfter = await repo.getAgent(SPARK);
+      expect(sparkAfter.shortTermIntent).toBe('take the fire map to the docks');
+
+      // Tick 2: Spark's prompt should now mention the intent.
+      sparkSystemPrompts.length = 0;
+      await runTick(PAFF, 'wait', repo, { parse, llm });
+      const sparkPrompt = sparkSystemPrompts.find((p) => p.includes('Current short-term intent'));
+      expect(sparkPrompt).toBeTruthy();
+      expect(sparkPrompt).toContain('take the fire map to the docks');
+    } finally {
+      h.close();
+    }
+  });
+
   it('"wait" skips player dispatch but still ticks NPCs', async () => {
     const h = openDb(':memory:');
     try {

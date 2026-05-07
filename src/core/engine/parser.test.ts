@@ -17,6 +17,7 @@ const ACTOR: Agent = {
   defense: 0,
   capacity: 10,
   mood: null,
+  shortTermIntent: null,
   goal: null,
   autonomous: false,
 };
@@ -80,6 +81,7 @@ const spark: Agent = {
   defense: 0,
   capacity: 10,
   mood: null,
+  shortTermIntent: null,
   goal: null,
   autonomous: false,
 };
@@ -95,6 +97,7 @@ const ember: Agent = {
   defense: 0,
   capacity: 10,
   mood: null,
+  shortTermIntent: null,
   goal: null,
   autonomous: false,
 };
@@ -300,6 +303,7 @@ describe('parse', () => {
       defense: 12,
       capacity: 30,
       mood: null,
+      shortTermIntent: null,
       goal: null,
       autonomous: false,
     };

@@ -38,6 +38,7 @@ const paff: Agent = {
   defense: 0,
   capacity: 10,
   mood: null,
+  shortTermIntent: null,
   goal: null,
   autonomous: false,
 };
@@ -134,6 +135,90 @@ describe('consequencesFor', () => {
     });
     const r = await consequencesFor([takeEvent], repo, llm);
     expect(r.length).toBe(MAX_CONSEQUENCES_PER_PASS);
+  });
+
+  it('produces an update_description action carrying mood when the LLM sets it on an agent target', async () => {
+    const repo = repoFor();
+    const llm = makeFakeLanguageModel({
+      responder: () => ({
+        raw: '',
+        parsed: {
+          consequences: [
+            {
+              kind: 'update_description',
+              targetKind: 'agent',
+              targetRef: 'Paff',
+              shortDescription: null,
+              longDescription: null,
+              mood: 'wary',
+              shortTermIntent: null,
+            },
+          ],
+        },
+      }),
+    });
+    const r = await consequencesFor([takeEvent], repo, llm);
+    expect(r).toHaveLength(1);
+    const a = r[0];
+    if (!a || a.kind !== ActionKind.UpdateDescription) throw new Error();
+    expect(a.target.kind).toBe(OwnerKind.Agent);
+    expect(a.mood).toBe('wary');
+    expect(a.shortTermIntent).toBeNull();
+  });
+
+  it('produces an update_description action carrying shortTermIntent when the LLM sets it', async () => {
+    const repo = repoFor();
+    const llm = makeFakeLanguageModel({
+      responder: () => ({
+        raw: '',
+        parsed: {
+          consequences: [
+            {
+              kind: 'update_description',
+              targetKind: 'agent',
+              targetRef: 'Paff',
+              shortDescription: null,
+              longDescription: null,
+              mood: null,
+              shortTermIntent: 'take the lantern to the docks',
+            },
+          ],
+        },
+      }),
+    });
+    const r = await consequencesFor([takeEvent], repo, llm);
+    expect(r).toHaveLength(1);
+    const a = r[0];
+    if (!a || a.kind !== ActionKind.UpdateDescription) throw new Error();
+    expect(a.shortTermIntent).toBe('take the lantern to the docks');
+  });
+
+  it('strips mood/shortTermIntent set on a non-agent target rather than rejecting', async () => {
+    const repo = repoFor();
+    const llm = makeFakeLanguageModel({
+      responder: () => ({
+        raw: '',
+        parsed: {
+          consequences: [
+            {
+              kind: 'update_description',
+              targetKind: 'location',
+              targetRef: 'workshop',
+              shortDescription: null,
+              longDescription: 'an emptier workshop',
+              mood: 'wary',
+              shortTermIntent: 'something',
+            },
+          ],
+        },
+      }),
+    });
+    const r = await consequencesFor([takeEvent], repo, llm);
+    expect(r).toHaveLength(1);
+    const a = r[0];
+    if (!a || a.kind !== ActionKind.UpdateDescription) throw new Error();
+    expect(a.mood).toBeNull();
+    expect(a.shortTermIntent).toBeNull();
   });
 
   it('drops entries with both descriptions null and unresolvable refs', async () => {

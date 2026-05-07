@@ -49,6 +49,7 @@ const npc: Agent = {
   defense: 0,
   capacity: 0,
   mood: null,
+  shortTermIntent: null,
   goal: null,
   autonomous: false,
 };
@@ -178,6 +179,7 @@ describe('renderEmoteMechanical', () => {
     defense: 0,
     capacity: 10,
     mood: null,
+    shortTermIntent: null,
     goal: null,
     autonomous: false,
   };
@@ -193,6 +195,7 @@ describe('renderEmoteMechanical', () => {
     defense: 0,
     capacity: 10,
     mood: null,
+    shortTermIntent: null,
     goal: null,
     autonomous: false,
   };
@@ -208,6 +211,7 @@ describe('renderEmoteMechanical', () => {
     defense: 0,
     capacity: 10,
     mood: null,
+    shortTermIntent: null,
     goal: null,
     autonomous: false,
   };

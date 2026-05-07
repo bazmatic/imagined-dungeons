@@ -26,6 +26,7 @@ const paff: Agent = {
   defense: 0,
   capacity: 10,
   mood: null,
+  shortTermIntent: null,
   goal: null,
   autonomous: false,
 };
@@ -51,6 +52,7 @@ const spark: Agent = {
   defense: 4,
   capacity: 10,
   mood: null,
+  shortTermIntent: null,
   goal: null,
   autonomous: false,
 };

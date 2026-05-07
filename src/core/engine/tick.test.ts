@@ -59,6 +59,7 @@ const player: Agent = {
   defense: 12,
   capacity: 30,
   mood: null,
+  shortTermIntent: null,
   goal: null,
   autonomous: false,
 };
@@ -75,6 +76,7 @@ const spark: Agent = {
   defense: 14,
   capacity: 10,
   mood: 'Energetic',
+  shortTermIntent: null,
   goal: 'Explore',
   autonomous: true,
 };
@@ -91,6 +93,7 @@ const ember: Agent = {
   defense: 16,
   capacity: 10,
   mood: 'Playful',
+  shortTermIntent: null,
   goal: 'Spread chaos',
   autonomous: true,
 };
@@ -207,6 +210,7 @@ describe('runTick', () => {
       defense: 0,
       capacity: 0,
       mood: null,
+      shortTermIntent: null,
       goal: null,
       autonomous: false,
     };

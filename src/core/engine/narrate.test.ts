@@ -27,6 +27,7 @@ const paff: Agent = {
   defense: 4,
   capacity: 10,
   mood: 'cheerful',
+  shortTermIntent: null,
   goal: 'find Spark',
   autonomous: false,
 };
@@ -42,6 +43,7 @@ const spark: Agent = {
   defense: 4,
   capacity: 10,
   mood: 'wary',
+  shortTermIntent: null,
   goal: 'observe',
   autonomous: false,
 };

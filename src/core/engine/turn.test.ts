@@ -54,6 +54,7 @@ const paff: Agent = {
   defense: 0,
   capacity: 10,
   mood: null,
+  shortTermIntent: null,
   goal: null,
   autonomous: false,
 };
@@ -122,6 +123,7 @@ describe('runTurn with narrated events', () => {
     defense: 4,
     capacity: 10,
     mood: 'curious',
+    shortTermIntent: null,
     goal: 'observe',
     autonomous: false,
   };

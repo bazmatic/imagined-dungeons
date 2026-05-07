@@ -31,6 +31,7 @@ const mkAgent = (id: AgentId): Agent => ({
   defense: 10,
   capacity: 10,
   mood: null,
+  shortTermIntent: null,
   goal: null,
   autonomous: false,
 });

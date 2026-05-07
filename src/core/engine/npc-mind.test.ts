@@ -31,6 +31,7 @@ const spark: Agent = {
   defense: 14,
   capacity: 10,
   mood: 'Energetic',
+  shortTermIntent: null,
   goal: 'Map out all safe routes in the district',
   autonomous: true,
 };
@@ -47,6 +48,7 @@ const paff: Agent = {
   defense: 12,
   capacity: 30,
   mood: null,
+  shortTermIntent: null,
   goal: null,
   autonomous: false,
 };
@@ -131,5 +133,45 @@ describe('decideNpcIntent', () => {
     const repo = makeRepo();
     // Sanity: passing null skips construction of the prompt entirely.
     await expect(decideNpcIntent(SPARK_ID, repo, null)).resolves.toBe('wait');
+  });
+
+  it("includes 'Current short-term intent' in the system prompt when set", async () => {
+    const llm = makeFakeLanguageModel({ textResponder: () => 'I wait.' });
+    const sparkWithIntent: Agent = {
+      ...spark,
+      shortTermIntent: 'deliver the fire map to the docks',
+    };
+    const repo = new MemoryRepository(W, {
+      locations: [loc],
+      exits: [],
+      items: [],
+      agents: [sparkWithIntent, paff],
+    });
+    await decideNpcIntent(SPARK_ID, repo, llm);
+    const call = llm.textCalls[0];
+    if (!call) throw new Error('expected textCall');
+    expect(call.system).toContain('Current short-term intent: deliver the fire map to the docks');
+  });
+
+  it("does NOT include 'Current short-term intent' when null", async () => {
+    const llm = makeFakeLanguageModel({ textResponder: () => 'I wait.' });
+    const repo = makeRepo();
+    await decideNpcIntent(SPARK_ID, repo, llm);
+    const call = llm.textCalls[0];
+    if (!call) throw new Error('expected textCall');
+    expect(call.system).not.toMatch(/Current short-term intent:/);
+  });
+
+  it('behavioural priorities mention the short-term intent', async () => {
+    const llm = makeFakeLanguageModel({ textResponder: () => 'I wait.' });
+    const repo = makeRepo();
+    await decideNpcIntent(SPARK_ID, repo, llm);
+    const call = llm.textCalls[0];
+    if (!call) throw new Error('expected textCall');
+    expect(call.system).toContain('short-term intent');
+    // Renumbered priority 5 used to be priority 4.
+    expect(call.system).toMatch(
+      /5\. Otherwise, pick something consistent with your long-term goal/,
+    );
   });
 });

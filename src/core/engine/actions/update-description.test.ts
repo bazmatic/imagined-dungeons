@@ -36,6 +36,7 @@ const paff: Agent = {
   defense: 0,
   capacity: 10,
   mood: null,
+  shortTermIntent: null,
   goal: null,
   autonomous: false,
 };
@@ -51,6 +52,7 @@ const spark: Agent = {
   defense: 0,
   capacity: 10,
   mood: null,
+  shortTermIntent: null,
   goal: null,
   autonomous: true,
 };
@@ -70,6 +72,8 @@ describe('handleUpdateDescription', () => {
         target: { kind: OwnerKind.Location, id: A },
         shortDescription: null,
         longDescription: 'long A, now scorched',
+        mood: null,
+        shortTermIntent: null,
       },
       repo,
     );
@@ -103,6 +107,8 @@ describe('handleUpdateDescription', () => {
         target: { kind: OwnerKind.Location, id: A },
         shortDescription: null,
         longDescription: null,
+        mood: null,
+        shortTermIntent: null,
       },
       repo,
     );
@@ -123,6 +129,8 @@ describe('handleUpdateDescription', () => {
         target: { kind: OwnerKind.Item, id: lantern.id },
         shortDescription: 'a soot-stained lantern',
         longDescription: null,
+        mood: null,
+        shortTermIntent: null,
       },
       repo,
     );
@@ -147,11 +155,203 @@ describe('handleUpdateDescription', () => {
         target: { kind: OwnerKind.Agent, id: spark.id },
         shortDescription: null,
         longDescription: 'visibly wounded',
+        mood: null,
+        shortTermIntent: null,
       },
       repo,
     );
     if (!r.ok) throw new Error(r.error);
     const a = await repo.getAgent(spark.id);
     expect(a.longDescription).toBe('visibly wounded');
+  });
+
+  it("updates an agent's mood and emits moodBefore/moodAfter on the event", async () => {
+    const repo = new MemoryRepository(W, {
+      locations: [loc],
+      exits: [],
+      items: [],
+      agents: [paff, spark],
+    });
+    const r = await handleUpdateDescription(
+      {
+        kind: ActionKind.UpdateDescription,
+        actorId: SYSTEM_AGENT_ID,
+        target: { kind: OwnerKind.Agent, id: spark.id },
+        shortDescription: null,
+        longDescription: null,
+        mood: 'wary',
+        shortTermIntent: null,
+      },
+      repo,
+    );
+    if (!r.ok) throw new Error(r.error);
+    const a = await repo.getAgent(spark.id);
+    expect(a.mood).toBe('wary');
+    if (r.value.event.kind !== EventKind.DescriptionUpdated) throw new Error();
+    expect(r.value.event.moodBefore).toBeNull();
+    expect(r.value.event.moodAfter).toBe('wary');
+    expect(r.value.event.shortTermIntentBefore).toBeNull();
+    expect(r.value.event.shortTermIntentAfter).toBeNull();
+  });
+
+  it("updates an agent's shortTermIntent and emits shortTermIntent before/after", async () => {
+    const repo = new MemoryRepository(W, {
+      locations: [loc],
+      exits: [],
+      items: [],
+      agents: [paff, spark],
+    });
+    const r = await handleUpdateDescription(
+      {
+        kind: ActionKind.UpdateDescription,
+        actorId: SYSTEM_AGENT_ID,
+        target: { kind: OwnerKind.Agent, id: spark.id },
+        shortDescription: null,
+        longDescription: null,
+        mood: null,
+        shortTermIntent: 'take the fire map to the docks',
+      },
+      repo,
+    );
+    if (!r.ok) throw new Error(r.error);
+    const a = await repo.getAgent(spark.id);
+    expect(a.shortTermIntent).toBe('take the fire map to the docks');
+    if (r.value.event.kind !== EventKind.DescriptionUpdated) throw new Error();
+    expect(r.value.event.shortTermIntentBefore).toBeNull();
+    expect(r.value.event.shortTermIntentAfter).toBe('take the fire map to the docks');
+  });
+
+  it('updates mood and shortTermIntent at once', async () => {
+    const repo = new MemoryRepository(W, {
+      locations: [loc],
+      exits: [],
+      items: [],
+      agents: [paff, spark],
+    });
+    const r = await handleUpdateDescription(
+      {
+        kind: ActionKind.UpdateDescription,
+        actorId: SYSTEM_AGENT_ID,
+        target: { kind: OwnerKind.Agent, id: spark.id },
+        shortDescription: null,
+        longDescription: null,
+        mood: 'angry',
+        shortTermIntent: 'find Paff',
+      },
+      repo,
+    );
+    if (!r.ok) throw new Error(r.error);
+    const a = await repo.getAgent(spark.id);
+    expect(a.mood).toBe('angry');
+    expect(a.shortTermIntent).toBe('find Paff');
+  });
+
+  it('passing null for mood is a no-op even if shortDescription is provided', async () => {
+    const sparkWithMood: Agent = { ...spark, mood: 'energetic' };
+    const repo = new MemoryRepository(W, {
+      locations: [loc],
+      exits: [],
+      items: [],
+      agents: [paff, sparkWithMood],
+    });
+    const r = await handleUpdateDescription(
+      {
+        kind: ActionKind.UpdateDescription,
+        actorId: SYSTEM_AGENT_ID,
+        target: { kind: OwnerKind.Agent, id: spark.id },
+        shortDescription: 'a halfling, a bit singed',
+        longDescription: null,
+        mood: null,
+        shortTermIntent: null,
+      },
+      repo,
+    );
+    if (!r.ok) throw new Error(r.error);
+    const a = await repo.getAgent(spark.id);
+    expect(a.shortDescription).toBe('a halfling, a bit singed');
+    expect(a.mood).toBe('energetic'); // untouched
+  });
+
+  it('passing "" for mood clears the mood', async () => {
+    const sparkWithMood: Agent = { ...spark, mood: 'energetic' };
+    const repo = new MemoryRepository(W, {
+      locations: [loc],
+      exits: [],
+      items: [],
+      agents: [paff, sparkWithMood],
+    });
+    const r = await handleUpdateDescription(
+      {
+        kind: ActionKind.UpdateDescription,
+        actorId: SYSTEM_AGENT_ID,
+        target: { kind: OwnerKind.Agent, id: spark.id },
+        shortDescription: null,
+        longDescription: null,
+        mood: '',
+        shortTermIntent: null,
+      },
+      repo,
+    );
+    if (!r.ok) throw new Error(r.error);
+    const a = await repo.getAgent(spark.id);
+    expect(a.mood).toBeNull();
+    if (r.value.event.kind !== EventKind.DescriptionUpdated) throw new Error();
+    expect(r.value.event.moodBefore).toBe('energetic');
+    expect(r.value.event.moodAfter).toBeNull();
+  });
+
+  it('passing "" for shortTermIntent clears the intent', async () => {
+    const sparkWithIntent: Agent = {
+      ...spark,
+      shortTermIntent: 'take the map',
+    };
+    const repo = new MemoryRepository(W, {
+      locations: [loc],
+      exits: [],
+      items: [],
+      agents: [paff, sparkWithIntent],
+    });
+    const r = await handleUpdateDescription(
+      {
+        kind: ActionKind.UpdateDescription,
+        actorId: SYSTEM_AGENT_ID,
+        target: { kind: OwnerKind.Agent, id: spark.id },
+        shortDescription: null,
+        longDescription: null,
+        mood: null,
+        shortTermIntent: '',
+      },
+      repo,
+    );
+    if (!r.ok) throw new Error(r.error);
+    const a = await repo.getAgent(spark.id);
+    expect(a.shortTermIntent).toBeNull();
+  });
+
+  it('mood/shortTermIntent set on a non-agent target are silently ignored', async () => {
+    const repo = new MemoryRepository(W, {
+      locations: [loc],
+      exits: [],
+      items: [],
+      agents: [paff],
+    });
+    const r = await handleUpdateDescription(
+      {
+        kind: ActionKind.UpdateDescription,
+        actorId: SYSTEM_AGENT_ID,
+        target: { kind: OwnerKind.Location, id: A },
+        shortDescription: 'a workshop, slightly redder',
+        longDescription: null,
+        mood: 'wary',
+        shortTermIntent: 'find the goblin',
+      },
+      repo,
+    );
+    if (!r.ok) throw new Error(r.error);
+    if (r.value.event.kind !== EventKind.DescriptionUpdated) throw new Error();
+    expect(r.value.event.moodBefore).toBeNull();
+    expect(r.value.event.moodAfter).toBeNull();
+    expect(r.value.event.shortTermIntentBefore).toBeNull();
+    expect(r.value.event.shortTermIntentAfter).toBeNull();
   });
 });

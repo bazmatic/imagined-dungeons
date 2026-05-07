@@ -25,6 +25,7 @@ const agent = (id: string, label: string, locId: string): Agent => ({
   defense: 10,
   capacity: 10,
   mood: null,
+  shortTermIntent: null,
   goal: null,
   autonomous: false,
 });
