@@ -14,6 +14,7 @@ describe('PLAYER_ACTION_SCHEMA', () => {
       expect.arrayContaining([
         'kind',
         'direction',
+        'targetKind',
         'targetRef',
         'itemRef',
         'targetAgentRef',
@@ -56,14 +57,47 @@ describe('validatePlayerAction', () => {
     });
   });
 
-  it('accepts look with targetRef = null and with a string targetRef', () => {
-    expect(validatePlayerAction({ kind: 'look', targetRef: null })).toEqual({
+  it('accepts look with targetKind=null (room) and resolves to a room target', () => {
+    expect(validatePlayerAction({ kind: 'look', targetKind: null, targetRef: null })).toEqual({
       kind: 'look',
-      targetRef: null,
+      target: { kind: 'room' },
     });
-    expect(validatePlayerAction({ kind: 'look', targetRef: 'fire map' })).toEqual({
+    expect(validatePlayerAction({ kind: 'look', targetKind: 'room', targetRef: null })).toEqual({
       kind: 'look',
-      targetRef: 'fire map',
+      target: { kind: 'room' },
+    });
+  });
+
+  it('accepts look with item/agent/exit targetKind and a non-empty targetRef', () => {
+    expect(
+      validatePlayerAction({ kind: 'look', targetKind: 'item', targetRef: 'fire map' }),
+    ).toEqual({
+      kind: 'look',
+      target: { kind: 'item', ref: 'fire map' },
+    });
+    expect(validatePlayerAction({ kind: 'look', targetKind: 'agent', targetRef: 'Spark' })).toEqual(
+      {
+        kind: 'look',
+        target: { kind: 'agent', ref: 'Spark' },
+      },
+    );
+    expect(
+      validatePlayerAction({ kind: 'look', targetKind: 'exit', targetRef: 'tavern back door' }),
+    ).toEqual({
+      kind: 'look',
+      target: { kind: 'exit', ref: 'tavern back door' },
+    });
+  });
+
+  it('rejects look with a non-room targetKind and missing/empty targetRef', () => {
+    expect(validatePlayerAction({ kind: 'look', targetKind: 'item', targetRef: '' })).toEqual({
+      kind: 'invalid',
+    });
+    expect(validatePlayerAction({ kind: 'look', targetKind: 'agent', targetRef: null })).toEqual({
+      kind: 'invalid',
+    });
+    expect(validatePlayerAction({ kind: 'look', targetKind: 'banana', targetRef: 'x' })).toEqual({
+      kind: 'invalid',
     });
   });
 

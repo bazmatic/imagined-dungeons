@@ -59,6 +59,52 @@ describe('runTick against the seeded burning district', () => {
     }
   });
 
+  it('"look at spark" returns Spark-shaped prose for the player', async () => {
+    const h = openDb(':memory:');
+    try {
+      await seedIfEmpty(h.db, BURNING_DISTRICT_CAMPAIGN);
+      const repo = new SqliteRepository(h.db, BURNING_DISTRICT_CAMPAIGN.worldId);
+      const parse = makeCompositeParser({ llm: null });
+      const r = await runTick(PAFF, 'look at spark', repo, { parse, llm: null });
+      // Spark's seeded long/short are empty, so the fallback template fires.
+      expect(r.render).toContain('Spark');
+    } finally {
+      h.close();
+    }
+  });
+
+  it('"look at the fire map" returns the item long description', async () => {
+    const h = openDb(':memory:');
+    try {
+      await seedIfEmpty(h.db, BURNING_DISTRICT_CAMPAIGN);
+      const repo = new SqliteRepository(h.db, BURNING_DISTRICT_CAMPAIGN.worldId);
+      const parse = makeCompositeParser({ llm: null });
+      const r = await runTick(PAFF, 'look at the fire map', repo, { parse, llm: null });
+      expect(r.render.length).toBeGreaterThan(0);
+      // Sanity: must NOT be the room view's first line.
+      expect(r.render).not.toContain('The Flaming Goblet\n');
+    } finally {
+      h.close();
+    }
+  });
+
+  it('"look at the tavern back door" returns the exit description', async () => {
+    const h = openDb(':memory:');
+    try {
+      await seedIfEmpty(h.db, BURNING_DISTRICT_CAMPAIGN);
+      const repo = new SqliteRepository(h.db, BURNING_DISTRICT_CAMPAIGN.worldId);
+      const parse = makeCompositeParser({ llm: null });
+      const r = await runTick(PAFF, 'look at the tavern back door', repo, { parse, llm: null });
+      // Exit prose mentions the label and a direction.
+      expect(r.render.toLowerCase()).toContain('back door');
+      expect(r.render).toMatch(
+        /(north|south|east|west|up|down|northeast|northwest|southeast|southwest)/,
+      );
+    } finally {
+      h.close();
+    }
+  });
+
   it('"say hello" plus an NPC tick produces a visible NPC line in the player transcript', async () => {
     const h = openDb(':memory:');
     try {

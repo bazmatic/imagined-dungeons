@@ -134,8 +134,8 @@ describe('composite parser through runTurn', () => {
     });
     const llm = makeFakeLanguageModel({
       responder: () => ({
-        raw: '{"kind":"look","targetRef":null}',
-        parsed: { kind: 'look', targetRef: null },
+        raw: '{"kind":"look","targetKind":null,"targetRef":null}',
+        parsed: { kind: 'look', targetKind: null, targetRef: null },
       }),
     });
     const parse = makeCompositeParser({ llm });

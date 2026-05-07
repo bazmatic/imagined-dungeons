@@ -47,7 +47,7 @@ describe('handleLook', () => {
       items: [map],
       agents: [paff],
     });
-    const r = await handleLook({ kind: 'look', actorId: paff.id, targetItemId: null }, repo);
+    const r = await handleLook({ kind: 'look', actorId: paff.id, target: { kind: 'room' } }, repo);
     if (!r.ok) throw new Error();
     expect(r.value.render).toContain('The Goblet');
     expect(r.value.render).toContain('A tavern.');
@@ -61,7 +61,10 @@ describe('handleLook', () => {
       items: [map],
       agents: [paff],
     });
-    const r = await handleLook({ kind: 'look', actorId: paff.id, targetItemId: map.id }, repo);
+    const r = await handleLook(
+      { kind: 'look', actorId: paff.id, target: { kind: 'item', id: map.id } },
+      repo,
+    );
     if (!r.ok) throw new Error();
     expect(r.value.render).toBe('A real-time map.');
   });

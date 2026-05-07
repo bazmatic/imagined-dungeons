@@ -43,7 +43,7 @@ const baseEvent = (i: number, actor: AgentId, witnesses: readonly AgentId[]): Do
   witnesses,
   createdAt: new Date(2026, 0, 1, 0, 0, i),
   locationId: LOC,
-  targetItemId: null,
+  target: { kind: 'room' },
 });
 
 describe('recallFor', () => {

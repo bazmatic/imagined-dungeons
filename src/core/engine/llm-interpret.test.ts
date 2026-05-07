@@ -87,12 +87,40 @@ describe('llmInterpret', () => {
     expect(r).toBeNull();
   });
 
-  it('returns a look with targetItemId=null for look(targetRef=null)', async () => {
+  it('returns a look at the room for look(targetKind=null)', async () => {
     const llm = makeFakeLanguageModel({
-      responder: () => respond({ kind: 'look', targetRef: null }),
+      responder: () => respond({ kind: 'look', targetKind: null, targetRef: null }),
     });
     const r = await llmInterpret('look around me', paff, view, [], llm);
-    expect(r).toEqual({ kind: 'look', actorId: paff.id, targetItemId: null });
+    expect(r).toEqual({
+      kind: 'look',
+      actorId: paff.id,
+      target: { kind: 'room' },
+    });
+  });
+
+  it('resolves an agent look targetRef into an agent target', async () => {
+    const llm = makeFakeLanguageModel({
+      responder: () => respond({ kind: 'look', targetKind: 'agent', targetRef: 'spark' }),
+    });
+    const r = await llmInterpret('look at spark', paff, view, [], llm);
+    expect(r).toEqual({
+      kind: 'look',
+      actorId: paff.id,
+      target: { kind: 'agent', id: spark.id },
+    });
+  });
+
+  it('resolves an item look targetRef into an item target', async () => {
+    const llm = makeFakeLanguageModel({
+      responder: () => respond({ kind: 'look', targetKind: 'item', targetRef: 'fire map' }),
+    });
+    const r = await llmInterpret('examine the fire map', paff, view, [], llm);
+    expect(r).toEqual({
+      kind: 'look',
+      actorId: paff.id,
+      target: { kind: 'item', id: map.id },
+    });
   });
 
   it('returns null on the unknown variant', async () => {

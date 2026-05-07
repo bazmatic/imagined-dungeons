@@ -140,16 +140,28 @@ describe('parse', () => {
     expect(r.kind).toBe('unknown_direction');
   });
 
-  it('"look" with no target', () => {
+  it('"look" with no target targets the room', () => {
     const r = parse('look', ACTOR, view(), inv());
     if (r.kind !== 'look') throw new Error();
-    expect(r.targetItemId).toBeNull();
+    expect(r.target).toEqual({ kind: 'room' });
   });
 
-  it('"look at the fire map" resolves to the item id', () => {
+  it('"look at the fire map" resolves to an item target', () => {
     const r = parse('look at the fire map', ACTOR, view(), inv());
     if (r.kind !== 'look') throw new Error();
-    expect(r.targetItemId).toBe(map.id);
+    expect(r.target).toEqual({ kind: 'item', id: map.id });
+  });
+
+  it('"look at spark" resolves to an agent target', () => {
+    const r = parse('look at spark', ACTOR, view([map], [spark]), inv());
+    if (r.kind !== 'look') throw new Error();
+    expect(r.target).toEqual({ kind: 'agent', id: spark.id });
+  });
+
+  it('"look at the door" resolves to an exit target by label', () => {
+    const r = parse('look at the d', ACTOR, view(), inv());
+    if (r.kind !== 'look') throw new Error();
+    expect(r.target).toEqual({ kind: 'exit', id: exitN.id });
   });
 
   it('"take fire map" yields take action with resolved id', () => {
