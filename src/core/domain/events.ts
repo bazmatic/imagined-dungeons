@@ -1,5 +1,6 @@
 import type { DescriptionTarget } from './actions';
 import type { Direction } from './entities';
+import type { ExaminableTarget } from './examinable';
 import type { AgentId, EventId, ItemId, LocationId, WorldId } from './ids';
 import { EventKind } from './kinds';
 
@@ -19,7 +20,7 @@ export type DomainEvent =
   | (BaseEvent & { kind: 'move'; from: LocationId; to: LocationId; direction: Direction })
   | (BaseEvent & { kind: 'take'; itemId: ItemId; from: LocationId })
   | (BaseEvent & { kind: 'drop'; itemId: ItemId; to: LocationId })
-  | (BaseEvent & { kind: 'look'; locationId: LocationId; targetItemId: ItemId | null })
+  | (BaseEvent & { kind: 'look'; locationId: LocationId; target: ExaminableTarget })
   | (BaseEvent & { kind: 'inventory' })
   | (BaseEvent & { kind: 'failed'; attempted: string; reason: string })
   | (BaseEvent & { kind: 'speak'; targetAgentId: AgentId; utterance: string })

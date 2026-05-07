@@ -1,4 +1,5 @@
 import type { Direction } from './entities';
+import type { ExaminableTarget } from './examinable';
 import type { AgentId, ItemId, LocationId } from './ids';
 
 export type DescriptionTarget =
@@ -8,7 +9,7 @@ export type DescriptionTarget =
 
 export type Action =
   | { kind: 'move'; actorId: AgentId; direction: Direction }
-  | { kind: 'look'; actorId: AgentId; targetItemId: ItemId | null }
+  | { kind: 'look'; actorId: AgentId; target: ExaminableTarget }
   | { kind: 'take'; actorId: AgentId; itemId: ItemId }
   | { kind: 'drop'; actorId: AgentId; itemId: ItemId }
   | { kind: 'inventory'; actorId: AgentId }

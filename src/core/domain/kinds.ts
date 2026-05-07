@@ -45,6 +45,23 @@ export const EventKind = {
 } as const;
 export type EventKind = (typeof EventKind)[keyof typeof EventKind];
 
+/**
+ * Discriminator values for `ExaminableTarget` — what the `look` action can be
+ * pointed at. Notes:
+ *   - `Item` and `Location` collide string-wise with `OwnerKind` values; they
+ *     live in distinct namespaces and are never compared cross-kind.
+ *   - `Location` is reserved for examining a non-current location (future
+ *     work); the parser does not currently produce it.
+ */
+export const ExaminableKind = {
+  Room: 'room',
+  Item: 'item',
+  Agent: 'agent',
+  Exit: 'exit',
+  Location: 'location',
+} as const;
+export type ExaminableKind = (typeof ExaminableKind)[keyof typeof ExaminableKind];
+
 export const OwnerKind = {
   Location: 'location',
   Agent: 'agent',
