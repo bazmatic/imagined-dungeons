@@ -168,6 +168,14 @@ async function summarise(event: DomainEvent, repo: Repository): Promise<string> 
       const target = await labelOf(event.targetAgentId);
       return `${actor} said "${event.utterance}" to ${target}`;
     }
+    case EventKind.Emote: {
+      const actor = await labelOf(event.actorId);
+      if (event.targetAgentId === null) {
+        return `${actor} ${event.description} (for show, no state change)`;
+      }
+      const target = await labelOf(event.targetAgentId);
+      return `${actor} ${event.description} at ${target} (for show, no state change)`;
+    }
     case EventKind.Attack: {
       const actor = await labelOf(event.actorId);
       const target = await labelOf(event.targetAgentId);
@@ -252,6 +260,9 @@ async function agentsInvolved(
   for (const e of events) {
     if (e.actorId !== SYSTEM_AGENT_ID) await add(e.actorId);
     if (e.kind === EventKind.Speak || e.kind === EventKind.Attack) {
+      await add(e.targetAgentId);
+    }
+    if (e.kind === EventKind.Emote && e.targetAgentId !== null) {
       await add(e.targetAgentId);
     }
   }

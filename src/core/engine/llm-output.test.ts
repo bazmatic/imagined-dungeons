@@ -19,6 +19,7 @@ describe('PLAYER_ACTION_SCHEMA', () => {
         'itemRef',
         'targetAgentRef',
         'utterance',
+        'emoteDescription',
         'reason',
       ]),
     );
@@ -173,5 +174,48 @@ describe('validatePlayerAction', () => {
       kind: 'invalid',
     });
     expect(validatePlayerAction({ kind: 'attack' })).toEqual({ kind: 'invalid' });
+  });
+
+  it('accepts emote with non-empty description and null targetAgentRef', () => {
+    expect(
+      validatePlayerAction({ kind: 'emote', emoteDescription: 'wave', targetAgentRef: null }),
+    ).toEqual({
+      kind: 'emote',
+      emoteDescription: 'wave',
+      targetAgentRef: null,
+    });
+  });
+
+  it('accepts emote with non-empty description and a targetAgentRef', () => {
+    expect(
+      validatePlayerAction({
+        kind: 'emote',
+        emoteDescription: 'waves',
+        targetAgentRef: 'Spark',
+      }),
+    ).toEqual({
+      kind: 'emote',
+      emoteDescription: 'waves',
+      targetAgentRef: 'Spark',
+    });
+  });
+
+  it('rejects emote with empty or missing description', () => {
+    expect(
+      validatePlayerAction({ kind: 'emote', emoteDescription: '', targetAgentRef: null }),
+    ).toEqual({ kind: 'invalid' });
+    expect(validatePlayerAction({ kind: 'emote', targetAgentRef: null })).toEqual({
+      kind: 'invalid',
+    });
+  });
+
+  it('coerces empty-string targetAgentRef on emote to null', () => {
+    expect(
+      validatePlayerAction({ kind: 'emote', emoteDescription: 'shrug', targetAgentRef: '' }),
+    ).toEqual({
+      kind: 'emote',
+      emoteDescription: 'shrug',
+      targetAgentRef: null,
+    });
   });
 });

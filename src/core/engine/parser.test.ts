@@ -339,6 +339,53 @@ describe('parse', () => {
     if (r.kind !== 'no_such_target') throw new Error('expected no_such_target');
     expect(r.ref).toBe('ghost');
   });
+
+  it('"emote waves" parses to an untargeted emote with the description', () => {
+    const r = parse('emote waves', ACTOR, view([map], [spark]), inv());
+    if (r.kind !== 'emote') throw new Error('expected emote');
+    expect(r.description).toBe('waves');
+    expect(r.targetAgentId).toBeNull();
+  });
+
+  it('"gesture grins broadly" (synonym) parses to emote', () => {
+    const r = parse('gesture grins broadly', ACTOR, view([map], [spark]), inv());
+    if (r.kind !== 'emote') throw new Error('expected emote');
+    expect(r.description).toBe('grins broadly');
+    expect(r.targetAgentId).toBeNull();
+  });
+
+  it('"emote at Spark waves" parses to a targeted emote', () => {
+    const r = parse('emote at Spark waves', ACTOR, view([map], [spark]), inv());
+    if (r.kind !== 'emote') throw new Error('expected emote');
+    expect(r.description).toBe('waves');
+    expect(r.targetAgentId).toBe(spark.id);
+  });
+
+  it('"emote spark, grins" parses to a targeted emote via comma split', () => {
+    const r = parse('emote spark, grins', ACTOR, view([map], [spark]), inv());
+    if (r.kind !== 'emote') throw new Error('expected emote');
+    expect(r.description).toBe('grins');
+    expect(r.targetAgentId).toBe(spark.id);
+  });
+
+  it('"emote" alone yields missing_argument', () => {
+    const r = parse('emote', ACTOR, view([map], [spark]), inv());
+    if (r.kind !== 'missing_argument') throw new Error('expected missing_argument');
+    expect(r.verb).toBe('emote');
+  });
+
+  it('"I emote wave" honours the leading-I strip', () => {
+    const r = parse('I emote wave', ACTOR, view([map], [spark]), inv());
+    if (r.kind !== 'emote') throw new Error('expected emote');
+    expect(r.description).toBe('wave');
+    expect(r.targetAgentId).toBeNull();
+  });
+
+  it('"emote \\"waves broadly\\"" strips surrounding quotes', () => {
+    const r = parse('emote "waves broadly"', ACTOR, view([map], [spark]), inv());
+    if (r.kind !== 'emote') throw new Error('expected emote');
+    expect(r.description).toBe('waves broadly');
+  });
 });
 
 describe('resolveAgent', () => {

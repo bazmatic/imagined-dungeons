@@ -116,6 +116,7 @@ async function renderWitnessForPlayer(
       // engine details into the player's transcript.
       return null;
     case EventKind.Speak:
+    case EventKind.Emote:
     case EventKind.Attack:
       return event.narrations?.[playerId] ?? null;
     case EventKind.DescriptionUpdated:

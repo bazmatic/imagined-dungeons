@@ -169,6 +169,33 @@ describe('llmInterpret', () => {
     expect(r).toEqual({ kind: 'attack', actorId: paff.id, targetAgentId: spark.id });
   });
 
+  it('returns an emote Action with the resolved targetAgentId when the model gives a ref', async () => {
+    const llm = makeFakeLanguageModel({
+      responder: () =>
+        respond({ kind: 'emote', emoteDescription: 'wave', targetAgentRef: 'spark' }),
+    });
+    const r = await llmInterpret('wave at spark', paff, view, [], llm);
+    expect(r).toEqual({
+      kind: 'emote',
+      actorId: paff.id,
+      description: 'wave',
+      targetAgentId: spark.id,
+    });
+  });
+
+  it('returns an emote Action with targetAgentId=null when the model gives null targetAgentRef', async () => {
+    const llm = makeFakeLanguageModel({
+      responder: () => respond({ kind: 'emote', emoteDescription: 'shrug', targetAgentRef: null }),
+    });
+    const r = await llmInterpret('I shrug', paff, view, [], llm);
+    expect(r).toEqual({
+      kind: 'emote',
+      actorId: paff.id,
+      description: 'shrug',
+      targetAgentId: null,
+    });
+  });
+
   it('passes the schema and a non-empty system+user prompt to the port', async () => {
     const llm = makeFakeLanguageModel({ responder: () => respond({ kind: 'inventory' }) });
     await llmInterpret('what am i carrying', paff, view, [], llm);

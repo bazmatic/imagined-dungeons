@@ -91,6 +91,24 @@ export async function llmInterpret(
       if (!r.ok) return null;
       return { kind: ActionKind.Attack, actorId: actor.id, targetAgentId: r.agent.id };
     }
+    case ActionKind.Emote: {
+      if (validated.targetAgentRef === null) {
+        return {
+          kind: ActionKind.Emote,
+          actorId: actor.id,
+          description: validated.emoteDescription,
+          targetAgentId: null,
+        };
+      }
+      const r = resolveAgent(validated.targetAgentRef, view.agents);
+      if (!r.ok) return null;
+      return {
+        kind: ActionKind.Emote,
+        actorId: actor.id,
+        description: validated.emoteDescription,
+        targetAgentId: r.agent.id,
+      };
+    }
     case 'unknown':
     case 'invalid':
       return null;

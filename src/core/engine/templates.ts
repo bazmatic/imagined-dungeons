@@ -113,6 +113,50 @@ export function renderSpeakMechanical(
 }
 
 /**
+ * Conjugate the leading verb of an emote description into its third-person
+ * form for rendering by an outside observer. Stored descriptions are the base
+ * verb form ("wave", "shake their head"); the helper adds an "s" to the
+ * leading verb so "Spark waves" / "Spark shakes their head" reads naturally.
+ *
+ * Idempotent: if the leading verb already ends in "s" (e.g. "waves",
+ * "kisses", "fusses", "splashes"), it is left alone. This keeps things
+ * grammatically permissive — the description is short free text and the
+ * helper does no full conjugation.
+ */
+export function thirdPersonVerb(description: string): string {
+  const parts = description.split(' ');
+  const verb = parts[0] ?? '';
+  if (verb.length === 0 || verb.endsWith('s')) return description;
+  parts[0] = `${verb}s`;
+  return parts.join(' ');
+}
+
+/**
+ * Mechanical fallback for an `emote` event from a given observer's perspective.
+ * Used when no LLM is available, or when the LLM call fails. The description
+ * is short free-text (e.g. "wave", "grin broadly", "shake their head"); we
+ * render it second-person as-is for the actor and conjugate for third-person.
+ */
+export function renderEmoteMechanical(
+  event: Extract<DomainEvent, { kind: 'emote' }>,
+  actor: Agent,
+  observer: Agent,
+  target: Agent | null,
+): string {
+  if (observer.id === actor.id) {
+    return `You ${event.description}.`;
+  }
+  const verb = thirdPersonVerb(event.description);
+  if (target && observer.id === target.id) {
+    return `${actor.label} ${verb} at you.`;
+  }
+  if (target) {
+    return `${actor.label} ${verb} at ${target.label}.`;
+  }
+  return `${actor.label} ${verb}.`;
+}
+
+/**
  * Mechanical templates for an *observer watching another agent* perform a
  * mechanical action. Used when an autonomous NPC takes a turn and we need to
  * tell the player what they saw.

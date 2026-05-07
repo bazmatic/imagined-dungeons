@@ -14,6 +14,12 @@ export type Action =
   | { kind: 'drop'; actorId: AgentId; itemId: ItemId }
   | { kind: 'inventory'; actorId: AgentId }
   | { kind: 'speak'; actorId: AgentId; targetAgentId: AgentId; utterance: string }
+  | {
+      kind: 'emote';
+      actorId: AgentId;
+      description: string;
+      targetAgentId: AgentId | null;
+    }
   | { kind: 'attack'; actorId: AgentId; targetAgentId: AgentId }
   | {
       kind: 'update_description';

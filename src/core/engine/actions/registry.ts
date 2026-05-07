@@ -4,6 +4,7 @@ import type { Result } from '@core/domain/result';
 import type { Repository } from '../repository';
 import { handleAttack } from './attack';
 import { handleDrop } from './drop';
+import { handleEmote } from './emote';
 import { handleInventory } from './inventory';
 import { handleLook } from './look';
 import { handleMove } from './move';
@@ -29,6 +30,8 @@ export async function dispatch(
       return handleInventory(action, repo);
     case ActionKind.Speak:
       return handleSpeak(action, repo);
+    case ActionKind.Emote:
+      return handleEmote(action, repo);
     case ActionKind.Attack:
       return handleAttack(action, repo);
     case ActionKind.UpdateDescription:

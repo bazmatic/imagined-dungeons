@@ -61,6 +61,9 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
   lines.push(
     '  - say "<utterance>" to <character>   — speak to another character. Quote the words. (e.g. \'I say "hello there" to Paff\')',
   );
+  lines.push(
+    '  - emote <description>             — perform a brief gesture or expression for show, no state change. Use the base verb form (e.g. "I emote wave at Paff", "I emote grin", "I emote shake my head").',
+  );
   lines.push('  - attack <character>   — attack another character (e.g. "I attack the goblin")');
   lines.push('  - wait                 — do nothing this turn');
   lines.push('');
@@ -77,7 +80,7 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
   lines.push('');
   lines.push('Hard rules:');
   lines.push(
-    '- Use one of the verbs above. Do not use "greet", "smile", "compliment", "approach", "wave", "nod", "look up", "shrug", or any verb not in the list — those will fail to parse and you will do nothing.',
+    '- Use one of the verbs above. For purely physical/expressive actions like waving, grinning, nodding, or shrugging, use `emote <description>` (e.g. "I emote wave at Paff"). For greeting someone with words, use `say "..." to <them>` plus `emote wave at <them>` if you want both.',
   );
   lines.push(
     '- Refer only to characters, items, and exits that appear in the user message. Inventing names will fail.',
@@ -171,6 +174,16 @@ async function summariseEvent(
         return `${actorLabel} said to you: "${event.utterance}"`;
       }
       return `${actorLabel} said "${event.utterance}" to ${targetLabel}`;
+    }
+    case EventKind.Emote: {
+      if (event.targetAgentId === selfId) {
+        return `${actorLabel} ${event.description} at you`;
+      }
+      if (event.targetAgentId !== null) {
+        const targetLabel = await labelOf(event.targetAgentId);
+        return `${actorLabel} ${event.description} at ${targetLabel}`;
+      }
+      return `${actorLabel} ${event.description}`;
     }
     case EventKind.Attack: {
       const targetLabel = await labelOf(event.targetAgentId);

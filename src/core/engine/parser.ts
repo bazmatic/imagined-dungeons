@@ -1,5 +1,6 @@
 import type { Action, ParseError } from '@core/domain/actions';
 import type { Agent, Exit, Item } from '@core/domain/entities';
+import type { AgentId } from '@core/domain/ids';
 import { ActionKind, Direction, ExaminableKind, ParseErrorKind } from '@core/domain/kinds';
 import type { PerceptionView } from './perception';
 
@@ -246,6 +247,116 @@ export function parse(
         actorId: actor.id,
         targetAgentId: r.agent.id,
         utterance,
+      };
+    }
+
+    case 'emote':
+    case 'gesture': {
+      // "emote <description>" or "emote at <agent> <description>" or
+      // "emote <agent>, <description>". Description is short free-text — we
+      // recover the original-cased remainder so casing is preserved.
+      const original = text.trim();
+      // Honour the leading-"I" strip already applied to `toks`. Mirror it on
+      // the original-cased text so `I emote wave` -> remainder `wave`.
+      const detoked = original.replace(/^\s*i\s+/i, '');
+      const afterVerb = detoked.replace(/^(emote|gesture)\b\s*/i, '').trim();
+      if (afterVerb.length === 0) {
+        return { kind: ParseErrorKind.MissingArgument, verb: first };
+      }
+      // "emote at <agent> <description>" — strip leading "at " and try to
+      // consume the longest agent-name prefix.
+      let remainder = afterVerb;
+      let hadExplicitAt = false;
+      if (/^at\s+/i.test(remainder)) {
+        remainder = remainder.replace(/^at\s+/i, '');
+        hadExplicitAt = true;
+      }
+
+      let targetAgentId: AgentId | null = null;
+      let description = remainder;
+
+      // Trailing "at <agent>" clause: "emote wave at spark" → desc="wave", target=spark.
+      // Only when there's no leading "at " (already handled above) and no comma.
+      const commaIdxEarly = remainder.indexOf(',');
+      if (!hadExplicitAt && commaIdxEarly < 0) {
+        const lower = remainder.toLowerCase();
+        // Find the longest agent-name suffix preceded by " at ".
+        const matched = [...view.agents]
+          .map((a) => a.label.toLowerCase())
+          .filter((label) => lower.endsWith(` at ${label}`))
+          .sort((a, b) => b.length - a.length)[0];
+        if (matched) {
+          const cutoff = remainder.length - matched.length - ' at '.length;
+          const desc = remainder.slice(0, cutoff).trim();
+          const targetRef = remainder.slice(cutoff + ' at '.length).trim();
+          const r = resolveAgent(targetRef, view.agents);
+          if (!r.ok) return r.error;
+          targetAgentId = r.agent.id;
+          description = desc;
+          // Skip the comma/at-prefix branches below.
+          description = description.replace(/^["'](.*)["']\.?$/s, '$1').trim();
+          description = description.replace(/\.$/, '').trim();
+          if (description.length === 0) {
+            return { kind: ParseErrorKind.MissingArgument, verb: first };
+          }
+          return {
+            kind: ActionKind.Emote,
+            actorId: actor.id,
+            description,
+            targetAgentId,
+          };
+        }
+      }
+
+      const commaIdx = remainder.indexOf(',');
+      if (commaIdx >= 0) {
+        // "emote <agent>, <description>"
+        const targetRef = remainder.slice(0, commaIdx).trim();
+        const desc = remainder.slice(commaIdx + 1).trim();
+        if (targetRef.length > 0) {
+          const r = resolveAgent(targetRef, view.agents);
+          if (!r.ok) return r.error;
+          targetAgentId = r.agent.id;
+          description = desc;
+        }
+      } else if (hadExplicitAt) {
+        // "emote at <agent> <description>" — consume the longest agent-name
+        // prefix from the remainder.
+        const lower = remainder.toLowerCase();
+        const matched = [...view.agents]
+          .map((a) => a.label.toLowerCase())
+          .filter((label) => lower.startsWith(label))
+          .sort((a, b) => b.length - a.length)[0];
+        if (matched) {
+          const targetRef = remainder.slice(0, matched.length).trim();
+          const r = resolveAgent(targetRef, view.agents);
+          if (!r.ok) return r.error;
+          targetAgentId = r.agent.id;
+          description = remainder.slice(matched.length).trim();
+        } else {
+          // "at" was given but no agent matched: try first word as ref.
+          const parts = remainder.split(/\s+/);
+          const targetRef = parts[0] ?? '';
+          if (targetRef.length === 0) return { kind: ParseErrorKind.MissingArgument, verb: first };
+          const r = resolveAgent(targetRef, view.agents);
+          if (!r.ok) return r.error;
+          targetAgentId = r.agent.id;
+          description = parts.slice(1).join(' ').trim();
+        }
+      }
+
+      // Strip surrounding quotes from the description if present.
+      description = description.replace(/^["'](.*)["']\.?$/s, '$1').trim();
+      // Trim a trailing period for cleaner storage.
+      description = description.replace(/\.$/, '').trim();
+      if (description.length === 0) {
+        return { kind: ParseErrorKind.MissingArgument, verb: first };
+      }
+      return {
+        kind: ActionKind.Emote,
+        actorId: actor.id,
+        description,
+        targetAgentId,
       };
     }
 

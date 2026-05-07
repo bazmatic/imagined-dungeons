@@ -24,6 +24,7 @@ const INTERPRETER_KINDS = [
   ActionKind.Drop,
   ActionKind.Inventory,
   ActionKind.Speak,
+  ActionKind.Emote,
   ActionKind.Attack,
 ] as const;
 const KINDS = [...INTERPRETER_KINDS, UnknownKind] as const;
@@ -60,6 +61,7 @@ export const PLAYER_ACTION_SCHEMA: JsonSchema = {
     'itemRef',
     'targetAgentRef',
     'utterance',
+    'emoteDescription',
     'reason',
   ],
   properties: {
@@ -73,6 +75,7 @@ export const PLAYER_ACTION_SCHEMA: JsonSchema = {
     itemRef: { type: ['string', 'null'] },
     targetAgentRef: { type: ['string', 'null'] },
     utterance: { type: ['string', 'null'] },
+    emoteDescription: { type: ['string', 'null'] },
     reason: { type: ['string', 'null'] },
   },
 };
@@ -108,6 +111,11 @@ export type ValidatedPlayerAction =
   | { readonly kind: 'drop'; readonly itemRef: string }
   | { readonly kind: 'inventory' }
   | { readonly kind: 'speak'; readonly targetAgentRef: string; readonly utterance: string }
+  | {
+      readonly kind: 'emote';
+      readonly emoteDescription: string;
+      readonly targetAgentRef: string | null;
+    }
   | { readonly kind: 'attack'; readonly targetAgentRef: string }
   | { readonly kind: 'unknown'; readonly reason: string }
   | { readonly kind: 'invalid' };
@@ -188,6 +196,18 @@ export function validatePlayerAction(input: unknown): ValidatedPlayerAction {
         return { kind: InvalidKind };
       }
       return { kind: ActionKind.Attack, targetAgentRef };
+    }
+    case ActionKind.Emote: {
+      const emoteDescription = input.emoteDescription;
+      if (typeof emoteDescription !== 'string' || emoteDescription.length === 0) {
+        return { kind: InvalidKind };
+      }
+      const rawTargetAgentRef = input.targetAgentRef;
+      const targetAgentRef =
+        typeof rawTargetAgentRef === 'string' && rawTargetAgentRef.length > 0
+          ? rawTargetAgentRef
+          : null;
+      return { kind: ActionKind.Emote, emoteDescription, targetAgentRef };
     }
     case UnknownKind: {
       const reason = input.reason;

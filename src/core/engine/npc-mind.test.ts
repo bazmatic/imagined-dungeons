@@ -113,6 +113,20 @@ describe('decideNpcIntent', () => {
     }
   });
 
+  it('NPC-mind prompt enumerates emote and the produced intent parses cleanly', async () => {
+    const llm = makeFakeLanguageModel({
+      textResponder: () => 'I emote wave at Paff.',
+    });
+    const repo = makeRepo();
+    const intent = await decideNpcIntent(SPARK_ID, repo, llm);
+    expect(intent).toBe('I emote wave at Paff.');
+    // System prompt should advertise emote.
+    const call = llm.textCalls[0];
+    expect(call?.system).toContain('emote');
+    // Forbidden-verbs rule should NOT mention "smile" as forbidden any more.
+    expect(call?.system ?? '').not.toMatch(/Do not use[^.]*"smile"/);
+  });
+
   it('does not call the LLM when llm is null (no model usage on fallback)', async () => {
     const repo = makeRepo();
     // Sanity: passing null skips construction of the prompt entirely.

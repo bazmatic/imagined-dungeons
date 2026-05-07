@@ -17,6 +17,7 @@ export const ActionKind = {
   Drop: 'drop',
   Inventory: 'inventory',
   Speak: 'speak',
+  Emote: 'emote',
   Attack: 'attack',
   UpdateDescription: 'update_description',
 } as const;
@@ -40,6 +41,7 @@ export const EventKind = {
   Inventory: 'inventory',
   Failed: 'failed',
   Speak: 'speak',
+  Emote: 'emote',
   Attack: 'attack',
   DescriptionUpdated: 'description_updated',
 } as const;

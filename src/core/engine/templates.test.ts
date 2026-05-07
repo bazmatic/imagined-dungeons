@@ -1,14 +1,18 @@
 import type { Agent, Exit, Item, Location } from '@core/domain/entities';
+import type { DomainEvent } from '@core/domain/events';
 import { asAgentId, asExitId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
+import { asEventId } from '@core/domain/ids';
 import { describe, expect, it } from 'vitest';
 import {
   renderActionError,
   renderDropSelf,
+  renderEmoteMechanical,
   renderInventory,
   renderLook,
   renderMoveSelf,
   renderParseError,
   renderTakeSelf,
+  thirdPersonVerb,
 } from './templates';
 
 const W = asWorldId('w');
@@ -125,5 +129,133 @@ describe('templates', () => {
 
   it('renderActionError returns the supplied reason', () => {
     expect(renderActionError("You can't go that way.")).toBe("You can't go that way.");
+  });
+});
+
+describe('thirdPersonVerb', () => {
+  it('appends an "s" to a base verb that does not end in "s"', () => {
+    expect(thirdPersonVerb('wave')).toBe('waves');
+    expect(thirdPersonVerb('grin')).toBe('grins');
+  });
+
+  it('is idempotent — already-third-person stays', () => {
+    expect(thirdPersonVerb('waves')).toBe('waves');
+    expect(thirdPersonVerb('grins')).toBe('grins');
+  });
+
+  it('is a no-op for verbs that already end in "s" ("kiss", "fuss")', () => {
+    expect(thirdPersonVerb('kiss')).toBe('kiss');
+    expect(thirdPersonVerb('fuss')).toBe('fuss');
+  });
+
+  it('does the simple thing for non-s endings ("splash" → "splashs"), keeping behaviour predictable', () => {
+    // The helper does not know English orthography; "splash" → "splashs" is
+    // grammatically off but acceptable per the spec ("keep grammatically
+    // permissive — the description verb is whatever the parser produced").
+    expect(thirdPersonVerb('splash')).toBe('splashs');
+  });
+
+  it('only conjugates the leading word for multi-word descriptions', () => {
+    expect(thirdPersonVerb('shake their head')).toBe('shakes their head');
+    expect(thirdPersonVerb('grin broadly')).toBe('grins broadly');
+  });
+
+  it('handles empty input safely', () => {
+    expect(thirdPersonVerb('')).toBe('');
+  });
+});
+
+describe('renderEmoteMechanical', () => {
+  const paff: Agent = {
+    id: asAgentId('char_p'),
+    worldId: W,
+    label: 'Paff',
+    shortDescription: '',
+    longDescription: '',
+    locationId: A,
+    hp: 10,
+    damage: 0,
+    defense: 0,
+    capacity: 10,
+    mood: null,
+    goal: null,
+    autonomous: false,
+  };
+  const spark: Agent = {
+    id: asAgentId('char_s'),
+    worldId: W,
+    label: 'Spark',
+    shortDescription: '',
+    longDescription: '',
+    locationId: A,
+    hp: 10,
+    damage: 0,
+    defense: 0,
+    capacity: 10,
+    mood: null,
+    goal: null,
+    autonomous: false,
+  };
+  const ember: Agent = {
+    id: asAgentId('char_e'),
+    worldId: W,
+    label: 'Ember',
+    shortDescription: '',
+    longDescription: '',
+    locationId: A,
+    hp: 10,
+    damage: 0,
+    defense: 0,
+    capacity: 10,
+    mood: null,
+    goal: null,
+    autonomous: false,
+  };
+  const evWith = (
+    description: string,
+    targetId: string | null,
+  ): Extract<DomainEvent, { kind: 'emote' }> => ({
+    id: asEventId('e1'),
+    worldId: W,
+    actorId: paff.id,
+    kind: 'emote',
+    witnesses: [paff.id, spark.id],
+    createdAt: new Date(),
+    description,
+    targetAgentId: targetId as Extract<DomainEvent, { kind: 'emote' }>['targetAgentId'],
+  });
+
+  it('renders second-person for the actor', () => {
+    expect(renderEmoteMechanical(evWith('wave', spark.id), paff, paff, spark)).toBe('You wave.');
+  });
+
+  it('renders second-person addressed to the target', () => {
+    expect(renderEmoteMechanical(evWith('wave', spark.id), paff, spark, spark)).toBe(
+      'Paff waves at you.',
+    );
+  });
+
+  it('renders third-person with target for an outside observer', () => {
+    expect(renderEmoteMechanical(evWith('wave', spark.id), paff, ember, spark)).toBe(
+      'Paff waves at Spark.',
+    );
+  });
+
+  it('renders third-person without target when targetAgentId is null', () => {
+    expect(renderEmoteMechanical(evWith('shrug', null), paff, ember, null)).toBe('Paff shrugs.');
+  });
+
+  it('uses the description verbatim for second-person actor (no double-s)', () => {
+    // Even if the model accidentally sends a third-person form, the second-person
+    // output is what the parser/LLM gave — kept grammatically permissive.
+    expect(renderEmoteMechanical(evWith('shake their head', null), paff, paff, null)).toBe(
+      'You shake their head.',
+    );
+  });
+
+  it('does not double-pluralise a description already in third person', () => {
+    expect(renderEmoteMechanical(evWith('waves', spark.id), paff, ember, spark)).toBe(
+      'Paff waves at Spark.',
+    );
   });
 });

@@ -97,6 +97,52 @@ describe('full flow against seeded burning district', () => {
     }
   });
 
+  it('"emote wave at spark" runs end-to-end and is witnessed by Spark', async () => {
+    const h = openDb(':memory:');
+    try {
+      await seedIfEmpty(h.db, BURNING_DISTRICT_CAMPAIGN);
+      const repo = new SqliteRepository(h.db, BURNING_DISTRICT_CAMPAIGN.worldId);
+      const here = await repo.agentsAt((await repo.getAgent(PAFF)).locationId);
+      const spark = here.find((a) => a.label === 'Spark');
+      if (!spark) throw new Error('Spark not seeded in starting room');
+      const r = await runTurn(PAFF, 'emote wave at spark', repo);
+      expect(r.events).toHaveLength(1);
+      const event = r.events[0];
+      if (!event || event.kind !== 'emote') throw new Error('expected emote event');
+      expect(event.description).toBe('wave');
+      expect(event.targetAgentId).toBe(spark.id);
+      // Both witnesses received a (mechanical) narration.
+      expect(event.witnesses).toEqual(expect.arrayContaining([PAFF, spark.id]));
+      expect(event.narrations?.[PAFF]).toBeTruthy();
+      expect(event.narrations?.[spark.id]).toBeTruthy();
+      // Persisted with narrations.
+      const recent = await repo.recentEvents(5);
+      const persisted = recent[recent.length - 1];
+      if (!persisted || persisted.kind !== 'emote') throw new Error('expected persisted emote');
+      expect(persisted.narrations).toBeDefined();
+    } finally {
+      h.close();
+    }
+  });
+
+  it('"emote shrugs" runs end-to-end as an untargeted emote', async () => {
+    const h = openDb(':memory:');
+    try {
+      await seedIfEmpty(h.db, BURNING_DISTRICT_CAMPAIGN);
+      const repo = new SqliteRepository(h.db, BURNING_DISTRICT_CAMPAIGN.worldId);
+      const r = await runTurn(PAFF, 'emote shrugs', repo);
+      expect(r.events).toHaveLength(1);
+      const event = r.events[0];
+      if (!event || event.kind !== 'emote') throw new Error('expected emote event');
+      expect(event.description).toBe('shrugs');
+      expect(event.targetAgentId).toBeNull();
+      // Mechanical fallback for the actor's own POV.
+      expect(r.render).toBe('You shrugs.');
+    } finally {
+      h.close();
+    }
+  });
+
   it('"attack spark" runs end-to-end with a determined outcome and reduced HP on hit', async () => {
     const h = openDb(':memory:');
     try {
