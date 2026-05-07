@@ -122,7 +122,14 @@ export async function runTick(
     if (!npc.autonomous || npc.hp <= 0) continue;
 
     const intent = await decideNpcIntent(npcId, repo, llm);
+    console.info(`[npc] ${npc.label} intent: "${intent}"`);
     const npcResult = await runTurn(npcId, intent, repo, { parse, llm });
+    if (npcResult.events.length === 0) {
+      // Intent didn't parse or dispatch failed. The reason is in npcResult.render
+      // (a parse-error or action-error message). Surface it so the dev terminal
+      // shows why the NPC produced nothing visible to the player.
+      console.info(`[npc] ${npc.label} produced no event: ${npcResult.render}`);
+    }
     for (const ev of npcResult.events) {
       events.push(ev);
       const line = await renderWitnessForPlayer(ev, playerId, repo);
