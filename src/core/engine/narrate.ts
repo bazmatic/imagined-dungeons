@@ -15,12 +15,21 @@ import { renderAttackMechanical, renderSpeakMechanical } from './templates';
  */
 
 const SYSTEM_PROMPT = `You are the narrator of a fantasy text adventure.
-You are narrating a single event from the perspective of one specific observer.
-Reply with one short paragraph, no more than 60 words, in present tense.
-Do not include meta-commentary, do not address the reader, do not give the player instructions.
-Stay in the fiction. Reflect the observer's perspective: the actor and target may be
-the observer themselves (use "you"), or other characters (use their names).
-Use the observer's mood/goal to colour the description without contradicting the bare facts of the event.`;
+You narrate a single event from one specific observer's point of view.
+
+Person of narration is determined strictly by who the observer is:
+- If the observer IS the actor, narrate in second person ("You say...", "You swing at...").
+- If the observer IS the target, narrate in second person addressed to them ("Spark says to you...").
+- Otherwise, narrate in third person using names ("Paff says to Spark...").
+
+Style:
+- One short paragraph, present tense.
+- speak events: at most 30 words. attack events: at most 40 words.
+- Stick to what the observer can plainly perceive: the words spoken, the swing, the hit or miss.
+- Do not invent inner thoughts, motivations, heart-rates, blushes, hopes, smiles, or romantic subtext.
+- Do not paraphrase or rewrite the spoken utterance — quote it verbatim once.
+- Do not address the reader. Do not give the player advice. Stay in the fiction.
+- The observer's mood/goal may colour word choice slightly; it must never contradict the facts.`;
 
 interface NarrateContext {
   readonly event: DomainEvent;
@@ -32,25 +41,40 @@ interface NarrateContext {
 
 function buildUserPrompt(ctx: NarrateContext, recentMemory: readonly string[]): string {
   const { event, observer, actor, target, location } = ctx;
+  const observerIsActor = observer.id === actor.id;
+  const observerIsTarget = observer.id === target.id;
+
   const lines: string[] = [];
-  lines.push(`Observer: ${observer.label}${observer.id === actor.id ? ' (the actor)' : ''}`);
+  if (observerIsActor) {
+    lines.push(`POV: second person. The observer IS the actor. Use "you" for the actor.`);
+    lines.push(`Refer to the target ("${target.label}") by name.`);
+  } else if (observerIsTarget) {
+    lines.push(`POV: second person. The observer IS the target. Use "you" for the target.`);
+    lines.push(`Refer to the actor ("${actor.label}") by name.`);
+  } else {
+    lines.push(
+      `POV: third person. Refer to actor ("${actor.label}") and target ("${target.label}") by name.`,
+    );
+  }
+  lines.push('');
+  lines.push(`Observer: ${observer.label}`);
   if (observer.mood) lines.push(`Observer mood: ${observer.mood}`);
   if (observer.goal) lines.push(`Observer goal: ${observer.goal}`);
   lines.push(`Location: ${location.label}`);
-  lines.push(`Actor: ${actor.label}`);
-  lines.push(`Target: ${target.label}`);
+  lines.push('');
   if (event.kind === EventKind.Speak) {
-    lines.push('Action: speak');
-    lines.push(`Utterance: "${event.utterance}"`);
+    lines.push('Event: speak');
+    lines.push('The actor said the following words verbatim — quote them once, do not paraphrase:');
+    lines.push(`"${event.utterance}"`);
   } else if (event.kind === EventKind.Attack) {
-    lines.push('Action: attack');
+    lines.push('Event: attack');
     lines.push(`Outcome: ${event.outcome}`);
     lines.push(`Damage dealt: ${event.damageDealt}`);
     lines.push(`Target HP after: ${target.hp}`);
   }
   if (recentMemory.length > 0) {
     lines.push('');
-    lines.push('Recent events the observer witnessed:');
+    lines.push('Recent events the observer witnessed (context only, do not narrate these):');
     for (const m of recentMemory) lines.push(`- ${m}`);
   }
   return lines.join('\n');
