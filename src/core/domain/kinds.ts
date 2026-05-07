@@ -18,6 +18,7 @@ export const ActionKind = {
   Inventory: 'inventory',
   Speak: 'speak',
   Attack: 'attack',
+  UpdateDescription: 'update_description',
 } as const;
 export type ActionKind = (typeof ActionKind)[keyof typeof ActionKind];
 
@@ -40,6 +41,7 @@ export const EventKind = {
   Failed: 'failed',
   Speak: 'speak',
   Attack: 'attack',
+  DescriptionUpdated: 'description_updated',
 } as const;
 export type EventKind = (typeof EventKind)[keyof typeof EventKind];
 

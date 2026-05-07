@@ -146,6 +146,8 @@ async function summariseEvent(
       }
       return `${actorLabel} attacked ${targetLabel} (${event.outcome}${dmg})`;
     }
+    case EventKind.DescriptionUpdated:
+      return `the world changed (${event.target.kind} description updated)`;
   }
 }
 

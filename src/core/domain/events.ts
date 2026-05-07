@@ -1,3 +1,4 @@
+import type { DescriptionTarget } from './actions';
 import type { Direction } from './entities';
 import type { AgentId, EventId, ItemId, LocationId, WorldId } from './ids';
 import { EventKind } from './kinds';
@@ -27,6 +28,14 @@ export type DomainEvent =
       targetAgentId: AgentId;
       outcome: 'hit' | 'miss';
       damageDealt: number;
+    })
+  | (BaseEvent & {
+      kind: 'description_updated';
+      target: DescriptionTarget;
+      shortBefore: string | null;
+      shortAfter: string | null;
+      longBefore: string | null;
+      longAfter: string | null;
     });
 
 export const NARRATED_EVENT_KINDS: ReadonlySet<EventKind> = new Set<EventKind>([

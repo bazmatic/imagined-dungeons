@@ -1,5 +1,10 @@
 import type { Direction } from './entities';
-import type { AgentId, ItemId } from './ids';
+import type { AgentId, ItemId, LocationId } from './ids';
+
+export type DescriptionTarget =
+  | { kind: 'location'; id: LocationId }
+  | { kind: 'item'; id: ItemId }
+  | { kind: 'agent'; id: AgentId };
 
 export type Action =
   | { kind: 'move'; actorId: AgentId; direction: Direction }
@@ -8,7 +13,14 @@ export type Action =
   | { kind: 'drop'; actorId: AgentId; itemId: ItemId }
   | { kind: 'inventory'; actorId: AgentId }
   | { kind: 'speak'; actorId: AgentId; targetAgentId: AgentId; utterance: string }
-  | { kind: 'attack'; actorId: AgentId; targetAgentId: AgentId };
+  | { kind: 'attack'; actorId: AgentId; targetAgentId: AgentId }
+  | {
+      kind: 'update_description';
+      actorId: AgentId;
+      target: DescriptionTarget;
+      shortDescription: string | null;
+      longDescription: string | null;
+    };
 
 export type ParseError =
   | { kind: 'empty' }

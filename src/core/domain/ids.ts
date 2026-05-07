@@ -14,3 +14,10 @@ export const asAgentId = (s: string): AgentId => s as AgentId;
 export const asExitId = (s: string): ExitId => s as ExitId;
 export const asEventId = (s: string): EventId => s as EventId;
 export const asWorldId = (s: string): WorldId => s as WorldId;
+
+/**
+ * The synthetic "system" agent — used as the actorId on actions and events
+ * issued by "the world" (notably the consequence engine; abstract-design §4,
+ * §10). The agent is non-autonomous and is filtered out by the NPC scheduler.
+ */
+export const SYSTEM_AGENT_ID: AgentId = asAgentId('system');

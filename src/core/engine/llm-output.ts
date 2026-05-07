@@ -11,7 +11,22 @@ const DIRECTIONS: readonly Direction[] = ALL_DIRECTIONS;
  */
 const UnknownKind = 'unknown' as const;
 const InvalidKind = 'invalid' as const;
-const KINDS = [...Object.values(ActionKind), UnknownKind] as const;
+/**
+ * Kinds the player/NPC interpreter is allowed to produce. The
+ * `update_description` action exists in the closed action vocabulary but is
+ * issued by "the world" (the consequence engine) and is therefore deliberately
+ * absent here — players and NPCs cannot rewrite stored descriptions.
+ */
+const INTERPRETER_KINDS = [
+  ActionKind.Move,
+  ActionKind.Look,
+  ActionKind.Take,
+  ActionKind.Drop,
+  ActionKind.Inventory,
+  ActionKind.Speak,
+  ActionKind.Attack,
+] as const;
+const KINDS = [...INTERPRETER_KINDS, UnknownKind] as const;
 type Kind = (typeof KINDS)[number];
 
 /**
