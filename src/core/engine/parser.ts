@@ -139,11 +139,46 @@ export function parse(
       return { kind: ActionKind.Inventory, actorId: actor.id };
 
     case 'say': {
-      // "say <utterance>" — utterance is everything after "say".
-      // Optional implicit target: only one other agent in the room.
-      const rest = toks.slice(1).join(' ').trim();
-      if (rest.length === 0) return { kind: ParseErrorKind.MissingArgument, verb: 'say' };
-      // No comma form: target is the (sole) other agent in the room, if exactly one.
+      // Recover the original-cased remainder after "say" from `text` (the
+      // tokens array has been lowercased). Honour the leading-"I" strip that
+      // happens at the top of `parse` — drop a leading "I " from `text` too
+      // so utterances like `I say "hi" to Paff` don't keep the "I say" prefix.
+      const detoked = text.replace(/^\s*i\s+/i, '');
+      // Match "say" with optional trailing whitespace+rest, so a bare "say"
+      // produces an empty afterSay (→ missing_argument), not the literal "say".
+      const afterSay = detoked.replace(/^say\b\s*/i, '').trim();
+      if (afterSay.length === 0) {
+        return { kind: ParseErrorKind.MissingArgument, verb: 'say' };
+      }
+
+      // Try to detect a trailing "to <agent>" clause first. The utterance is
+      // everything before it; the target is whatever follows.
+      let utterance = afterSay;
+      let explicitTargetRef: string | null = null;
+      const toMatch = afterSay.match(/^(.*?)\s+to\s+([^,]+?)\.?\s*$/i);
+      if (toMatch?.[1] && toMatch[2]) {
+        utterance = toMatch[1].trim();
+        explicitTargetRef = toMatch[2].trim();
+      }
+
+      // Strip surrounding quotes from the utterance if the speaker quoted it.
+      utterance = utterance.replace(/^["'](.*)["']\.?$/s, '$1').trim();
+      if (utterance.length === 0) {
+        return { kind: ParseErrorKind.MissingArgument, verb: 'say' };
+      }
+
+      // Resolve the target: explicit "to <agent>" wins; otherwise implicit
+      // (only one other agent in the room) wins; otherwise ambiguous.
+      if (explicitTargetRef) {
+        const r = resolveAgent(explicitTargetRef, view.agents);
+        if (!r.ok) return r.error;
+        return {
+          kind: ActionKind.Speak,
+          actorId: actor.id,
+          targetAgentId: r.agent.id,
+          utterance,
+        };
+      }
       if (view.agents.length === 0) {
         return { kind: ParseErrorKind.NoSuchTarget, ref: '' };
       }
@@ -160,7 +195,7 @@ export function parse(
         kind: ActionKind.Speak,
         actorId: actor.id,
         targetAgentId: target.id,
-        utterance: text.trim().replace(/^say\s+/i, ''),
+        utterance,
       };
     }
 

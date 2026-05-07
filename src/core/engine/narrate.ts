@@ -24,10 +24,11 @@ Person of narration is determined strictly by who the observer is:
 
 Style:
 - One short paragraph, present tense.
-- speak events: at most 30 words. attack events: at most 40 words.
+- speak events: at most 25 words. attack events: at most 40 words.
 - Stick to what the observer can plainly perceive: the words spoken, the swing, the hit or miss.
+- For speak events specifically: the actor only said the words. They did NOT approach, grin, smile, wave, nod, lean in, gesture, look up, raise a hand, or otherwise move. Don't invent body language. Just narrate the speech.
 - Do not invent inner thoughts, motivations, heart-rates, blushes, hopes, smiles, or romantic subtext.
-- Do not paraphrase or rewrite the spoken utterance — quote it verbatim once.
+- Do not paraphrase or rewrite the spoken utterance — quote it verbatim once, exactly as supplied. The supplied utterance is already the final dialogue; do not prepend "I say" or wrap it further.
 - Do not address the reader. Do not give the player advice. Stay in the fiction.
 - The observer's mood/goal may colour word choice slightly; it must never contradict the facts.`;
 

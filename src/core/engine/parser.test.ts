@@ -268,6 +268,46 @@ describe('parse', () => {
     expect(r.candidates).toEqual(expect.arrayContaining(['Spark', 'Ember']));
   });
 
+  it('"say \\"hi\\" to spark" parses utterance + explicit target with two agents present', () => {
+    const r = parse('say "hi" to spark', ACTOR, view([map], [spark, ember]), inv());
+    if (r.kind !== 'speak') throw new Error('expected speak');
+    expect(r.targetAgentId).toBe(spark.id);
+    expect(r.utterance).toBe('hi');
+  });
+
+  it('"I say \\"hi\\" to Paff Pinkerton." (NPC-mind shape) parses cleanly', () => {
+    // After the leading-`I` strip the verb is `say`. Then the parser must:
+    //   - drop the trailing "to Paff Pinkerton" target clause
+    //   - strip surrounding quotes and the trailing period
+    // utterance must be just "hi", not "\"hi\" to Paff Pinkerton."
+    const paff: Agent = {
+      id: asAgentId('char_paff'),
+      worldId: W,
+      label: 'Paff Pinkerton',
+      shortDescription: '',
+      longDescription: '',
+      locationId: asLocationId('loc_a'),
+      hp: 20,
+      damage: 2,
+      defense: 12,
+      capacity: 30,
+      mood: null,
+      goal: null,
+      autonomous: false,
+    };
+    const speakerView: PerceptionView = {
+      actor: spark,
+      location: LOC,
+      items: [],
+      agents: [paff],
+      exits: [exitN],
+    };
+    const r = parse('I say "hi" to Paff Pinkerton.', spark, speakerView, inv());
+    if (r.kind !== 'speak') throw new Error(`expected speak, got ${r.kind}`);
+    expect(r.targetAgentId).toBe(paff.id);
+    expect(r.utterance).toBe('hi');
+  });
+
   it('"say" alone yields missing_argument', () => {
     const r = parse('say', ACTOR, view([map], [spark]), inv());
     if (r.kind !== 'missing_argument') throw new Error('expected missing_argument');
