@@ -1,7 +1,7 @@
 import type { Agent } from '@core/domain/entities';
 import type { DomainEvent } from '@core/domain/events';
 import type { AgentId } from '@core/domain/ids';
-import { EventKind } from '@core/domain/kinds';
+import { EventKind, NpcFallbackIntent } from '@core/domain/kinds';
 import type { LanguageModel } from './language-model';
 import { decideNpcIntent } from './npc-mind';
 import { MAX_NPCS_PER_TICK, scheduleNpcs } from './npc-scheduler';
@@ -14,6 +14,35 @@ import {
   renderTakeObserved,
 } from './templates';
 import { runTurn } from './turn';
+
+/**
+ * The NPC mind's most common "I have nothing to do" output. We don't add a
+ * `wait` action to the closed vocabulary just for this — instead the tick
+ * orchestrator recognises a small set of phrasings as benign no-ops and skips
+ * the runTurn call entirely. Any phrasing is matched after lowercasing and
+ * stripping leading "i " / final ".".
+ */
+const NPC_WAIT_PHRASES: ReadonlySet<string> = new Set<string>([
+  NpcFallbackIntent,
+  'wait',
+  'i wait',
+  'do nothing',
+  'i do nothing',
+  'hold my ground',
+  'i hold my ground',
+  'watch',
+  'i watch',
+]);
+
+const isWaitIntent = (intent: string): boolean => {
+  const normalised = intent
+    .trim()
+    .toLowerCase()
+    .replace(/[.!]+$/g, '')
+    .replace(/^i /, 'i ')
+    .trim();
+  return NPC_WAIT_PHRASES.has(normalised) || NPC_WAIT_PHRASES.has(normalised.replace(/^i /, ''));
+};
 
 /**
  * Tick orchestrator: a single player turn followed by zero or more autonomous
@@ -123,6 +152,13 @@ export async function runTick(
 
     const intent = await decideNpcIntent(npcId, repo, llm);
     console.info(`[npc] ${npc.label} intent: "${intent}"`);
+
+    if (isWaitIntent(intent)) {
+      // Benign no-op — don't bother the parser, don't pollute the player's
+      // transcript with "Spark waits."-style filler.
+      continue;
+    }
+
     const npcResult = await runTurn(npcId, intent, repo, { parse, llm });
     if (npcResult.events.length === 0) {
       // Intent didn't parse or dispatch failed. The reason is in npcResult.render

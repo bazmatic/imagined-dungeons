@@ -32,12 +32,47 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
   }
   if (npc.mood) lines.push(`Current mood: ${npc.mood}.`);
   if (npc.goal) lines.push(`Long-term goal: ${npc.goal}.`);
+  lines.push('');
   lines.push('Decide what you want to do this turn given what you can perceive right now.');
-  lines.push('Reply with one short sentence in the first person describing your intended action.');
-  lines.push('Do not narrate. Do not address the reader.');
-  lines.push("Do not invent items, exits, or characters that aren't listed in the user message.");
   lines.push(
-    'If nothing meaningful presents itself, say that you wait, watch, or hold your ground.',
+    'Your reply will be parsed by a verb-noun command interpreter, so you MUST phrase your intent as a single command in the first person, using exactly one of these verbs:',
+  );
+  lines.push(
+    '  - move <direction>     — travel through one of the listed exits (e.g. "I move north", "I go south")',
+  );
+  lines.push(
+    '  - look [<thing>]       — examine the room, an item, or another character (e.g. "I look", "I look at the fire map")',
+  );
+  lines.push(
+    '  - take <item>          — pick up an item visible in the room (e.g. "I take the fire map")',
+  );
+  lines.push(
+    '  - drop <item>          — drop an item from your inventory (e.g. "I drop the lantern")',
+  );
+  lines.push(
+    '  - inventory            — check what you are carrying (e.g. "I check my inventory")',
+  );
+  lines.push(
+    '  - say "<utterance>" to <character>   — speak to another character. Quote the words. (e.g. \'I say "hello there" to Paff\')',
+  );
+  lines.push('  - attack <character>   — attack another character (e.g. "I attack the goblin")');
+  lines.push('  - wait                 — do nothing this turn');
+  lines.push('');
+  lines.push('Hard rules:');
+  lines.push(
+    '- Use one of the verbs above. Do not use "greet", "smile", "compliment", "approach", "wave", "nod", "look up", "shrug", or any verb not in the list — those will fail to parse and you will do nothing.',
+  );
+  lines.push(
+    '- Refer only to characters, items, and exits that appear in the user message. Inventing names will fail.',
+  );
+  lines.push(
+    '- For "say", quote the actual words in double quotes and name the listener. Do not paraphrase.',
+  );
+  lines.push(
+    '- Do not narrate. Do not describe yourself in third person. Do not address the reader.',
+  );
+  lines.push(
+    '- If nothing useful presents itself, reply exactly: I wait. (or "I look" to take in the room.)',
   );
   return lines.join('\n');
 };
