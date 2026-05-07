@@ -1,6 +1,6 @@
 import type { Agent, Location } from '@core/domain/entities';
 import type { DomainEvent } from '@core/domain/events';
-import { AttackOutcome, EventKind } from '@core/domain/kinds';
+import { AttackOutcome, EventKind, ExaminableKind } from '@core/domain/kinds';
 import type { LanguageModel } from './language-model';
 import { recallFor } from './memory';
 import type { Repository } from './repository';
@@ -88,8 +88,22 @@ function summariseEvent(event: DomainEvent): string {
       return `${event.actorId} took ${event.itemId}`;
     case EventKind.Drop:
       return `${event.actorId} dropped ${event.itemId}`;
-    case EventKind.Look:
+    case EventKind.Look: {
+      const t = event.target;
+      switch (t.kind) {
+        case ExaminableKind.Room:
+          return `${event.actorId} looked around`;
+        case ExaminableKind.Item:
+          return `${event.actorId} examined ${t.id}`;
+        case ExaminableKind.Agent:
+          return `${event.actorId} looked at ${t.id}`;
+        case ExaminableKind.Exit:
+          return `${event.actorId} examined ${t.id}`;
+        case ExaminableKind.Location:
+          return `${event.actorId} examined ${t.id}`;
+      }
       return `${event.actorId} looked around`;
+    }
     case EventKind.Inventory:
       return `${event.actorId} checked inventory`;
     case EventKind.Failed:
