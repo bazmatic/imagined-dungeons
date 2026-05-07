@@ -58,6 +58,17 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
   lines.push('  - attack <character>   — attack another character (e.g. "I attack the goblin")');
   lines.push('  - wait                 — do nothing this turn');
   lines.push('');
+  lines.push('Behavioural priorities (in order):');
+  lines.push(
+    '1. If someone has just spoken to you (look for "directed AT YOU" entries in the user message), respond — usually with `say "..." to <them>`. Be true to your mood and goal.',
+  );
+  lines.push(
+    '2. If someone has just attacked you, decide whether to fight back, flee through an exit, or speak.',
+  );
+  lines.push(
+    "3. Otherwise, pick something consistent with your goal — move toward something useful, examine your surroundings, pick up something you'd want, or wait.",
+  );
+  lines.push('');
   lines.push('Hard rules:');
   lines.push(
     '- Use one of the verbs above. Do not use "greet", "smile", "compliment", "approach", "wave", "nod", "look up", "shrug", or any verb not in the list — those will fail to parse and you will do nothing.',
@@ -79,24 +90,62 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
 
 const join = (xs: readonly string[]): string => (xs.length === 0 ? 'none' : xs.join(', '));
 
-function summariseEvent(event: DomainEvent): string {
+async function summariseEvent(
+  event: DomainEvent,
+  selfId: AgentId,
+  repo: Repository,
+): Promise<string> {
+  const labelOf = async (id: AgentId): Promise<string> => {
+    if (id === selfId) return 'you';
+    try {
+      return (await repo.getAgent(id)).label;
+    } catch {
+      return id;
+    }
+  };
+  const actorLabel = await labelOf(event.actorId);
   switch (event.kind) {
     case EventKind.Move:
-      return `${event.actorId} went ${event.direction}`;
-    case EventKind.Take:
-      return `${event.actorId} took ${event.itemId}`;
-    case EventKind.Drop:
-      return `${event.actorId} dropped ${event.itemId}`;
+      return `${actorLabel} went ${event.direction}`;
+    case EventKind.Take: {
+      try {
+        const item = await repo.getItem(event.itemId);
+        return `${actorLabel} took the ${item.label}`;
+      } catch {
+        return `${actorLabel} took an item`;
+      }
+    }
+    case EventKind.Drop: {
+      try {
+        const item = await repo.getItem(event.itemId);
+        return `${actorLabel} dropped the ${item.label}`;
+      } catch {
+        return `${actorLabel} dropped an item`;
+      }
+    }
     case EventKind.Look:
-      return `${event.actorId} looked around`;
+      return `${actorLabel} looked around`;
     case EventKind.Inventory:
-      return `${event.actorId} checked inventory`;
+      return `${actorLabel} checked inventory`;
     case EventKind.Failed:
-      return `${event.actorId} attempted: ${event.attempted}`;
-    case EventKind.Speak:
-      return `${event.actorId} said "${event.utterance}" to ${event.targetAgentId}`;
-    case EventKind.Attack:
-      return `${event.actorId} attacked ${event.targetAgentId} (${event.outcome}${event.outcome === AttackOutcome.Hit ? `, ${event.damageDealt} dmg` : ''})`;
+      return `${actorLabel} attempted: ${event.attempted}`;
+    case EventKind.Speak: {
+      const targetLabel = await labelOf(event.targetAgentId);
+      // When the NPC is the target, foreground that — direct address is the
+      // strongest cue for "you might want to respond".
+      if (event.targetAgentId === selfId) {
+        return `${actorLabel} said to you: "${event.utterance}"`;
+      }
+      return `${actorLabel} said "${event.utterance}" to ${targetLabel}`;
+    }
+    case EventKind.Attack: {
+      const targetLabel = await labelOf(event.targetAgentId);
+      const dmg = event.outcome === AttackOutcome.Hit ? `, ${event.damageDealt} dmg` : '';
+      if (event.targetAgentId === selfId) {
+        return `${actorLabel} attacked you (${event.outcome}${dmg})`;
+      }
+      return `${actorLabel} attacked ${targetLabel} (${event.outcome}${dmg})`;
+    }
   }
 }
 
@@ -108,7 +157,11 @@ interface NpcMindContext {
   readonly location: Location;
 }
 
-function buildUserPrompt(ctx: NpcMindContext): string {
+async function buildUserPrompt(
+  ctx: NpcMindContext,
+  selfId: AgentId,
+  repo: Repository,
+): Promise<string> {
   const { view, inventory, memory } = ctx;
   const items = view.items.map((i) => i.label);
   const agents = view.agents.map((a) => {
@@ -126,10 +179,25 @@ function buildUserPrompt(ctx: NpcMindContext): string {
   lines.push(`Other characters here: ${join(agents)}`);
   lines.push(`Exits: ${join(exits)}`);
   lines.push(`You are carrying: ${join(inv)}`);
+
+  // Foreground events directly addressed to the NPC — these are the strongest
+  // cue for "respond, don't go off and do an unrelated thing".
+  const directlyAddressed = memory.filter(
+    (m) =>
+      (m.kind === EventKind.Speak || m.kind === EventKind.Attack) && m.targetAgentId === selfId,
+  );
+  if (directlyAddressed.length > 0) {
+    lines.push('');
+    lines.push('IMPORTANT — recent events directed AT YOU (consider how to respond):');
+    for (const m of directlyAddressed) {
+      lines.push(`- ${await summariseEvent(m, selfId, repo)}`);
+    }
+  }
+
   if (memory.length > 0) {
     lines.push('');
     lines.push('What you have witnessed recently:');
-    for (const m of memory) lines.push(`- ${summariseEvent(m)}`);
+    for (const m of memory) lines.push(`- ${await summariseEvent(m, selfId, repo)}`);
   }
   return lines.join('\n');
 }
@@ -165,7 +233,7 @@ export async function decideNpcIntent(
   try {
     const prose = await llm.completeText({
       system: SYSTEM_PROMPT(actor),
-      user: buildUserPrompt(ctx),
+      user: await buildUserPrompt(ctx, actorId, repo),
     });
     const trimmed = prose.trim();
     if (trimmed.length === 0) {

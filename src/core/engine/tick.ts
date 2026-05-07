@@ -165,6 +165,10 @@ export async function runTick(
       // (a parse-error or action-error message). Surface it so the dev terminal
       // shows why the NPC produced nothing visible to the player.
       console.info(`[npc] ${npc.label} produced no event: ${npcResult.render}`);
+    } else {
+      for (const ev of npcResult.events) {
+        console.info(`[npc] ${npc.label} -> ${ev.kind}`);
+      }
     }
     for (const ev of npcResult.events) {
       events.push(ev);
