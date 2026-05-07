@@ -216,9 +216,17 @@ describe('parse', () => {
     expect(r.candidates).toEqual(expect.arrayContaining(['rusty key', 'silver key']));
   });
 
-  it('"take fire map" looks against view items, not inventory', () => {
-    // even if the actor is "carrying" a fire map, parser searches view for take
+  it('"take fire map" with the map already in inventory yields already_carried', () => {
+    // The parser searches the room first; when the ref doesn't resolve there
+    // but DOES resolve in inventory, surface a useful error rather than
+    // "you don't see one" (which is misleading when you're holding it).
     const r = parse('take fire map', ACTOR, view([]), inv([map]));
+    if (r.kind !== 'already_carried') throw new Error('expected already_carried');
+    expect(r.label).toBe('fire map');
+  });
+
+  it('"take fire map" with the map nowhere visible yields no_such_target', () => {
+    const r = parse('take fire map', ACTOR, view([]), inv());
     expect(r.kind).toBe('no_such_target');
   });
 

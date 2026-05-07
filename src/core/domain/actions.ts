@@ -35,4 +35,5 @@ export type ParseError =
   | { kind: 'missing_argument'; verb: string }
   | { kind: 'unknown_direction'; raw: string }
   | { kind: 'no_such_target'; ref: string }
-  | { kind: 'ambiguous_target'; ref: string; candidates: string[] };
+  | { kind: 'ambiguous_target'; ref: string; candidates: string[] }
+  | { kind: 'already_carried'; ref: string; label: string };

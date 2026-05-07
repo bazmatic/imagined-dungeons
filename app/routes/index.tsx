@@ -14,9 +14,15 @@ interface Line {
   text: string;
 }
 
+interface InventoryItem {
+  id: string;
+  label: string;
+}
+
 function Page() {
   const initial = Route.useLoaderData();
   const [lines, setLines] = useState<Line[]>([{ id: 0, kind: 'system', text: initial.render }]);
+  const [inventory, setInventory] = useState<InventoryItem[]>(initial.inventory ?? []);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const idRef = useRef(1);
@@ -50,6 +56,7 @@ function Page() {
         }
         return next;
       });
+      if (r.inventory) setInventory(r.inventory);
     } finally {
       setBusy(false);
     }
@@ -64,41 +71,94 @@ function Page() {
   return (
     <main style={{ display: 'flex', flexDirection: 'column', height: '100vh', padding: 16 }}>
       <h1 style={{ fontSize: 14, opacity: 0.6, margin: '0 0 12px' }}>{initial.displayName}</h1>
-      <div style={{ flex: 1, overflowY: 'auto', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
-        {lines.map((l) => (
-          <div
-            key={l.id}
-            style={{
-              color: colorFor(l.kind),
-              marginBottom: 8,
-              fontStyle: l.kind === 'witnessed' ? 'italic' : 'normal',
-            }}
-          >
-            {l.text}
-          </div>
-        ))}
-        <div ref={endRef} />
-      </div>
-      <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-        <span style={{ alignSelf: 'center', color: '#9aff9a' }}>&gt;</span>
-        <input
-          ref={inputRef}
-          // biome-ignore lint/a11y/noAutofocus: single-input game prompt — focus is the entire UX
-          autoFocus
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          disabled={busy}
+      <div style={{ flex: 1, display: 'flex', gap: 16, minHeight: 0 }}>
+        <div
           style={{
             flex: 1,
-            background: '#0a0a0a',
-            color: '#cfcfcf',
-            border: '1px solid #333',
-            padding: '6px 8px',
-            fontFamily: 'inherit',
+            display: 'flex',
+            flexDirection: 'column',
+            minWidth: 0,
           }}
-          placeholder="What do you do?"
-        />
-      </form>
+        >
+          <div
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              whiteSpace: 'pre-wrap',
+              lineHeight: 1.5,
+              paddingRight: 8,
+            }}
+          >
+            {lines.map((l) => (
+              <div
+                key={l.id}
+                style={{
+                  color: colorFor(l.kind),
+                  marginBottom: 8,
+                  fontStyle: l.kind === 'witnessed' ? 'italic' : 'normal',
+                }}
+              >
+                {l.text}
+              </div>
+            ))}
+            <div ref={endRef} />
+          </div>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+            <span style={{ alignSelf: 'center', color: '#9aff9a' }}>&gt;</span>
+            <input
+              ref={inputRef}
+              // biome-ignore lint/a11y/noAutofocus: single-input game prompt — focus is the entire UX
+              autoFocus
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              disabled={busy}
+              style={{
+                flex: 1,
+                background: '#0a0a0a',
+                color: '#cfcfcf',
+                border: '1px solid #333',
+                padding: '6px 8px',
+                fontFamily: 'inherit',
+              }}
+              placeholder="What do you do?"
+            />
+          </form>
+        </div>
+        <aside
+          style={{
+            width: 220,
+            flexShrink: 0,
+            borderLeft: '1px solid #222',
+            paddingLeft: 16,
+            color: '#cfcfcf',
+            fontSize: 13,
+            overflowY: 'auto',
+          }}
+        >
+          <div
+            style={{
+              opacity: 0.6,
+              textTransform: 'uppercase',
+              letterSpacing: 1,
+              fontSize: 11,
+              marginBottom: 8,
+            }}
+          >
+            Inventory
+          </div>
+          {inventory.length === 0 ? (
+            <div style={{ opacity: 0.5, fontStyle: 'italic' }}>(empty)</div>
+          ) : (
+            <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+              {inventory.map((it) => (
+                <li key={it.id} style={{ padding: '3px 0' }}>
+                  {it.label}
+                </li>
+              ))}
+            </ul>
+          )}
+        </aside>
+      </div>
     </main>
   );
 }

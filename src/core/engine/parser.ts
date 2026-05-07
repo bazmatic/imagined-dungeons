@@ -121,8 +121,14 @@ export function parse(
       if (rest.length === 0) return { kind: ParseErrorKind.MissingArgument, verb: 'take' };
       const ref = rest.join(' ');
       const r = resolveItem(ref, view.items);
-      if (!r.ok) return r.error;
-      return { kind: ActionKind.Take, actorId: actor.id, itemId: r.item.id };
+      if (r.ok) return { kind: ActionKind.Take, actorId: actor.id, itemId: r.item.id };
+      // Not in the room — but if it's something the actor is already
+      // carrying, give a more useful error than "you don't see one here".
+      const carried = resolveItem(ref, inventory);
+      if (carried.ok) {
+        return { kind: ParseErrorKind.AlreadyCarried, ref, label: carried.item.label };
+      }
+      return r.error;
     }
 
     case 'drop': {

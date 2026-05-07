@@ -89,6 +89,8 @@ export function renderParseError(err: ParseError): string {
       return `You don't see any "${err.ref}" here.`;
     case ParseErrorKind.AmbiguousTarget:
       return `Which do you mean — ${err.candidates.join(' or ')}?`;
+    case ParseErrorKind.AlreadyCarried:
+      return `You are already carrying the ${err.label}.`;
   }
 }
 

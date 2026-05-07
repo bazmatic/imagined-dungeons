@@ -1,3 +1,4 @@
+import { OwnerKind } from '@core/domain/kinds';
 import { runTick } from '@core/engine/tick';
 import { createServerFn } from '@tanstack/react-start';
 import { PLAYER_ID, getNarratorLlm, getParse, getRepo } from './world';
@@ -14,8 +15,10 @@ export const submitCommand = createServerFn({ method: 'POST' })
     const parse = getParse();
     const llm = getNarratorLlm();
     const result = await runTick(PLAYER_ID, data.text, repo, { parse, llm });
+    const inventoryItems = await repo.itemsOwnedBy({ kind: OwnerKind.Agent, id: PLAYER_ID });
     return {
       render: result.render,
       witnessed: [...result.witnessed],
+      inventory: inventoryItems.map((i) => ({ id: i.id as string, label: i.label })),
     };
   });

@@ -30,6 +30,7 @@ export const ParseErrorKind = {
   UnknownDirection: 'unknown_direction',
   NoSuchTarget: 'no_such_target',
   AmbiguousTarget: 'ambiguous_target',
+  AlreadyCarried: 'already_carried',
 } as const;
 export type ParseErrorKind = (typeof ParseErrorKind)[keyof typeof ParseErrorKind];
 
