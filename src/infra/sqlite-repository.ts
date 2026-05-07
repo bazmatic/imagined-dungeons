@@ -213,6 +213,7 @@ export class SqliteRepository implements Repository {
     const slice = rows.slice(-limit);
     return slice.map((r) => {
       const narrations = r.narrations as Record<string, string> | null;
+      const payload = migratePayload(r.kind as DomainEvent['kind'], r.payload as object);
       return {
         id: asEventId(r.id),
         worldId: this.worldId,
@@ -221,8 +222,29 @@ export class SqliteRepository implements Repository {
         witnesses: (r.witnesses as string[]).map(asAgentId),
         createdAt: r.createdAt,
         ...(narrations ? { narrations } : {}),
-        ...(r.payload as object),
+        ...payload,
       } as DomainEvent;
     });
   }
+}
+
+/**
+ * Hydrate older event payload shapes into the current domain shape on read.
+ * Persisted events written before a domain change still live in the DB; rather
+ * than drop or rewrite them, normalise on the way out so the engine only ever
+ * sees the current shape.
+ *
+ * Currently migrates:
+ *   - `look` events: pre-ExaminableTarget rows had `{ targetItemId: ItemId | null }`.
+ *     Translate to `{ target: { kind: 'room' } }` when null, or
+ *     `{ target: { kind: 'item', id } }` when set.
+ */
+function migratePayload(kind: DomainEvent['kind'], payload: object): object {
+  if (kind !== 'look') return payload;
+  const p = payload as { target?: unknown; targetItemId?: string | null };
+  if (p.target !== undefined) return payload; // already migrated
+  if (p.targetItemId === null || p.targetItemId === undefined) {
+    return { ...p, target: { kind: 'room' } };
+  }
+  return { ...p, target: { kind: 'item', id: p.targetItemId } };
 }

@@ -131,6 +131,7 @@ async function summariseEvent(
     }
     case EventKind.Look: {
       const t = event.target;
+      if (!t) return `${actorLabel} looked around`;
       if (t.kind === ExaminableKind.Room) return `${actorLabel} looked around`;
       if (t.kind === ExaminableKind.Item) {
         try {

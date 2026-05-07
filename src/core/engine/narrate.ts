@@ -90,6 +90,7 @@ function summariseEvent(event: DomainEvent): string {
       return `${event.actorId} dropped ${event.itemId}`;
     case EventKind.Look: {
       const t = event.target;
+      if (!t) return `${event.actorId} looked around`;
       switch (t.kind) {
         case ExaminableKind.Room:
           return `${event.actorId} looked around`;
