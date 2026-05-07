@@ -24,28 +24,47 @@ import type { Repository } from './repository';
  * an API key. Malformed responses also collapse to `[]` with a `[llm]` warn.
  */
 
-const SYSTEM_PROMPT = `You are the consequence engine of a fantasy text adventure.
+const SYSTEM_PROMPT_LINES: readonly string[] = [
+  'You are the consequence engine of a fantasy text adventure.',
+  '',
+  "Given a batch of events that just happened, decide whether the world's stored short/long descriptions should change to reflect those events durably, and whether any agent's mood or short-term intent should be updated.",
+  '',
+  'You can only emit `update_description` actions. Be conservative — most batches need no consequences. Reply with a JSON object containing a `consequences` array (possibly empty).',
+  '',
+  'When to emit a description update:',
+  '- An event has visibly altered an entity in a way that the prior stored description now misrepresents (e.g. an attack outcome leaves a body, wreckage, or stains; a take of a key item leaves an empty pedestal; fire damage scars a wall).',
+  "- Prefer updating the location's longDescription when the room itself is now different.",
+  '',
+  'When to update mood (agent target only):',
+  '- After being attacked: shift toward fearful, defiant, or angry depending on outcome.',
+  '- After receiving distressing news: shift toward melancholy or anxious.',
+  '- After a positive interaction: shift toward warmer or more relaxed.',
+  '- Routine actions do NOT change mood.',
+  '',
+  'When to update shortTermIntent (agent target only):',
+  '- After an agent commits to something verbally ("Sure, I\'ll take the map"): set their shortTermIntent to that commitment.',
+  '- After an agent fulfils their commitment (e.g. they said they\'d take the map and now they did): clear shortTermIntent (set it to "").',
+  '- After a major event reorients them: set a new intent.',
+  '- Routine actions do NOT change shortTermIntent.',
+  '',
+  'When NOT to emit a consequence:',
+  '- Routine movement (move): people enter and leave rooms constantly; that does not change the room.',
+  '- Routine looking, inventory checks, or failed actions.',
+  '- Speech that does not damage anything (but speech that contains a commitment IS a reason to set shortTermIntent on the speaker).',
+  '- Any change you would have to invent details for that the events do not support.',
+  '',
+  'Output rules:',
+  '- Refer to entities by short natural-language names ("the workshop", "the lantern", "Paff Pinkerton") in the targetRef field.',
+  '- targetKind must be exactly one of: "location", "item", "agent".',
+  '- Set shortDescription or longDescription to the new prose, or null to leave that field unchanged.',
+  '- mood and shortTermIntent are only meaningful when targetKind is "agent". On a location or item they will be ignored.',
+  '- Use null for mood/shortTermIntent to leave that field unchanged. Use "" (empty string) to explicitly clear it. Use a short string to set it.',
+  "- A consequence must change SOMETHING — at least one of shortDescription, longDescription, mood, shortTermIntent must be non-null. (Empty string '' counts as a change for mood/shortTermIntent.)",
+  '- Keep prose short, present tense, factual, and grounded in what actually happened in the events.',
+  '- Maximum 3 entries in consequences.',
+];
 
-Given a batch of events that just happened, decide whether the world's stored short/long descriptions should change to reflect those events durably.
-
-You can only emit \`update_description\` actions. Be conservative — most batches need no consequences. Reply with a JSON object containing a \`consequences\` array (possibly empty).
-
-When to emit a consequence:
-- An event has visibly altered an entity in a way that the prior stored description now misrepresents (e.g. an attack outcome leaves a body, wreckage, or stains; a take of a key item leaves an empty pedestal; fire damage scars a wall).
-- Prefer updating the location's longDescription when the room itself is now different.
-
-When NOT to emit a consequence:
-- Routine movement (move): people enter and leave rooms constantly; that does not change the room.
-- Routine looking, inventory checks, or failed actions.
-- Speech that does not damage anything.
-- Any change you would have to invent details for that the events do not support.
-
-Output rules:
-- Refer to entities by short natural-language names ("the workshop", "the lantern", "Paff Pinkerton") in the targetRef field.
-- targetKind must be exactly one of: "location", "item", "agent".
-- Set shortDescription or longDescription to the new prose, or null to leave that field unchanged. At least one must be a string.
-- Keep prose short, present tense, factual, and grounded in what actually happened in the events.
-- Maximum 3 entries in consequences.`;
+const SYSTEM_PROMPT = SYSTEM_PROMPT_LINES.join('\n');
 
 export const CONSEQUENCE_SCHEMA_NAME = 'ConsequenceResponse';
 
@@ -62,13 +81,23 @@ export const CONSEQUENCE_SCHEMA: JsonSchema = {
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['kind', 'targetKind', 'targetRef', 'shortDescription', 'longDescription'],
+        required: [
+          'kind',
+          'targetKind',
+          'targetRef',
+          'shortDescription',
+          'longDescription',
+          'mood',
+          'shortTermIntent',
+        ],
         properties: {
           kind: { enum: [...CONSEQUENCE_KINDS] },
           targetKind: { enum: [...TARGET_KINDS] },
           targetRef: { type: 'string' },
           shortDescription: { type: ['string', 'null'] },
           longDescription: { type: ['string', 'null'] },
+          mood: { type: ['string', 'null'] },
+          shortTermIntent: { type: ['string', 'null'] },
         },
       },
     },
@@ -87,6 +116,8 @@ interface RawConsequence {
   readonly targetRef: string;
   readonly shortDescription: string | null;
   readonly longDescription: string | null;
+  readonly mood: string | null;
+  readonly shortTermIntent: string | null;
 }
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>
@@ -114,13 +145,30 @@ function parseResponse(parsed: unknown): readonly RawConsequence[] {
     const longDescription = entry.longDescription;
     if (shortDescription !== null && typeof shortDescription !== 'string') continue;
     if (longDescription !== null && typeof longDescription !== 'string') continue;
-    if (shortDescription === null && longDescription === null) continue;
+    // mood / shortTermIntent are optional in older fakes/tests; default to null.
+    const moodRaw = 'mood' in entry ? entry.mood : null;
+    const intentRaw = 'shortTermIntent' in entry ? entry.shortTermIntent : null;
+    if (moodRaw !== null && typeof moodRaw !== 'string') continue;
+    if (intentRaw !== null && typeof intentRaw !== 'string') continue;
+    const isAgent = targetKind === OwnerKind.Agent;
+    // mood/shortTermIntent are only meaningful for agents; if the LLM sets
+    // them on a non-agent we drop them silently rather than reject the
+    // whole consequence.
+    const mood = isAgent ? (moodRaw as string | null) : null;
+    const shortTermIntent = isAgent ? (intentRaw as string | null) : null;
+    // A consequence must change SOMETHING. For agents an empty-string mood
+    // or intent counts as a change (clear). For non-agents only the
+    // descriptions count.
+    const agentSideChange = isAgent && (mood !== null || shortTermIntent !== null);
+    if (shortDescription === null && longDescription === null && !agentSideChange) continue;
     out.push({
       kind: ActionKind.UpdateDescription,
       targetKind,
       targetRef,
       shortDescription,
       longDescription,
+      mood,
+      shortTermIntent,
     });
   }
   return out;
@@ -307,6 +355,8 @@ async function buildUserPrompt(events: readonly DomainEvent[], repo: Repository)
       lines.push(`- AGENT ${a.label}`);
       lines.push(`    short: ${a.shortDescription}`);
       lines.push(`    long: ${a.longDescription}`);
+      lines.push(`    mood: ${a.mood ?? '(none)'}`);
+      lines.push(`    shortTermIntent: ${a.shortTermIntent ?? '(none)'}`);
     }
   }
 
@@ -375,6 +425,8 @@ export async function consequencesFor(
       target,
       shortDescription: raw.shortDescription,
       longDescription: raw.longDescription,
+      mood: raw.mood,
+      shortTermIntent: raw.shortTermIntent,
     });
   }
   return actions;

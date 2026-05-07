@@ -32,6 +32,10 @@ export function renderLookTarget(item: Item): string {
  * Render an agent the player has chosen to examine. Falls back from long
  * description -> short description -> a bare label sentence so the player
  * never gets an empty string back.
+ *
+ * Mood is intentionally surfaced ("They seem energetic"); the agent's
+ * `shortTermIntent` is intentionally NOT surfaced — it is the NPC's private
+ * internal plan and only informs their own next-tick prompt.
  */
 export function renderLookAgent(agent: Agent): string {
   const parts: string[] = [];
@@ -186,6 +190,19 @@ export function renderLookObserved(actor: Agent): string {
  */
 export function renderDescriptionUpdatedObserved(): string {
   return '(The space around you shifts. Things are no longer quite as you remember them.)';
+}
+
+/**
+ * Player-perspective surface for an agent-targeted `description_updated`
+ * event where only the agent's mood changed (no description, no intent).
+ * The new mood itself is NOT revealed — the next `look at <agent>` will pick
+ * it up. Same conservative pattern as `renderDescriptionUpdatedObserved`.
+ *
+ * Intent-only changes are NOT witnessable; this function is not called for
+ * them and the witness branching in `tick.ts` returns null instead.
+ */
+export function renderAgentStateUpdatedObserved(actor: Agent): string {
+  return `(${actor.label}'s expression shifts.)`;
 }
 
 export function renderAttackMechanical(

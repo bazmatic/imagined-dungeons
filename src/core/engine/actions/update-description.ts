@@ -27,16 +27,42 @@ async function locationOfItem(repo: Repository, itemId: ItemId): Promise<Locatio
   return null;
 }
 
+/**
+ * Translate the action-level convention ("null = leave unchanged, '' = clear")
+ * into the repo-level convention ("undefined = skip, null = clear"). Used for
+ * the new agent-only mood and shortTermIntent fields.
+ */
+function actionToRepoNullable(value: string | null): string | null | undefined {
+  if (value === null) return undefined; // leave unchanged
+  if (value === '') return null; // explicitly clear
+  return value;
+}
+
 export async function handleUpdateDescription(
   action: Extract<Action, { kind: 'update_description' }>,
   repo: Repository,
 ): Promise<Result<ActionOutcome, string>> {
-  if (action.shortDescription === null && action.longDescription === null) {
-    return Err('update_description requires at least one of shortDescription or longDescription.');
+  // For agent targets, an update may be purely mood/intent — descriptions can
+  // both be null and the action is still meaningful. For location/item, we
+  // still require at least one of the descriptions.
+  const isAgent = action.target.kind === OwnerKind.Agent;
+  const moodChanging = isAgent && action.mood !== null;
+  const intentChanging = isAgent && action.shortTermIntent !== null;
+  if (
+    action.shortDescription === null &&
+    action.longDescription === null &&
+    !moodChanging &&
+    !intentChanging
+  ) {
+    return Err(
+      'update_description requires at least one of shortDescription, longDescription, mood, or shortTermIntent.',
+    );
   }
 
   let shortBefore: string;
   let longBefore: string;
+  let moodBefore: string | null = null;
+  let shortTermIntentBefore: string | null = null;
   let affectedLocationId: LocationId | null;
 
   switch (action.target.kind) {
@@ -58,30 +84,59 @@ export async function handleUpdateDescription(
       const agent = await repo.getAgent(action.target.id);
       shortBefore = agent.shortDescription;
       longBefore = agent.longDescription;
+      moodBefore = agent.mood;
+      shortTermIntentBefore = agent.shortTermIntent;
       affectedLocationId = agent.locationId;
       break;
     }
   }
 
-  const patch: { short?: string; long?: string } = {};
-  if (action.shortDescription !== null) patch.short = action.shortDescription;
-  if (action.longDescription !== null) patch.long = action.longDescription;
-
   switch (action.target.kind) {
-    case OwnerKind.Location:
+    case OwnerKind.Location: {
+      const patch: { short?: string; long?: string } = {};
+      if (action.shortDescription !== null) patch.short = action.shortDescription;
+      if (action.longDescription !== null) patch.long = action.longDescription;
       await repo.updateLocationDescription(action.target.id, patch);
       break;
-    case OwnerKind.Item:
+    }
+    case OwnerKind.Item: {
+      const patch: { short?: string; long?: string } = {};
+      if (action.shortDescription !== null) patch.short = action.shortDescription;
+      if (action.longDescription !== null) patch.long = action.longDescription;
       await repo.updateItemDescription(action.target.id, patch);
       break;
-    case OwnerKind.Agent:
+    }
+    case OwnerKind.Agent: {
+      const patch: {
+        short?: string;
+        long?: string;
+        mood?: string | null;
+        shortTermIntent?: string | null;
+      } = {};
+      if (action.shortDescription !== null) patch.short = action.shortDescription;
+      if (action.longDescription !== null) patch.long = action.longDescription;
+      const moodPatch = actionToRepoNullable(action.mood);
+      if (moodPatch !== undefined) patch.mood = moodPatch;
+      const intentPatch = actionToRepoNullable(action.shortTermIntent);
+      if (intentPatch !== undefined) patch.shortTermIntent = intentPatch;
       await repo.updateAgentDescription(action.target.id, patch);
       break;
+    }
   }
 
   const witnesses = affectedLocationId
     ? (await repo.agentsAt(affectedLocationId)).map((a) => a.id)
     : [];
+
+  // Compute "after" values mirroring the repo write semantics.
+  const moodAfter =
+    isAgent && action.mood !== null ? (action.mood === '' ? null : action.mood) : moodBefore;
+  const shortTermIntentAfter =
+    isAgent && action.shortTermIntent !== null
+      ? action.shortTermIntent === ''
+        ? null
+        : action.shortTermIntent
+      : shortTermIntentBefore;
 
   const event: DomainEvent = {
     id: nextEventId(),
@@ -95,6 +150,10 @@ export async function handleUpdateDescription(
     shortAfter: action.shortDescription ?? shortBefore,
     longBefore: longBefore,
     longAfter: action.longDescription ?? longBefore,
+    moodBefore,
+    moodAfter,
+    shortTermIntentBefore,
+    shortTermIntentAfter,
   };
   await repo.appendEvent(event);
   return Ok({ render: 'The description has been updated.', event });

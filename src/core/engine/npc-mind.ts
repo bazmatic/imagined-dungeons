@@ -37,6 +37,7 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
     lines.push(npc.longDescription);
   }
   if (npc.mood) lines.push(`Current mood: ${npc.mood}.`);
+  if (npc.shortTermIntent) lines.push(`Current short-term intent: ${npc.shortTermIntent}.`);
   if (npc.goal) lines.push(`Long-term goal: ${npc.goal}.`);
   lines.push('');
   lines.push('Decide what you want to do this turn given what you can perceive right now.');
@@ -78,7 +79,10 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
     '3. If "Things YOU have recently said" includes a commitment (e.g. "I\'ll take the X to the Y", "I\'ll head north"), make progress on it this turn — pick up the item if you said you would carry it, take a step in the relevant direction, etc. Don\'t restart the conversation; act.',
   );
   lines.push(
-    "4. Otherwise, pick something consistent with your long-term goal — move toward something useful, examine your surroundings, pick up something you'd want, emote a small in-character gesture, or wait. Don't repeat or rephrase things you've already said.",
+    '4. If you have a `Current short-term intent`, make progress on it. This is what you decided to do recently and it should usually drive your turn unless something more urgent (priority 1 or 2) interrupts.',
+  );
+  lines.push(
+    "5. Otherwise, pick something consistent with your long-term goal — move toward something useful, examine your surroundings, pick up something you'd want, emote a small in-character gesture, or wait. Don't repeat or rephrase things you've already said.",
   );
   lines.push('');
   lines.push('Hard rules:');

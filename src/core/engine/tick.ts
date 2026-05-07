@@ -2,7 +2,7 @@ import type { Action } from '@core/domain/actions';
 import type { Agent } from '@core/domain/entities';
 import type { DomainEvent } from '@core/domain/events';
 import type { AgentId } from '@core/domain/ids';
-import { EventKind, NpcFallbackIntent } from '@core/domain/kinds';
+import { EventKind, NpcFallbackIntent, OwnerKind } from '@core/domain/kinds';
 import { dispatch } from './actions/registry';
 import { MAX_CONSEQUENCE_DEPTH, consequencesFor } from './consequences';
 import type { LanguageModel } from './language-model';
@@ -11,6 +11,7 @@ import { MAX_NPCS_PER_TICK, scheduleNpcs } from './npc-scheduler';
 import type { ParseFn } from './parser/composite';
 import type { Repository } from './repository';
 import {
+  renderAgentStateUpdatedObserved,
   renderDescriptionUpdatedObserved,
   renderDropObserved,
   renderLookObserved,
@@ -119,8 +120,22 @@ async function renderWitnessForPlayer(
     case EventKind.Emote:
     case EventKind.Attack:
       return event.narrations?.[playerId] ?? null;
-    case EventKind.DescriptionUpdated:
-      return renderDescriptionUpdatedObserved();
+    case EventKind.DescriptionUpdated: {
+      const descriptionChanged =
+        event.shortBefore !== event.shortAfter || event.longBefore !== event.longAfter;
+      const moodChanged = event.moodBefore !== event.moodAfter;
+      const intentChanged = event.shortTermIntentBefore !== event.shortTermIntentAfter;
+      // Description changes are the broad "world shifts" line.
+      if (descriptionChanged) return renderDescriptionUpdatedObserved();
+      // Otherwise — for an agent target — a mood-only change is a subtle
+      // visible cue. An intent-only change is private to the NPC and should
+      // not surface to the player.
+      if (event.target.kind === OwnerKind.Agent && moodChanged) {
+        return renderAgentStateUpdatedObserved(actor);
+      }
+      if (intentChanged) return null;
+      return null;
+    }
   }
 }
 
