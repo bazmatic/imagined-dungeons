@@ -1,7 +1,13 @@
 import type { Agent, Item, Location } from '@core/domain/entities';
 import type { DomainEvent } from '@core/domain/events';
 import type { AgentId } from '@core/domain/ids';
-import { AttackOutcome, EventKind, NpcFallbackIntent, OwnerKind } from '@core/domain/kinds';
+import {
+  AttackOutcome,
+  EventKind,
+  ExaminableKind,
+  NpcFallbackIntent,
+  OwnerKind,
+} from '@core/domain/kinds';
 import type { LanguageModel } from './language-model';
 import { recallFor } from './memory';
 import { type PerceptionView, perceive } from './perception';
@@ -41,7 +47,7 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
     '  - move <direction>     — travel through one of the listed exits (e.g. "I move north", "I go south")',
   );
   lines.push(
-    '  - look [<thing>]       — examine the room, an item, or another character (e.g. "I look", "I look at the fire map")',
+    '  - look [<thing>]       — examine the room, an item, a character, or an exit (e.g. "I look", "I look at the fire map", "I look at Paff", "I look at the door")',
   );
   lines.push(
     '  - take <item>          — pick up an item visible in the room (e.g. "I take the fire map")',
@@ -123,8 +129,35 @@ async function summariseEvent(
         return `${actorLabel} dropped an item`;
       }
     }
-    case EventKind.Look:
+    case EventKind.Look: {
+      const t = event.target;
+      if (t.kind === ExaminableKind.Room) return `${actorLabel} looked around`;
+      if (t.kind === ExaminableKind.Item) {
+        try {
+          const item = await repo.getItem(t.id);
+          return `${actorLabel} examined the ${item.label}`;
+        } catch {
+          return `${actorLabel} examined an item`;
+        }
+      }
+      if (t.kind === ExaminableKind.Agent) {
+        try {
+          const a = await repo.getAgent(t.id);
+          return `${actorLabel} looked at ${a.label}`;
+        } catch {
+          return `${actorLabel} looked at someone`;
+        }
+      }
+      if (t.kind === ExaminableKind.Exit) {
+        try {
+          const exit = await repo.getExit(t.id);
+          return `${actorLabel} examined the ${exit.label}`;
+        } catch {
+          return `${actorLabel} examined an exit`;
+        }
+      }
       return `${actorLabel} looked around`;
+    }
     case EventKind.Inventory:
       return `${actorLabel} checked inventory`;
     case EventKind.Failed:

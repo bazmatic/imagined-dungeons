@@ -1,6 +1,6 @@
 import type { Action } from '@core/domain/actions';
 import type { Agent, Item } from '@core/domain/entities';
-import { ActionKind } from '@core/domain/kinds';
+import { ActionKind, ExaminableKind } from '@core/domain/kinds';
 import type { LanguageModel } from './language-model';
 import {
   PLAYER_ACTION_SCHEMA,
@@ -8,7 +8,7 @@ import {
   validatePlayerAction,
 } from './llm-output';
 import { buildSystemPrompt, buildUserPrompt } from './llm-prompt';
-import { resolveAgent, resolveItem } from './parser';
+import { resolveAgent, resolveExit, resolveItem } from './parser';
 import type { PerceptionView } from './perception';
 
 export async function llmInterpret(
@@ -29,12 +29,40 @@ export async function llmInterpret(
     case ActionKind.Move:
       return { kind: ActionKind.Move, actorId: actor.id, direction: validated.direction };
     case ActionKind.Look: {
-      if (validated.targetRef === null) {
-        return { kind: ActionKind.Look, actorId: actor.id, targetItemId: null };
+      const t = validated.target;
+      if (t.kind === ExaminableKind.Room) {
+        return {
+          kind: ActionKind.Look,
+          actorId: actor.id,
+          target: { kind: ExaminableKind.Room },
+        };
       }
-      const r = resolveItem(validated.targetRef, [...view.items, ...inventory]);
+      if (t.kind === ExaminableKind.Item) {
+        const r = resolveItem(t.ref, [...view.items, ...inventory]);
+        if (!r.ok) return null;
+        return {
+          kind: ActionKind.Look,
+          actorId: actor.id,
+          target: { kind: ExaminableKind.Item, id: r.item.id },
+        };
+      }
+      if (t.kind === ExaminableKind.Agent) {
+        const r = resolveAgent(t.ref, view.agents);
+        if (!r.ok) return null;
+        return {
+          kind: ActionKind.Look,
+          actorId: actor.id,
+          target: { kind: ExaminableKind.Agent, id: r.agent.id },
+        };
+      }
+      // Exit
+      const r = resolveExit(t.ref, view.exits);
       if (!r.ok) return null;
-      return { kind: ActionKind.Look, actorId: actor.id, targetItemId: r.item.id };
+      return {
+        kind: ActionKind.Look,
+        actorId: actor.id,
+        target: { kind: ExaminableKind.Exit, id: r.exit.id },
+      };
     }
     case ActionKind.Take: {
       const r = resolveItem(validated.itemRef, view.items);
