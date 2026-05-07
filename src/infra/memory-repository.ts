@@ -101,4 +101,37 @@ export class MemoryRepository implements Repository {
   async setRngSeed(seed: number): Promise<void> {
     this.rngSeed = seed >>> 0;
   }
+
+  async updateLocationDescription(
+    id: LocationId,
+    patch: { short?: string; long?: string },
+  ): Promise<void> {
+    const current = await this.getLocation(id);
+    this.locations.set(id, {
+      ...current,
+      ...(patch.short !== undefined ? { shortDescription: patch.short } : {}),
+      ...(patch.long !== undefined ? { longDescription: patch.long } : {}),
+    });
+  }
+
+  async updateItemDescription(id: ItemId, patch: { short?: string; long?: string }): Promise<void> {
+    const current = await this.getItem(id);
+    this.items.set(id, {
+      ...current,
+      ...(patch.short !== undefined ? { shortDescription: patch.short } : {}),
+      ...(patch.long !== undefined ? { longDescription: patch.long } : {}),
+    });
+  }
+
+  async updateAgentDescription(
+    id: AgentId,
+    patch: { short?: string; long?: string },
+  ): Promise<void> {
+    const current = await this.getAgent(id);
+    this.agents.set(id, {
+      ...current,
+      ...(patch.short !== undefined ? { shortDescription: patch.short } : {}),
+      ...(patch.long !== undefined ? { longDescription: patch.long } : {}),
+    });
+  }
 }

@@ -178,6 +178,36 @@ export class SqliteRepository implements Repository {
       .where(eq(schema.worlds.id, this.worldId));
   }
 
+  async updateLocationDescription(
+    id: LocationId,
+    patch: { short?: string; long?: string },
+  ): Promise<void> {
+    const set: { shortDescription?: string; longDescription?: string } = {};
+    if (patch.short !== undefined) set.shortDescription = patch.short;
+    if (patch.long !== undefined) set.longDescription = patch.long;
+    if (Object.keys(set).length === 0) return;
+    await this.db.update(schema.locations).set(set).where(eq(schema.locations.id, id));
+  }
+
+  async updateItemDescription(id: ItemId, patch: { short?: string; long?: string }): Promise<void> {
+    const set: { shortDescription?: string; longDescription?: string } = {};
+    if (patch.short !== undefined) set.shortDescription = patch.short;
+    if (patch.long !== undefined) set.longDescription = patch.long;
+    if (Object.keys(set).length === 0) return;
+    await this.db.update(schema.items).set(set).where(eq(schema.items.id, id));
+  }
+
+  async updateAgentDescription(
+    id: AgentId,
+    patch: { short?: string; long?: string },
+  ): Promise<void> {
+    const set: { shortDescription?: string; longDescription?: string } = {};
+    if (patch.short !== undefined) set.shortDescription = patch.short;
+    if (patch.long !== undefined) set.longDescription = patch.long;
+    if (Object.keys(set).length === 0) return;
+    await this.db.update(schema.agents).set(set).where(eq(schema.agents.id, id));
+  }
+
   async recentEvents(limit: number): Promise<readonly DomainEvent[]> {
     const rows = await this.db.select().from(schema.events).orderBy(schema.events.createdAt);
     const slice = rows.slice(-limit);

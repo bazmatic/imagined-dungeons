@@ -20,4 +20,16 @@ export interface Repository {
   getRngSeed(): Promise<number>;
   /** Persist a new RNG seed for the world (after one or more rolls). */
   setRngSeed(seed: number): Promise<void>;
+  /**
+   * Description-update primitives used by the consequence engine. A field
+   * passed as `undefined` (i.e. omitted) MUST be left untouched. `null` is
+   * not a meaningful patch value — the action's `null` is filtered to
+   * "omit" by the handler before it reaches the repository.
+   */
+  updateLocationDescription(
+    id: LocationId,
+    patch: { short?: string; long?: string },
+  ): Promise<void>;
+  updateItemDescription(id: ItemId, patch: { short?: string; long?: string }): Promise<void>;
+  updateAgentDescription(id: AgentId, patch: { short?: string; long?: string }): Promise<void>;
 }
