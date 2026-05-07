@@ -10,6 +10,7 @@ import { handleMove } from './move';
 import { handleSpeak } from './speak';
 import { handleTake } from './take';
 import type { ActionOutcome } from './types';
+import { handleUpdateDescription } from './update-description';
 
 export async function dispatch(
   action: Action,
@@ -30,5 +31,7 @@ export async function dispatch(
       return handleSpeak(action, repo);
     case ActionKind.Attack:
       return handleAttack(action, repo);
+    case ActionKind.UpdateDescription:
+      return handleUpdateDescription(action, repo);
   }
 }
