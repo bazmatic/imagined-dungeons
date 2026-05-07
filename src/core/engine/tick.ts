@@ -159,17 +159,28 @@ export async function runTick(
   const { parse, llm } = opts;
   const cap = opts.npcCap ?? MAX_NPCS_PER_TICK;
 
-  // 1. Player turn.
-  const playerResult = await runTurn(playerId, text, repo, { parse, llm });
-  const events: DomainEvent[] = [...playerResult.events];
+  // 1. Player turn — but a "wait" intent is treated symmetrically with NPC
+  //    waits: the orchestrator emits no event, no error, and skips the
+  //    consequence pass over a non-existent player turn. NPCs still tick, so
+  //    the player can deliberately let time pass to see what happens.
+  const events: DomainEvent[] = [];
   const witnessed: string[] = [];
+  let playerRender: string;
 
-  // 2. Consequence pass over the player's events (depth 0).
-  const postPlayerConsequences = await runConsequencePass(playerResult.events, repo, llm, 0);
-  for (const ev of postPlayerConsequences) {
-    events.push(ev);
-    const line = await renderWitnessForPlayer(ev, playerId, repo);
-    if (line !== null && line.length > 0) witnessed.push(line);
+  if (isWaitIntent(text)) {
+    playerRender = 'You wait.';
+  } else {
+    const playerResult = await runTurn(playerId, text, repo, { parse, llm });
+    playerRender = playerResult.render;
+    events.push(...playerResult.events);
+
+    // 2. Consequence pass over the player's events (depth 0).
+    const postPlayerConsequences = await runConsequencePass(playerResult.events, repo, llm, 0);
+    for (const ev of postPlayerConsequences) {
+      events.push(ev);
+      const line = await renderWitnessForPlayer(ev, playerId, repo);
+      if (line !== null && line.length > 0) witnessed.push(line);
+    }
   }
 
   // 3. Scheduler picks NPCs co-located with the player.
@@ -225,7 +236,7 @@ export async function runTick(
   }
 
   return {
-    render: playerResult.render,
+    render: playerRender,
     witnessed,
     events,
   };

@@ -139,4 +139,21 @@ describe('runTick against the seeded burning district', () => {
       h.close();
     }
   });
+
+  it('"wait" skips player dispatch but still ticks NPCs', async () => {
+    const h = openDb(':memory:');
+    try {
+      await seedIfEmpty(h.db, BURNING_DISTRICT_CAMPAIGN);
+      const repo = new SqliteRepository(h.db, BURNING_DISTRICT_CAMPAIGN.worldId);
+      const parse = makeCompositeParser({ llm: null });
+      // With null LLM, NPCs always wait too — so events stays empty and the
+      // player's render is the friendly placeholder, not a "no such verb" error.
+      const r = await runTick(PAFF, 'wait', repo, { parse, llm: null });
+      expect(r.render).toBe('You wait.');
+      // No player turn was dispatched, so no events from the player either.
+      expect(r.events).toHaveLength(0);
+    } finally {
+      h.close();
+    }
+  });
 });
