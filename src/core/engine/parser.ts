@@ -1,6 +1,6 @@
 import type { Action, ParseError } from '@core/domain/actions';
-import type { Agent, Item } from '@core/domain/entities';
-import { ActionKind, Direction, ParseErrorKind } from '@core/domain/kinds';
+import type { Agent, Exit, Item } from '@core/domain/entities';
+import { ActionKind, Direction, ExaminableKind, ParseErrorKind } from '@core/domain/kinds';
 import type { PerceptionView } from './perception';
 
 const DIRECTION_ALIASES: Readonly<Record<string, Direction>> = {
@@ -74,12 +74,43 @@ export function parse(
     case 'look':
     case 'l': {
       const rest = stripStopWords(toks.slice(1));
-      if (rest.length === 0)
-        return { kind: ActionKind.Look, actorId: actor.id, targetItemId: null };
+      if (rest.length === 0) {
+        return {
+          kind: ActionKind.Look,
+          actorId: actor.id,
+          target: { kind: ExaminableKind.Room },
+        };
+      }
       const ref = rest.join(' ');
-      const r = resolveItem(ref, [...view.items, ...inventory]);
-      if (!r.ok) return r.error;
-      return { kind: ActionKind.Look, actorId: actor.id, targetItemId: r.item.id };
+      // Try item, then agent, then exit. Items are by far the most common
+      // look target, so try them first to minimise resolver work.
+      const itemR = resolveItem(ref, [...view.items, ...inventory]);
+      if (itemR.ok) {
+        return {
+          kind: ActionKind.Look,
+          actorId: actor.id,
+          target: { kind: ExaminableKind.Item, id: itemR.item.id },
+        };
+      }
+      const agentR = resolveAgent(ref, view.agents);
+      if (agentR.ok) {
+        return {
+          kind: ActionKind.Look,
+          actorId: actor.id,
+          target: { kind: ExaminableKind.Agent, id: agentR.agent.id },
+        };
+      }
+      const exitR = resolveExit(ref, view.exits);
+      if (exitR.ok) {
+        return {
+          kind: ActionKind.Look,
+          actorId: actor.id,
+          target: { kind: ExaminableKind.Exit, id: exitR.exit.id },
+        };
+      }
+      // None matched — return the standard no_such_target error
+      // (the item resolver's error preserves the player's ref verbatim).
+      return itemR.error;
     }
 
     case 'take':
@@ -257,6 +288,66 @@ export function resolveItem(
       },
     };
   }
+  return { ok: false, error: { kind: ParseErrorKind.NoSuchTarget, ref } };
+}
+
+/**
+ * Resolve a noun reference against a candidate set of exits.
+ *
+ * Matches against the exit's `label` first, then its `direction` (so
+ * "look at north" works just as "look at the back door" does). Same
+ * exact-then-prefix-then-substring strategy as the other resolvers.
+ */
+export function resolveExit(
+  ref: string,
+  candidates: readonly Exit[],
+): { ok: true; exit: Exit } | { ok: false; error: ParseError } {
+  const needle = ref.toLowerCase();
+  // Try by label first, then by direction. Each pass uses the same
+  // exact -> prefix -> substring escalation as resolveItem/resolveAgent.
+  const tryWith = (key: (e: Exit) => string): Exit | 'ambiguous' | null => {
+    const exact = candidates.filter((c) => key(c).toLowerCase() === needle);
+    if (exact.length === 1) return exact[0] ?? null;
+    if (exact.length > 1) return 'ambiguous';
+    const prefix = candidates.filter((c) => key(c).toLowerCase().startsWith(needle));
+    if (prefix.length === 1) return prefix[0] ?? null;
+    if (prefix.length > 1) return 'ambiguous';
+    const contains = candidates.filter((c) => key(c).toLowerCase().includes(needle));
+    if (contains.length === 1) return contains[0] ?? null;
+    if (contains.length > 1) return 'ambiguous';
+    return null;
+  };
+
+  const byLabel = tryWith((e) => e.label);
+  if (byLabel === 'ambiguous') {
+    return {
+      ok: false,
+      error: {
+        kind: ParseErrorKind.AmbiguousTarget,
+        ref,
+        candidates: candidates
+          .filter((c) => c.label.toLowerCase().includes(needle))
+          .map((c) => c.label),
+      },
+    };
+  }
+  if (byLabel) return { ok: true, exit: byLabel };
+
+  const byDir = tryWith((e) => e.direction);
+  if (byDir === 'ambiguous') {
+    return {
+      ok: false,
+      error: {
+        kind: ParseErrorKind.AmbiguousTarget,
+        ref,
+        candidates: candidates
+          .filter((c) => c.direction.toLowerCase().includes(needle))
+          .map((c) => c.direction),
+      },
+    };
+  }
+  if (byDir) return { ok: true, exit: byDir };
+
   return { ok: false, error: { kind: ParseErrorKind.NoSuchTarget, ref } };
 }
 

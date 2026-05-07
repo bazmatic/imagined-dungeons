@@ -1,5 +1,5 @@
 import type { ParseError } from '@core/domain/actions';
-import type { Agent, Direction, Item } from '@core/domain/entities';
+import type { Agent, Direction, Exit, Item } from '@core/domain/entities';
 import type { DomainEvent } from '@core/domain/events';
 import { AttackOutcome, ParseErrorKind } from '@core/domain/kinds';
 import type { PerceptionView } from './perception';
@@ -26,6 +26,28 @@ export function renderLook(view: PerceptionView): string {
 
 export function renderLookTarget(item: Item): string {
   return item.longDescription;
+}
+
+/**
+ * Render an agent the player has chosen to examine. Falls back from long
+ * description -> short description -> a bare label sentence so the player
+ * never gets an empty string back.
+ */
+export function renderLookAgent(agent: Agent): string {
+  if (agent.longDescription && agent.longDescription.length > 0) return agent.longDescription;
+  if (agent.shortDescription && agent.shortDescription.length > 0) return agent.shortDescription;
+  return `You see ${agent.label}.`;
+}
+
+/**
+ * Render an exit the player has chosen to examine. Combines the exit's
+ * label, the direction it leads, and its locked status into one short line.
+ * Exits don't have a separate longDescription column today (see
+ * burning-district-data.md), so this is the canonical examination prose.
+ */
+export function renderLookExit(exit: Exit): string {
+  const status = exit.locked ? 'It is locked.' : 'It is unobstructed.';
+  return `The ${exit.label} leads ${exit.direction}. ${status}`;
 }
 
 export function renderMoveSelf(dir: Direction): string {
