@@ -69,13 +69,13 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
   lines.push('');
   lines.push('Behavioural priorities (in order):');
   lines.push(
-    '1. If someone has just spoken to you (look for "directed AT YOU" entries in the user message), respond — usually with `say "..." to <them>`. Be true to your mood and goal.',
+    '1. If the user message contains a section "directed AT YOU that you have NOT yet responded to", respond — usually with `say "..." to <them>`. Be true to your mood and goal. If that section is absent or empty, you have nothing pending to respond to and you should NOT bring up earlier exchanges again — move on.',
   );
   lines.push(
-    '2. If someone has just attacked you, decide whether to fight back, flee through an exit, or speak.',
+    '2. If someone is currently attacking you (and you have not yet retaliated), decide whether to fight back, flee through an exit, or speak.',
   );
   lines.push(
-    "3. Otherwise, pick something consistent with your goal — move toward something useful, examine your surroundings, pick up something you'd want, or wait.",
+    "3. Otherwise, pick something consistent with your goal — move toward something useful, examine your surroundings, pick up something you'd want, emote a small in-character gesture, or wait. Don't repeat or rephrase things you've already said.",
   );
   lines.push('');
   lines.push('Hard rules:');
@@ -229,16 +229,33 @@ async function buildUserPrompt(
   lines.push(`Exits: ${join(exits)}`);
   lines.push(`You are carrying: ${join(inv)}`);
 
-  // Foreground events directly addressed to the NPC — these are the strongest
-  // cue for "respond, don't go off and do an unrelated thing".
-  const directlyAddressed = memory.filter(
-    (m) =>
-      (m.kind === EventKind.Speak || m.kind === EventKind.Attack) && m.targetAgentId === selfId,
-  );
-  if (directlyAddressed.length > 0) {
+  // Foreground events directly addressed to the NPC that the NPC has NOT yet
+  // responded to. An event is considered "addressed" once the NPC has emitted
+  // any speak/emote event after it (chronological order is preserved in
+  // `memory`). Without this filter the same incoming line keeps firing the
+  // "respond" priority every turn, so the NPC repeats themselves indefinitely.
+  const unanswered: DomainEvent[] = [];
+  for (let i = 0; i < memory.length; i++) {
+    const m = memory[i];
+    if (!m) continue;
+    const isAddressedToMe =
+      (m.kind === EventKind.Speak || m.kind === EventKind.Attack) && m.targetAgentId === selfId;
+    if (!isAddressedToMe) continue;
+    // Has the NPC already responded to this? Look for any subsequent
+    // speak/emote *by* selfId in memory.
+    const respondedAfter = memory
+      .slice(i + 1)
+      .some(
+        (later) =>
+          later.actorId === selfId &&
+          (later.kind === EventKind.Speak || later.kind === EventKind.Emote),
+      );
+    if (!respondedAfter) unanswered.push(m);
+  }
+  if (unanswered.length > 0) {
     lines.push('');
-    lines.push('IMPORTANT — recent events directed AT YOU (consider how to respond):');
-    for (const m of directlyAddressed) {
+    lines.push('IMPORTANT — recent events directed AT YOU that you have NOT yet responded to:');
+    for (const m of unanswered) {
       lines.push(`- ${await summariseEvent(m, selfId, repo)}`);
     }
   }
