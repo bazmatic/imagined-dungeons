@@ -1,5 +1,14 @@
 import type { Agent, Exit, Item, Location } from '@core/domain/entities';
-import { type AgentId, asAgentId, asExitId, asLocationId, asWorldId } from '@core/domain/ids';
+import {
+  type AgentId,
+  SYSTEM_AGENT_ID,
+  asAgentId,
+  asExitId,
+  asItemId,
+  asLocationId,
+  asWorldId,
+} from '@core/domain/ids';
+import { EventKind, OwnerKind } from '@core/domain/kinds';
 import { MemoryRepository } from '@infra/memory-repository';
 import { describe, expect, it } from 'vitest';
 import { makeFakeLanguageModel } from '../../../tests/helpers/fake-language-model';
@@ -173,6 +182,67 @@ describe('runTick', () => {
     const r = await runTick(player.id, 'look', repo, { parse, llm });
     expect(calls).toBe(0);
     expect(r.witnessed).toEqual([]);
+  });
+
+  it('runs the consequence pass after a player `take` and updates the room description end-to-end', async () => {
+    const lantern: Item = {
+      id: asItemId('item_lantern'),
+      worldId: W,
+      label: 'lantern',
+      shortDescription: 's',
+      longDescription: 'l',
+      owner: { kind: OwnerKind.Location, id: A },
+      weight: 1,
+      hidden: false,
+    };
+    const sys: Agent = {
+      id: SYSTEM_AGENT_ID,
+      worldId: W,
+      label: 'System',
+      shortDescription: '',
+      longDescription: '',
+      locationId: A,
+      hp: 0,
+      damage: 0,
+      defense: 0,
+      capacity: 0,
+      mood: null,
+      goal: null,
+      autonomous: false,
+    };
+    const repo = makeWorld([player, sys], [lantern]);
+    const llm = makeFakeLanguageModel({
+      textResponder: () => 'wait',
+      responder: () => ({
+        raw: '',
+        parsed: {
+          consequences: [
+            {
+              kind: 'update_description',
+              targetKind: 'location',
+              targetRef: 'Tavern',
+              shortDescription: null,
+              longDescription: 'A tavern, now darker without the lantern.',
+            },
+          ],
+        },
+      }),
+    });
+    const parse = makeCompositeParser({ llm: null });
+    const r = await runTick(player.id, 'take lantern', repo, { parse, llm });
+    // The event log includes a description_updated event.
+    const descUpdates = r.events.filter((e) => e.kind === EventKind.DescriptionUpdated);
+    expect(descUpdates).toHaveLength(1);
+    // Subsequent `look` returns the new long description.
+    const look = await runTick(player.id, 'look', repo, { parse, llm });
+    expect(look.render).toContain('A tavern, now darker without the lantern.');
+  });
+
+  it('with a null llm, the consequence pass is a no-op (slice-4 baseline)', async () => {
+    const repo = makeWorld();
+    const parse = makeCompositeParser({ llm: null });
+    const r = await runTick(player.id, 'look', repo, { parse, llm: null });
+    expect(r.events.some((e) => e.kind === EventKind.DescriptionUpdated)).toBe(false);
   });
 
   it('aggregates events from player + NPCs in order', async () => {

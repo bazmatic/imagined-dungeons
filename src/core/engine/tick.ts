@@ -1,13 +1,17 @@
+import type { Action } from '@core/domain/actions';
 import type { Agent } from '@core/domain/entities';
 import type { DomainEvent } from '@core/domain/events';
 import type { AgentId } from '@core/domain/ids';
 import { EventKind, NpcFallbackIntent } from '@core/domain/kinds';
+import { dispatch } from './actions/registry';
+import { MAX_CONSEQUENCE_DEPTH, consequencesFor } from './consequences';
 import type { LanguageModel } from './language-model';
 import { decideNpcIntent } from './npc-mind';
 import { MAX_NPCS_PER_TICK, scheduleNpcs } from './npc-scheduler';
 import type { ParseFn } from './parser/composite';
 import type { Repository } from './repository';
 import {
+  renderDescriptionUpdatedObserved,
   renderDropObserved,
   renderLookObserved,
   renderMoveObserved,
@@ -45,21 +49,17 @@ const isWaitIntent = (intent: string): boolean => {
 };
 
 /**
- * Tick orchestrator: a single player turn followed by zero or more autonomous
- * NPC turns (abstract-design §5, §7).
+ * Tick orchestrator: a single player turn followed by the consequence pass,
+ * autonomous NPC turns, and a second consequence pass over the new NPC events
+ * (abstract-design §5, §7, §9).
  *
- * Flow:
- *   1. Run the player's command through `runTurn` exactly as before.
- *   2. Use the NPC scheduler to pick co-located autonomous NPCs (capped).
- *   3. For each chosen NPC: ask the NPC mind for an intent string, then feed
- *      that string through the *same* `runTurn` machinery — same composite
- *      parser, same closed action vocabulary, same validation.
- *   4. Aggregate witnessed prose: the player gets a list of one-line
- *      descriptions of NPC actions they could perceive.
+ * Consequence passes:
+ *   - depth 0 after the player turn (over events from the player turn);
+ *   - depth 1 after the NPC loop (over the *new* NPC events only).
+ * `MAX_CONSEQUENCE_DEPTH = 1` keeps the recursion bounded (§9, §12).
  *
- * Determinism: the scheduler is deterministic; the only nondeterministic
- * source is the LLM. With a null LLM, NPCs produce the fallback intent
- * ("wait") which the parser rejects as an unknown verb — i.e. they do nothing.
+ * Determinism: with a null LLM, both consequence passes return [] and tick
+ * behaviour is identical to slice 4. The 171-test baseline is preserved.
  */
 
 export interface TickResult {
@@ -67,7 +67,7 @@ export interface TickResult {
   readonly render: string;
   /** Player-perspective lines describing NPC actions they witnessed this tick. */
   readonly witnessed: readonly string[];
-  /** All events from this tick (player's + NPCs'), in order. */
+  /** All events from this tick (player's + NPCs' + consequence-emitted), in order. */
   readonly events: readonly DomainEvent[];
 }
 
@@ -118,7 +118,35 @@ async function renderWitnessForPlayer(
     case EventKind.Speak:
     case EventKind.Attack:
       return event.narrations?.[playerId] ?? null;
+    case EventKind.DescriptionUpdated:
+      return renderDescriptionUpdatedObserved();
   }
+}
+
+/**
+ * Run the consequence engine over a slice of newly-emitted events and apply
+ * each returned action through the standard dispatch pipeline. Returns the
+ * events emitted by those consequence actions (so the caller can fold them
+ * into the running tick log and run a second pass at depth+1).
+ */
+async function runConsequencePass(
+  events: readonly DomainEvent[],
+  repo: Repository,
+  llm: LanguageModel | null,
+  depth: number,
+): Promise<readonly DomainEvent[]> {
+  if (depth > MAX_CONSEQUENCE_DEPTH) return [];
+  const actions: readonly Action[] = await consequencesFor(events, repo, llm);
+  const out: DomainEvent[] = [];
+  for (const action of actions) {
+    const r = await dispatch(action, repo);
+    if (!r.ok) {
+      console.warn(`[consequence] dispatch failed: ${r.error}`);
+      continue;
+    }
+    out.push(r.value.event);
+  }
+  return out;
 }
 
 export async function runTick(
@@ -133,12 +161,21 @@ export async function runTick(
   // 1. Player turn.
   const playerResult = await runTurn(playerId, text, repo, { parse, llm });
   const events: DomainEvent[] = [...playerResult.events];
+  const witnessed: string[] = [];
 
-  // 2. Scheduler picks NPCs co-located with the player.
+  // 2. Consequence pass over the player's events (depth 0).
+  const postPlayerConsequences = await runConsequencePass(playerResult.events, repo, llm, 0);
+  for (const ev of postPlayerConsequences) {
+    events.push(ev);
+    const line = await renderWitnessForPlayer(ev, playerId, repo);
+    if (line !== null && line.length > 0) witnessed.push(line);
+  }
+
+  // 3. Scheduler picks NPCs co-located with the player.
   const npcIds = await scheduleNpcs({ playerId, repo, cap });
 
-  // 3. NPC ticks.
-  const witnessed: string[] = [];
+  // 4. NPC ticks.
+  const npcEvents: DomainEvent[] = [];
   for (const npcId of npcIds) {
     // Re-check eligibility just before acting: the player's action may have
     // moved/killed/relocated the NPC mid-tick.
@@ -172,9 +209,18 @@ export async function runTick(
     }
     for (const ev of npcResult.events) {
       events.push(ev);
+      npcEvents.push(ev);
       const line = await renderWitnessForPlayer(ev, playerId, repo);
       if (line !== null && line.length > 0) witnessed.push(line);
     }
+  }
+
+  // 5. Consequence pass over the NPC events only (depth 1).
+  const postNpcConsequences = await runConsequencePass(npcEvents, repo, llm, 1);
+  for (const ev of postNpcConsequences) {
+    events.push(ev);
+    const line = await renderWitnessForPlayer(ev, playerId, repo);
+    if (line !== null && line.length > 0) witnessed.push(line);
   }
 
   return {

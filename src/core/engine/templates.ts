@@ -103,6 +103,15 @@ export function renderLookObserved(actor: Agent): string {
   return `${actor.label} looks around.`;
 }
 
+/**
+ * Player-perspective surface for a `description_updated` event the player
+ * happened to witness. Deliberately subtle — we don't reveal the new prose
+ * here; the next `look` will return the freshly stored description (§6.4).
+ */
+export function renderDescriptionUpdatedObserved(): string {
+  return '(The space around you shifts. Things are no longer quite as you remember them.)';
+}
+
 export function renderAttackMechanical(
   event: Extract<DomainEvent, { kind: 'attack' }>,
   actor: Agent,
