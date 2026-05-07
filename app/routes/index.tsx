@@ -103,8 +103,17 @@ function Page() {
             ))}
             <div ref={endRef} />
           </div>
-          <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            <span style={{ alignSelf: 'center', color: '#9aff9a' }}>&gt;</span>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+            <span
+              style={{
+                alignSelf: 'center',
+                color: '#9aff9a',
+                fontSize: 22,
+                lineHeight: 1,
+              }}
+            >
+              &gt;
+            </span>
             <input
               ref={inputRef}
               // biome-ignore lint/a11y/noAutofocus: single-input game prompt — focus is the entire UX
@@ -117,8 +126,10 @@ function Page() {
                 background: '#0a0a0a',
                 color: '#cfcfcf',
                 border: '1px solid #333',
-                padding: '6px 8px',
+                padding: '14px 16px',
                 fontFamily: 'inherit',
+                fontSize: 18,
+                lineHeight: 1.4,
               }}
               placeholder="What do you do?"
             />
