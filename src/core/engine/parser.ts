@@ -42,8 +42,14 @@ export function parse(
   view: PerceptionView,
   inventory: readonly Item[],
 ): ParseResult {
-  const toks = tokens(text);
+  let toks = tokens(text);
   if (toks.length === 0) return { kind: ParseErrorKind.Empty };
+
+  // First-person leading "I" — NPCs phrase intents like `I say "..." to Paff`.
+  // Drop it when there's a real verb behind it. A bare "i" stays = inventory.
+  if (toks.length > 1 && toks[0] === 'i') {
+    toks = toks.slice(1);
+  }
 
   const first = toks[0];
   if (!first) return { kind: ParseErrorKind.Empty };

@@ -26,7 +26,12 @@ function Page() {
   // biome-ignore lint/correctness/useExhaustiveDependencies: scroll + refocus on update is the intent
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
-    if (!busy) inputRef.current?.focus();
+    // Only refocus if focus has been lost (e.g. after busy=true disabled the
+    // input). Calling .focus() while the user is mid-keystroke can race with
+    // React's render cycle and drop characters.
+    if (!busy && document.activeElement !== inputRef.current) {
+      inputRef.current?.focus();
+    }
   }, [lines, busy]);
 
   async function handleSubmit(e: React.FormEvent): Promise<void> {
