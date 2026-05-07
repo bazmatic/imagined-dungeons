@@ -1,10 +1,8 @@
-import { SYSTEM_AGENT_ID, type WorldId, asWorldId } from '@core/domain/ids';
+import type { Campaign } from '@core/domain/campaign';
+import { SYSTEM_AGENT_ID, type WorldId } from '@core/domain/ids';
 import { eq, inArray } from 'drizzle-orm';
 import type { DB } from '../db';
 import * as schema from '../schema';
-import { BURNING_DISTRICT } from './burning-district';
-
-export const BURNING_DISTRICT_WORLD_ID: WorldId = asWorldId('w_burning_district');
 
 /**
  * Slice 4 introduced autonomous NPCs but the seed module is regenerated only
@@ -15,8 +13,8 @@ export const BURNING_DISTRICT_WORLD_ID: WorldId = asWorldId('w_burning_district'
  *
  * Idempotent: re-running it on an already-correct DB is a no-op.
  */
-async function ensureAutonomousFlags(db: DB): Promise<void> {
-  const targetIds = BURNING_DISTRICT.agents.filter((a) => a.autonomous).map((a) => a.id);
+async function ensureAutonomousFlags(db: DB, campaign: Campaign): Promise<void> {
+  const targetIds = campaign.seed.agents.filter((a) => a.autonomous).map((a) => a.id);
   if (targetIds.length === 0) return;
   await db
     .update(schema.agents)
@@ -63,26 +61,26 @@ async function ensureSystemAgent(db: DB, worldId: WorldId): Promise<void> {
   });
 }
 
-export async function seedIfEmpty(db: DB): Promise<void> {
+export async function seedIfEmpty(db: DB, campaign: Campaign): Promise<void> {
   const existing = await db.select().from(schema.worlds);
   if (existing.length > 0) {
-    await ensureAutonomousFlags(db);
-    await ensureSystemAgent(db, BURNING_DISTRICT_WORLD_ID);
+    await ensureAutonomousFlags(db, campaign);
+    await ensureSystemAgent(db, campaign.worldId);
     return;
   }
 
-  const W = BURNING_DISTRICT_WORLD_ID;
-  await db.insert(schema.worlds).values({ id: W, label: 'The Burning District', rngSeed: 1 });
+  const W = campaign.worldId;
+  await db.insert(schema.worlds).values({ id: W, label: campaign.worldLabel, rngSeed: 1 });
 
   await db
     .insert(schema.locations)
-    .values(BURNING_DISTRICT.locations.map((l) => ({ ...l, worldId: W })));
+    .values(campaign.seed.locations.map((l) => ({ ...l, worldId: W })));
 
-  await db.insert(schema.agents).values(BURNING_DISTRICT.agents.map((a) => ({ ...a, worldId: W })));
+  await db.insert(schema.agents).values(campaign.seed.agents.map((a) => ({ ...a, worldId: W })));
 
   // Insert items in two passes: those owned by location/agent first, then those owned by other items.
-  const flatItems = BURNING_DISTRICT.items.filter((i) => i.ownerKind !== 'item');
-  const containerItems = BURNING_DISTRICT.items.filter((i) => i.ownerKind === 'item');
+  const flatItems = campaign.seed.items.filter((i) => i.ownerKind !== 'item');
+  const containerItems = campaign.seed.items.filter((i) => i.ownerKind === 'item');
   if (flatItems.length > 0) {
     await db.insert(schema.items).values(flatItems.map((i) => ({ ...i, worldId: W })));
   }
@@ -91,7 +89,7 @@ export async function seedIfEmpty(db: DB): Promise<void> {
   }
 
   await db.insert(schema.exits).values(
-    BURNING_DISTRICT.exits.map((e) => ({
+    campaign.seed.exits.map((e) => ({
       id: e.id,
       worldId: W,
       fromLocationId: e.from,

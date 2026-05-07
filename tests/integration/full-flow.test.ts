@@ -1,7 +1,8 @@
+import { BURNING_DISTRICT_CAMPAIGN } from '@campaigns/burning-district';
 import { asAgentId } from '@core/domain/ids';
 import { runTurn } from '@core/engine/turn';
 import { openDb } from '@infra/db';
-import { BURNING_DISTRICT_WORLD_ID, seedIfEmpty } from '@infra/seed/seeder';
+import { seedIfEmpty } from '@infra/seed/seeder';
 import { SqliteRepository } from '@infra/sqlite-repository';
 import { describe, expect, it } from 'vitest';
 import { makeFakeLanguageModel } from '../helpers/fake-language-model';
@@ -12,8 +13,8 @@ describe('full flow against seeded burning district', () => {
   it('initial look shows the Flaming Goblet, items, NPCs, and exits', async () => {
     const h = openDb(':memory:');
     try {
-      await seedIfEmpty(h.db);
-      const repo = new SqliteRepository(h.db, BURNING_DISTRICT_WORLD_ID);
+      await seedIfEmpty(h.db, BURNING_DISTRICT_CAMPAIGN);
+      const repo = new SqliteRepository(h.db, BURNING_DISTRICT_CAMPAIGN.worldId);
       const r = await runTurn(PAFF, 'look', repo);
       expect(r.render).toContain('The Flaming Goblet');
       expect(r.render.toLowerCase()).toContain('fire map');
@@ -27,8 +28,8 @@ describe('full flow against seeded burning district', () => {
   it('locked Tavern Back Door blocks movement north with a clear message', async () => {
     const h = openDb(':memory:');
     try {
-      await seedIfEmpty(h.db);
-      const repo = new SqliteRepository(h.db, BURNING_DISTRICT_WORLD_ID);
+      await seedIfEmpty(h.db, BURNING_DISTRICT_CAMPAIGN);
+      const repo = new SqliteRepository(h.db, BURNING_DISTRICT_CAMPAIGN.worldId);
       const r = await runTurn(PAFF, 'north', repo);
       expect(r.render.toLowerCase()).toContain('locked');
     } finally {
@@ -39,8 +40,8 @@ describe('full flow against seeded burning district', () => {
   it('south exits to the Dockside Markets', async () => {
     const h = openDb(':memory:');
     try {
-      await seedIfEmpty(h.db);
-      const repo = new SqliteRepository(h.db, BURNING_DISTRICT_WORLD_ID);
+      await seedIfEmpty(h.db, BURNING_DISTRICT_CAMPAIGN);
+      const repo = new SqliteRepository(h.db, BURNING_DISTRICT_CAMPAIGN.worldId);
       const move = await runTurn(PAFF, 'south', repo);
       expect(move.render).toBe('You go south.');
       const look = await runTurn(PAFF, 'look', repo);
@@ -53,8 +54,8 @@ describe('full flow against seeded burning district', () => {
   it('take + inventory + drop round-trip', async () => {
     const h = openDb(':memory:');
     try {
-      await seedIfEmpty(h.db);
-      const repo = new SqliteRepository(h.db, BURNING_DISTRICT_WORLD_ID);
+      await seedIfEmpty(h.db, BURNING_DISTRICT_CAMPAIGN);
+      const repo = new SqliteRepository(h.db, BURNING_DISTRICT_CAMPAIGN.worldId);
       const take = await runTurn(PAFF, 'take fire map', repo);
       expect(take.render.toLowerCase()).toBe('taken: fire map.');
       const inv = await runTurn(PAFF, 'i', repo);
@@ -69,8 +70,8 @@ describe('full flow against seeded burning district', () => {
   it('"talk to spark, hello" runs end-to-end and persists narrations for every witness', async () => {
     const h = openDb(':memory:');
     try {
-      await seedIfEmpty(h.db);
-      const repo = new SqliteRepository(h.db, BURNING_DISTRICT_WORLD_ID);
+      await seedIfEmpty(h.db, BURNING_DISTRICT_CAMPAIGN);
+      const repo = new SqliteRepository(h.db, BURNING_DISTRICT_CAMPAIGN.worldId);
       const llm = makeFakeLanguageModel({
         textResponder: (req) =>
           req.user.includes('Observer: Paff')
@@ -99,8 +100,8 @@ describe('full flow against seeded burning district', () => {
   it('"attack spark" runs end-to-end with a determined outcome and reduced HP on hit', async () => {
     const h = openDb(':memory:');
     try {
-      await seedIfEmpty(h.db);
-      const repo = new SqliteRepository(h.db, BURNING_DISTRICT_WORLD_ID);
+      await seedIfEmpty(h.db, BURNING_DISTRICT_CAMPAIGN);
+      const repo = new SqliteRepository(h.db, BURNING_DISTRICT_CAMPAIGN.worldId);
       const paff = await repo.getAgent(PAFF);
       const here = await repo.agentsAt(paff.locationId);
       const spark = here.find((a) => a.label === 'Spark');

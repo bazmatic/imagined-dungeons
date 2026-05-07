@@ -1,14 +1,24 @@
 import 'dotenv/config';
-import { type AgentId, asAgentId } from '@core/domain/ids';
+import { BURNING_DISTRICT_CAMPAIGN } from '@campaigns/burning-district';
+import type { AgentId } from '@core/domain/ids';
 import type { LanguageModel } from '@core/engine/language-model';
 import { type ParseFn, makeCompositeParser } from '@core/engine/parser/composite';
 import { type DbHandle, openDb } from '@infra/db';
 import { makeOpenAILanguageModel } from '@infra/language-model/openai';
-import { BURNING_DISTRICT_WORLD_ID, seedIfEmpty } from '@infra/seed/seeder';
+import { seedIfEmpty } from '@infra/seed/seeder';
 import { SqliteRepository } from '@infra/sqlite-repository';
 
 const DB_PATH = process.env.DB_PATH ?? './imagined-dungeons.db';
-export const PLAYER_ID: AgentId = asAgentId('char_39322'); // Paff Pinkerton
+
+/**
+ * The active campaign. Swapping campaigns is a single-line change here:
+ * import a different campaign module and assign it. Everything else
+ * (player id, world id, seed, page heading) is derived from this constant.
+ */
+const CAMPAIGN = BURNING_DISTRICT_CAMPAIGN;
+
+export const PLAYER_ID: AgentId = CAMPAIGN.playerId;
+export const DISPLAY_NAME: string = CAMPAIGN.displayName;
 
 let handle: DbHandle | null = null;
 let parseFn: ParseFn | null = null;
@@ -26,9 +36,9 @@ function getLlm(): LanguageModel | null {
 export async function getRepo(): Promise<SqliteRepository> {
   if (!handle) {
     handle = openDb(DB_PATH);
-    await seedIfEmpty(handle.db);
+    await seedIfEmpty(handle.db, CAMPAIGN);
   }
-  return new SqliteRepository(handle.db, BURNING_DISTRICT_WORLD_ID);
+  return new SqliteRepository(handle.db, CAMPAIGN.worldId);
 }
 
 export function getParse(): ParseFn {

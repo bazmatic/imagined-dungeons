@@ -38,6 +38,8 @@ The engine is written against a `Repository` interface; tests use an in-memory i
 
 The action vocabulary is a closed set, dispatched through a registry. Adding a verb is one new file under `src/core/engine/actions/` and one line in `registry.ts`. The seam where the model layers slot in (interpreter, narrator, consequences) is the parser/template boundary — the rest of the engine is unaware of how text turns into actions or how events turn into prose.
 
+Campaigns (the seed world plus its player, world id, and display name) live behind a `Campaign` abstraction in `src/core/domain/campaign.ts`. Adding a new campaign is a single-module change: drop a new file under `src/campaigns/` exporting a `Campaign`, then point the composition root (`app/server/world.ts`) at it. The seeder, route heading, and scripts all read from the campaign — no further refactor required.
+
 ## Getting started
 
 ```bash

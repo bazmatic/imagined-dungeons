@@ -63,9 +63,7 @@ function Page() {
 
   return (
     <main style={{ display: 'flex', flexDirection: 'column', height: '100vh', padding: 16 }}>
-      <h1 style={{ fontSize: 14, opacity: 0.6, margin: '0 0 12px' }}>
-        Imagined Dungeons — The Burning District
-      </h1>
+      <h1 style={{ fontSize: 14, opacity: 0.6, margin: '0 0 12px' }}>{initial.displayName}</h1>
       <div style={{ flex: 1, overflowY: 'auto', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
         {lines.map((l) => (
           <div

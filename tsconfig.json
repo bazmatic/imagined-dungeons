@@ -19,7 +19,8 @@
     "paths": {
       "~/*": ["./app/*"],
       "@core/*": ["./src/core/*"],
-      "@infra/*": ["./src/infra/*"]
+      "@infra/*": ["./src/infra/*"],
+      "@campaigns/*": ["./src/campaigns/*"]
     }
   },
   "include": ["app", "src", "tests", "scripts", "*.ts", "*.tsx"]

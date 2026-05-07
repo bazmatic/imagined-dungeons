@@ -3,13 +3,14 @@
  * Run: `pnpm exec tsx scripts/smoke-resume.ts`
  */
 import { unlinkSync } from 'node:fs';
-import { asAgentId } from '@core/domain/ids';
+import { BURNING_DISTRICT_CAMPAIGN } from '@campaigns/burning-district';
 import { runTurn } from '@core/engine/turn';
 import { openDb } from '@infra/db';
-import { BURNING_DISTRICT_WORLD_ID, seedIfEmpty } from '@infra/seed/seeder';
+import { seedIfEmpty } from '@infra/seed/seeder';
 import { SqliteRepository } from '@infra/sqlite-repository';
 
-const PAFF = asAgentId('char_39322');
+const PAFF = BURNING_DISTRICT_CAMPAIGN.playerId;
+const WORLD_ID = BURNING_DISTRICT_CAMPAIGN.worldId;
 const DB = './smoke-resume.db';
 
 try {
@@ -28,8 +29,8 @@ try {
 // Round 1
 {
   const h = openDb(DB);
-  await seedIfEmpty(h.db);
-  const repo = new SqliteRepository(h.db, BURNING_DISTRICT_WORLD_ID);
+  await seedIfEmpty(h.db, BURNING_DISTRICT_CAMPAIGN);
+  const repo = new SqliteRepository(h.db, WORLD_ID);
   const r = await runTurn(PAFF, 'take fire map', repo);
   console.log('Round 1:', r.render);
   h.close();
@@ -38,7 +39,7 @@ try {
 // Round 2 — reopen
 {
   const h = openDb(DB);
-  const repo = new SqliteRepository(h.db, BURNING_DISTRICT_WORLD_ID);
+  const repo = new SqliteRepository(h.db, WORLD_ID);
   const r = await runTurn(PAFF, 'i', repo);
   console.log('Round 2:', r.render);
   if (!r.render.toLowerCase().includes('fire map')) {

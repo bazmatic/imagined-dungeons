@@ -1,8 +1,9 @@
+import { BURNING_DISTRICT_CAMPAIGN } from '@campaigns/burning-district';
 import { asAgentId } from '@core/domain/ids';
 import { makeCompositeParser } from '@core/engine/parser/composite';
 import { runTick } from '@core/engine/tick';
 import { openDb } from '@infra/db';
-import { BURNING_DISTRICT_WORLD_ID, seedIfEmpty } from '@infra/seed/seeder';
+import { seedIfEmpty } from '@infra/seed/seeder';
 import { SqliteRepository } from '@infra/sqlite-repository';
 import { describe, expect, it } from 'vitest';
 import { makeFakeLanguageModel } from '../helpers/fake-language-model';
@@ -14,8 +15,8 @@ describe('runTick against the seeded burning district', () => {
   it("the player's `look` resolves and Spark (autonomous) takes a tick", async () => {
     const h = openDb(':memory:');
     try {
-      await seedIfEmpty(h.db);
-      const repo = new SqliteRepository(h.db, BURNING_DISTRICT_WORLD_ID);
+      await seedIfEmpty(h.db, BURNING_DISTRICT_CAMPAIGN);
+      const repo = new SqliteRepository(h.db, BURNING_DISTRICT_CAMPAIGN.worldId);
       // Spark must be flagged autonomous in the seeded world (slice-4 default).
       const spark = await repo.getAgent(SPARK);
       expect(spark.autonomous).toBe(true);
@@ -44,8 +45,8 @@ describe('runTick against the seeded burning district', () => {
   it('with a null LLM, NPC ticks fall back to "wait" and produce no errors', async () => {
     const h = openDb(':memory:');
     try {
-      await seedIfEmpty(h.db);
-      const repo = new SqliteRepository(h.db, BURNING_DISTRICT_WORLD_ID);
+      await seedIfEmpty(h.db, BURNING_DISTRICT_CAMPAIGN);
+      const repo = new SqliteRepository(h.db, BURNING_DISTRICT_CAMPAIGN.worldId);
       const parse = makeCompositeParser({ llm: null });
       const r = await runTick(PAFF, 'look', repo, { parse, llm: null });
       // The player's look still works.
@@ -61,8 +62,8 @@ describe('runTick against the seeded burning district', () => {
   it('"say hello" plus an NPC tick produces a visible NPC line in the player transcript', async () => {
     const h = openDb(':memory:');
     try {
-      await seedIfEmpty(h.db);
-      const repo = new SqliteRepository(h.db, BURNING_DISTRICT_WORLD_ID);
+      await seedIfEmpty(h.db, BURNING_DISTRICT_CAMPAIGN);
+      const repo = new SqliteRepository(h.db, BURNING_DISTRICT_CAMPAIGN.worldId);
 
       const llm = makeFakeLanguageModel({
         textResponder: (req) => {
