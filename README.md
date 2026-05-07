@@ -108,6 +108,26 @@ Per [abstract-design.md §14](abstract-design.md#14-what-to-build-first):
 
 Each slice is independently playable and ships behind no feature flag.
 
+## Implementation rules learned
+
+Stack-specific lessons accumulated across slices 1–5. These are TypeScript/OpenAI/codebase rules, not architecture-level claims — those live in [abstract-design.md](abstract-design.md).
+
+### OpenAI strict mode forbids `oneOf`
+
+Structured outputs in strict mode reject `oneOf` / `anyOf` at the schema root and require every property listed under `properties` to also appear in `required`. Express union-shaped responses as a single flat object with a `kind` discriminator (an `enum`) and union/nullable payload fields; the validator picks the relevant fields per `kind` and ignores the rest. The slice 2 player-action schema (`src/core/engine/llm-output.ts`) and the slice 5 consequence schema (`src/core/engine/consequences.ts`) both follow this pattern.
+
+### NPC mind prompt must enumerate available verbs
+
+An open-ended "decide what you want to do" prompt produces verbs the closed parser rejects ("greet", "smile", "compliment", "wave"). The NPC mind's system prompt must enumerate the available verbs with first-person examples and explicitly forbid common alternatives. Without this, autonomous NPCs go silent — every intent fails to parse and the player sees nothing.
+
+### No string literals in logic
+
+Discriminator values (`kind`, `ownerKind`, `outcome`, etc.) live in `src/core/domain/kinds.ts` as `as const` objects, not raw strings sprinkled through the codebase. The TypeScript types stay as string-literal unions for inference; the *literals in code* always go through the const objects (`ActionKind.Move`, `EventKind.Attack`, `OwnerKind.Location`). This catches typos at compile time. The rule applies to logic; type declarations and test assertion strings keep raw literals.
+
+### Exhaustive switches over `EventKind` proliferate
+
+Every new event kind needs handling in `narrate.ts:summariseEvent`, `npc-mind.ts:summariseEvent`, `tick.ts:renderWitnessForPlayer`, and `consequences.ts:summarise`. TypeScript's exhaustiveness check catches missed cases at compile time — but the duplication itself is a smell. If more verbs land, consolidating into a single shared `summariseEvent` helper is the obvious next step. Flagged after slice 5.
+
 ## Design references
 
 - [abstract-design.md](abstract-design.md) — the full system design (entities, action vocabulary, three model roles, perception-gated memory, etc.)
