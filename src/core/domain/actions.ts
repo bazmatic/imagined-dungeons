@@ -27,6 +27,14 @@ export type Action =
       target: DescriptionTarget;
       shortDescription: string | null;
       longDescription: string | null;
+      /**
+       * Agent-only fields. `null` means "leave the field unchanged"; the empty
+       * string `""` means "clear the field" (the consequence engine uses this
+       * to mark a previously-set short-term intent as fulfilled). When the
+       * target is a location or item these are silently ignored by the handler.
+       */
+      mood: string | null;
+      shortTermIntent: string | null;
     };
 
 export type ParseError =

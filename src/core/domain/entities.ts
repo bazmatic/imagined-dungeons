@@ -50,6 +50,7 @@ export interface Agent {
   readonly defense: number;
   readonly capacity: number;
   readonly mood: string | null;
+  readonly shortTermIntent: string | null;
   readonly goal: string | null;
   readonly autonomous: boolean;
 }

@@ -35,6 +35,12 @@ export type DomainEvent =
       outcome: 'hit' | 'miss';
       damageDealt: number;
     })
+  /**
+   * The event kind name `description_updated` is retained for compatibility
+   * with persisted history; the payload now also covers mood and short-term
+   * intent on agent targets. For non-agent targets the new mood/intent
+   * before/after fields are always null.
+   */
   | (BaseEvent & {
       kind: 'description_updated';
       target: DescriptionTarget;
@@ -42,6 +48,10 @@ export type DomainEvent =
       shortAfter: string | null;
       longBefore: string | null;
       longAfter: string | null;
+      moodBefore: string | null;
+      moodAfter: string | null;
+      shortTermIntentBefore: string | null;
+      shortTermIntentAfter: string | null;
     });
 
 export const NARRATED_EVENT_KINDS: ReadonlySet<EventKind> = new Set<EventKind>([
