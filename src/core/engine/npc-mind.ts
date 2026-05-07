@@ -75,7 +75,10 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
     '2. If someone is currently attacking you (and you have not yet retaliated), decide whether to fight back, flee through an exit, or speak.',
   );
   lines.push(
-    "3. Otherwise, pick something consistent with your goal — move toward something useful, examine your surroundings, pick up something you'd want, emote a small in-character gesture, or wait. Don't repeat or rephrase things you've already said.",
+    '3. If "Things YOU have recently said" includes a commitment (e.g. "I\'ll take the X to the Y", "I\'ll head north"), make progress on it this turn — pick up the item if you said you would carry it, take a step in the relevant direction, etc. Don\'t restart the conversation; act.',
+  );
+  lines.push(
+    "4. Otherwise, pick something consistent with your long-term goal — move toward something useful, examine your surroundings, pick up something you'd want, emote a small in-character gesture, or wait. Don't repeat or rephrase things you've already said.",
   );
   lines.push('');
   lines.push('Hard rules:');
@@ -257,6 +260,24 @@ async function buildUserPrompt(
     lines.push('IMPORTANT — recent events directed AT YOU that you have NOT yet responded to:');
     for (const m of unanswered) {
       lines.push(`- ${await summariseEvent(m, selfId, repo)}`);
+    }
+  }
+
+  // Foreground recent things the NPC has SAID — most importantly any
+  // commitments ("Sure, I'll take the fire map to the docks!"). The NPC mind
+  // has no separate notion of pending tasks; the spoken utterance IS the
+  // commitment. Show recent outgoing speak events so the model treats them as
+  // standing intentions rather than past chatter.
+  const recentSelfSpeech = memory.filter((m) => m.actorId === selfId && m.kind === EventKind.Speak);
+  if (recentSelfSpeech.length > 0) {
+    lines.push('');
+    lines.push(
+      'Things YOU have recently said (treat these as standing commitments — if you said you would do something, follow through):',
+    );
+    for (const m of recentSelfSpeech) {
+      // m is narrowed to the speak variant by the filter above.
+      const speakEvent = m as Extract<DomainEvent, { kind: 'speak' }>;
+      lines.push(`- you said: "${speakEvent.utterance}"`);
     }
   }
 

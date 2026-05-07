@@ -185,6 +185,11 @@ export async function runTick(
 
   // 3. Scheduler picks NPCs co-located with the player.
   const npcIds = await scheduleNpcs({ playerId, repo, cap });
+  if (npcIds.length === 0) {
+    console.info('[scheduler] no NPCs eligible this tick');
+  } else {
+    console.info(`[scheduler] eligible: ${npcIds.join(', ')}`);
+  }
 
   // 4. NPC ticks.
   const npcEvents: DomainEvent[] = [];
