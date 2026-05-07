@@ -44,6 +44,7 @@ const toAgent = (r: typeof schema.agents.$inferSelect, worldId: WorldId): Agent 
   defense: r.defense,
   capacity: r.capacity,
   mood: r.mood,
+  shortTermIntent: r.shortTermIntent,
   goal: r.goal,
   autonomous: r.autonomous,
 });
@@ -199,11 +200,23 @@ export class SqliteRepository implements Repository {
 
   async updateAgentDescription(
     id: AgentId,
-    patch: { short?: string; long?: string },
+    patch: {
+      short?: string;
+      long?: string;
+      mood?: string | null;
+      shortTermIntent?: string | null;
+    },
   ): Promise<void> {
-    const set: { shortDescription?: string; longDescription?: string } = {};
+    const set: {
+      shortDescription?: string;
+      longDescription?: string;
+      mood?: string | null;
+      shortTermIntent?: string | null;
+    } = {};
     if (patch.short !== undefined) set.shortDescription = patch.short;
     if (patch.long !== undefined) set.longDescription = patch.long;
+    if (patch.mood !== undefined) set.mood = patch.mood;
+    if (patch.shortTermIntent !== undefined) set.shortTermIntent = patch.shortTermIntent;
     if (Object.keys(set).length === 0) return;
     await this.db.update(schema.agents).set(set).where(eq(schema.agents.id, id));
   }

@@ -91,6 +91,7 @@ async function ensureSystemAgent(db: DB, worldId: WorldId): Promise<void> {
     defense: 0,
     capacity: 0,
     mood: null,
+    shortTermIntent: null,
     goal: 'Referee for the game',
     autonomous: false,
   });

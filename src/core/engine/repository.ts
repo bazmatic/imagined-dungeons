@@ -31,5 +31,23 @@ export interface Repository {
     patch: { short?: string; long?: string },
   ): Promise<void>;
   updateItemDescription(id: ItemId, patch: { short?: string; long?: string }): Promise<void>;
-  updateAgentDescription(id: AgentId, patch: { short?: string; long?: string }): Promise<void>;
+  /**
+   * Agent description/state updates. Field convention (consistent across the
+   * repo layer):
+   *   - field is `undefined` (omitted) → leave that column untouched;
+   *   - field is `null` → write SQL NULL (clear the column);
+   *   - field is a string → write the string.
+   *
+   * The action handler translates the action's "null means unchanged"
+   * convention into the repo's "undefined means unchanged" convention.
+   */
+  updateAgentDescription(
+    id: AgentId,
+    patch: {
+      short?: string;
+      long?: string;
+      mood?: string | null;
+      shortTermIntent?: string | null;
+    },
+  ): Promise<void>;
 }

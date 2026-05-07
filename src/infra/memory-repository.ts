@@ -125,13 +125,20 @@ export class MemoryRepository implements Repository {
 
   async updateAgentDescription(
     id: AgentId,
-    patch: { short?: string; long?: string },
+    patch: {
+      short?: string;
+      long?: string;
+      mood?: string | null;
+      shortTermIntent?: string | null;
+    },
   ): Promise<void> {
     const current = await this.getAgent(id);
     this.agents.set(id, {
       ...current,
       ...(patch.short !== undefined ? { shortDescription: patch.short } : {}),
       ...(patch.long !== undefined ? { longDescription: patch.long } : {}),
+      ...(patch.mood !== undefined ? { mood: patch.mood } : {}),
+      ...(patch.shortTermIntent !== undefined ? { shortTermIntent: patch.shortTermIntent } : {}),
     });
   }
 }
