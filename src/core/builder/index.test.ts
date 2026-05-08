@@ -216,6 +216,9 @@ describe('cloneLiveAsDraft', () => {
       if (!tree.ok) throw new Error();
       expect(tree.value.summary.kind).toBe('draft');
       expect(tree.value.locations.map((l) => l.id as string)).toEqual(['loc_a']);
+      // Confirm the live world's parentDraftId was updated to point at the new draft.
+      const updatedLive = await repo.getWorldSummary(liveId);
+      expect(updatedLive?.parentDraftId).toBe(cloned.value);
     }
   });
 });
