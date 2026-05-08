@@ -10,6 +10,7 @@ import {
 } from '@core/builder/index';
 import { EntityKind } from '@core/domain/builder-kinds';
 import { asAgentId, asExitId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
+import type { OwnerKind } from '@core/domain/kinds';
 import { createServerFn } from '@tanstack/react-start';
 import { getBuilderRepo } from './repo';
 
@@ -63,7 +64,7 @@ export const saveEntity = createServerFn({ method: 'POST' })
         label: p.label as string,
         shortDescription: p.shortDescription as string,
         longDescription: p.longDescription as string,
-        ownerKind: p.ownerKind as 'location' | 'agent' | 'item',
+        ownerKind: p.ownerKind as OwnerKind,
         ownerId: p.ownerId as string,
         weight: p.weight as number,
         hidden: Boolean(p.hidden),
