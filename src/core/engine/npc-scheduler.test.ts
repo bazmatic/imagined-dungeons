@@ -38,6 +38,7 @@ const mkAgent = (id: AgentId, opts: Partial<Agent>): Agent => ({
   shortTermIntent: null,
   goal: null,
   autonomous: false,
+  awake: false,
   ...opts,
 });
 
@@ -60,6 +61,7 @@ describe('scheduleNpcs', () => {
     const here_npc = mkAgent(asAgentId('char_here'), { autonomous: true });
     const there_npc = mkAgent(asAgentId('char_there'), {
       autonomous: true,
+      awake: true,
       locationId: ELSEWHERE,
     });
     const repo = new MemoryRepository(W, {
@@ -97,7 +99,7 @@ describe('scheduleNpcs', () => {
   });
 
   it('excludes NPCs with hp <= 0', async () => {
-    const dead_npc = mkAgent(asAgentId('char_dead'), { autonomous: true, hp: 0 });
+    const dead_npc = mkAgent(asAgentId('char_dead'), { autonomous: true, awake: true, hp: 0 });
     const live_npc = mkAgent(asAgentId('char_live'), { autonomous: true });
     const repo = new MemoryRepository(W, {
       locations: [here],

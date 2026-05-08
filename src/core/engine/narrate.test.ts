@@ -30,6 +30,7 @@ const paff: Agent = {
   shortTermIntent: null,
   goal: 'find Spark',
   autonomous: false,
+  awake: false,
 };
 const spark: Agent = {
   id: asAgentId('char_spark'),
@@ -46,6 +47,7 @@ const spark: Agent = {
   shortTermIntent: null,
   goal: 'observe',
   autonomous: false,
+  awake: false,
 };
 
 const speakEvent: Extract<DomainEvent, { kind: 'speak' }> = {

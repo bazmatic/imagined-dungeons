@@ -66,6 +66,7 @@ export const agents = sqliteTable('agents', {
   shortTermIntent: text('short_term_intent'),
   goal: text('goal'),
   autonomous: integer('autonomous', { mode: 'boolean' }).notNull(),
+  awake: integer('awake', { mode: 'boolean' }).notNull(),
 });
 
 export const events = sqliteTable('events', {

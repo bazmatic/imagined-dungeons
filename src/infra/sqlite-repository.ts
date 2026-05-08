@@ -47,6 +47,7 @@ const toAgent = (r: typeof schema.agents.$inferSelect, worldId: WorldId): Agent 
   shortTermIntent: r.shortTermIntent,
   goal: r.goal,
   autonomous: r.autonomous,
+  awake: r.awake,
 });
 
 const toItem = (r: typeof schema.items.$inferSelect, worldId: WorldId): Item => ({
@@ -148,8 +149,8 @@ export class SqliteRepository implements Repository {
     await this.db.update(schema.agents).set({ hp }).where(eq(schema.agents.id, id));
   }
 
-  async setAgentAutonomous(id: AgentId, autonomous: boolean): Promise<void> {
-    await this.db.update(schema.agents).set({ autonomous }).where(eq(schema.agents.id, id));
+  async setAgentAwake(id: AgentId, awake: boolean): Promise<void> {
+    await this.db.update(schema.agents).set({ awake }).where(eq(schema.agents.id, id));
   }
 
   async appendEvent(event: DomainEvent): Promise<void> {

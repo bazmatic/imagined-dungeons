@@ -36,6 +36,7 @@ const paff: Agent = {
   shortTermIntent: null,
   goal: null,
   autonomous: false,
+  awake: false,
 };
 const spark: Agent = {
   id: asAgentId('char_spark'),
@@ -52,6 +53,7 @@ const spark: Agent = {
   shortTermIntent: null,
   goal: 'find clues',
   autonomous: false,
+  awake: false,
 };
 
 describe('handleSpeak', () => {

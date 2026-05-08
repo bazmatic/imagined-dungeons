@@ -52,5 +52,18 @@ export interface Agent {
   readonly mood: string | null;
   readonly shortTermIntent: string | null;
   readonly goal: string | null;
+  /**
+   * "Always awake." An autonomous agent ticks every turn they're co-located
+   * with the player, regardless of any other signal. Player-companions,
+   * patrol guards, etc.
+   */
   readonly autonomous: boolean;
+  /**
+   * Runtime "in the scene" flag. The scheduler ticks any agent that is
+   * `autonomous || awake`. The engine sets this true when something
+   * interacts with the agent (direct address, attack, emote-at, vocative
+   * broadcast) and clears it once `shortTermIntent` is null again — i.e.
+   * the agent has finished what they were drawn into.
+   */
+  readonly awake: boolean;
 }

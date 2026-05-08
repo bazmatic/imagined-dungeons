@@ -38,6 +38,7 @@ const player: Agent = {
   shortTermIntent: null,
   goal: null,
   autonomous: false,
+  awake: false,
 };
 
 const spark: Agent = {
@@ -55,6 +56,7 @@ const spark: Agent = {
   shortTermIntent: null,
   goal: null,
   autonomous: true,
+  awake: true,
 };
 
 const paff: Agent = {
@@ -72,6 +74,7 @@ const paff: Agent = {
   shortTermIntent: null,
   goal: null,
   autonomous: false,
+  awake: false,
 };
 
 const map: Item = {

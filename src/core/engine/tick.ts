@@ -153,56 +153,81 @@ async function renderWitnessForPlayer(
   }
 }
 
-const escapeRegex = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+/**
+ * Event kinds that, when they happen in an NPC's location, are noteworthy
+ * enough to wake them: someone enters or leaves, someone speaks/emotes/
+ * attacks, someone picks up or drops an item. Look/inventory/failed/
+ * description-updated are excluded — they are either private to the actor
+ * or internal bookkeeping.
+ */
+const WAKING_EVENT_KINDS: ReadonlySet<DomainEvent['kind']> = new Set<DomainEvent['kind']>([
+  EventKind.Move,
+  EventKind.Take,
+  EventKind.Drop,
+  EventKind.Speak,
+  EventKind.Attack,
+  EventKind.Emote,
+]);
 
 /**
- * Wake any dormant NPCs whose attention these events demand. An NPC is
- * "demanded" when an event:
- *   - speaks/attacks/emotes directly AT them (targetAgentId === their id), or
- *   - is broadcast speech (targetAgentId === null) whose utterance names them.
+ * Wake any dormant NPCs whose attention these events should draw. An NPC is
+ * woken when something noteworthy happens in their presence — a witness
+ * relation is enough. The scheduler then picks them up alongside the
+ * always-on autonomous agents.
  *
- * Sleeping is intentionally not symmetric here: once woken, an NPC stays in
- * the scene. The user's mental model is "interaction wakes them up"; if we
- * over-eagerly slept them after one response, they'd vanish from the
- * conversation again the next turn.
+ * Sleeping is handled separately by sleepFinishedNpcs after the tick: an
+ * NPC who is awake-not-autonomous and whose shortTermIntent has cleared is
+ * considered "done" and goes back to sleep.
  */
-async function wakeAddressedNpcs(events: readonly DomainEvent[], repo: Repository): Promise<void> {
-  const targeted = new Set<AgentId>();
+async function wakeWitnessingNpcs(events: readonly DomainEvent[], repo: Repository): Promise<void> {
+  const wakeIds = new Set<AgentId>();
   for (const e of events) {
-    if (
-      (e.kind === EventKind.Speak || e.kind === EventKind.Attack || e.kind === EventKind.Emote) &&
-      'targetAgentId' in e &&
-      e.targetAgentId !== null
-    ) {
-      targeted.add(e.targetAgentId);
-    }
-    if (e.kind === EventKind.Speak && e.targetAgentId === null) {
-      // Broadcast: anyone present whose label appears as a whole word in the
-      // utterance is being addressed by name.
-      const utteranceLower = e.utterance.toLowerCase();
-      try {
-        const here = await repo.agentsAt((await repo.getAgent(e.actorId)).locationId);
-        for (const a of here) {
-          if (a.id === e.actorId) continue;
-          const re = new RegExp(`\\b${escapeRegex(a.label.toLowerCase())}\\b`);
-          if (re.test(utteranceLower)) targeted.add(a.id);
-        }
-      } catch {
-        // Actor lookup failed — skip vocative scan; explicit-target wakes
-        // already happened above.
-      }
+    if (!WAKING_EVENT_KINDS.has(e.kind)) continue;
+    for (const witnessId of e.witnesses) {
+      if (witnessId === e.actorId) continue;
+      wakeIds.add(witnessId);
     }
   }
-  for (const id of targeted) {
+  for (const id of wakeIds) {
     try {
       const a = await repo.getAgent(id);
-      if (!a.autonomous && a.hp > 0) {
-        await repo.setAgentAutonomous(id, true);
-        console.info(`[wake] ${a.label} woken by interaction`);
+      if (!a.autonomous && !a.awake && a.hp > 0) {
+        await repo.setAgentAwake(id, true);
+        // Seed a short-term intent so the NPC has a reason to tick. The
+        // consequence engine and the NPC mind itself will refine or replace
+        // this as the scene develops; clearing it (back to null) is the
+        // signal that they're "done" and the sleep sweep can dismiss them.
+        // Don't overwrite an existing intent — they may have been mid-task
+        // when we last slept them, in which case picking up where they left
+        // off is the right behavior.
+        if (a.shortTermIntent === null) {
+          await repo.updateAgentDescription(id, {
+            shortTermIntent: 'figure out what just happened and respond appropriately',
+          });
+        }
+        console.info(`[wake] ${a.label} woken by witnessed event`);
       }
     } catch {
       // skip
     }
+  }
+}
+
+/**
+ * Sleep any NPC who was woken (awake && !autonomous) but no longer has a
+ * short-term intent — they've finished what drew them in. Autonomous agents
+ * are never slept here; their `awake` flag is incidental.
+ */
+async function sleepFinishedNpcs(repo: Repository, playerId: AgentId): Promise<void> {
+  const player = await repo.getAgent(playerId);
+  const here = await repo.agentsAt(player.locationId);
+  for (const a of here) {
+    if (a.id === playerId) continue;
+    if (a.autonomous) continue;
+    if (!a.awake) continue;
+    if (a.shortTermIntent !== null) continue;
+    await repo.setAgentAwake(a.id, false);
+    console.info(`[sleep] ${a.label} returned to dormant (intent fulfilled)`);
   }
 }
 
@@ -264,9 +289,9 @@ export async function runTick(
       playerRender = `${playerRender}\n\n${renderLook(view)}`;
     }
 
-    // Wake any dormant NPCs the player just addressed/attacked/emoted at,
-    // so the scheduler picks them up this same tick.
-    await wakeAddressedNpcs(playerResult.events, repo);
+    // Wake any dormant NPCs whose attention the player just drew, so the
+    // scheduler picks them up this same tick.
+    await wakeWitnessingNpcs(playerResult.events, repo);
 
     // 2. Consequence pass over the player's events (depth 0).
     const postPlayerConsequences = await runConsequencePass(playerResult.events, repo, llm, 0);
@@ -326,9 +351,9 @@ export async function runTick(
     }
   }
 
-  // 5. Wake NPCs that other NPCs just addressed (e.g. Spark says "Captain,
-  // I have your map" — Serena needs to be eligible next tick).
-  await wakeAddressedNpcs(npcEvents, repo);
+  // 5. Wake NPCs that other NPCs just drew the attention of (cross-NPC
+  // wake — e.g. Spark addresses Serena, who hasn't ticked yet).
+  await wakeWitnessingNpcs(npcEvents, repo);
 
   // 6. Consequence pass over the NPC events only (depth 1).
   const postNpcConsequences = await runConsequencePass(npcEvents, repo, llm, 1);
@@ -337,6 +362,10 @@ export async function runTick(
     const line = await renderWitnessForPlayer(ev, playerId, repo);
     if (line !== null && line.length > 0) witnessed.push(line);
   }
+
+  // 7. Sleep any woken NPCs (awake && !autonomous) whose shortTermIntent
+  // is now null — they've finished what drew them in.
+  await sleepFinishedNpcs(repo, playerId);
 
   return {
     render: playerRender,

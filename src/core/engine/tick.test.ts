@@ -62,6 +62,7 @@ const player: Agent = {
   shortTermIntent: null,
   goal: null,
   autonomous: false,
+  awake: false,
 };
 
 const spark: Agent = {
@@ -79,6 +80,7 @@ const spark: Agent = {
   shortTermIntent: null,
   goal: 'Explore',
   autonomous: true,
+  awake: true,
 };
 
 const ember: Agent = {
@@ -96,6 +98,7 @@ const ember: Agent = {
   shortTermIntent: null,
   goal: 'Spread chaos',
   autonomous: true,
+  awake: true,
 };
 
 const makeWorld = (
@@ -213,6 +216,7 @@ describe('runTick', () => {
       shortTermIntent: null,
       goal: null,
       autonomous: false,
+      awake: false,
     };
     const repo = makeWorld([player, sys], [lantern]);
     const llm = makeFakeLanguageModel({

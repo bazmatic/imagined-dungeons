@@ -28,6 +28,7 @@ const paff: Agent = {
   shortTermIntent: null,
   goal: null,
   autonomous: false,
+  awake: false,
 };
 const map: Item = {
   id: asItemId('item_map'),

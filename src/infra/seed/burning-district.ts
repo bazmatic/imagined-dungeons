@@ -607,7 +607,7 @@ export const BURNING_DISTRICT = {
       "capacity": 10,
       "mood": "Cautious",
       "goal": "Return to the sea",
-      "autonomous": true,
+      "autonomous": false,
       "shortDescription": "A tall tiefling with red skin and sharp horns, wearing a coat of fish scales. Veteran sailor whose ship is undergoing repairs. Has valuable information about Zezran and the elemental plane of water.",
       "longDescription": "A tall tiefling with red skin and sharp horns, wearing a coat of fish scales. Veteran sailor whose ship is undergoing repairs. Has valuable information about Zezran and the elemental plane of water."
     },

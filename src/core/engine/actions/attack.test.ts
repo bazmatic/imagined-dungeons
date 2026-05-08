@@ -36,6 +36,7 @@ const paff = (overrides: Partial<Agent> = {}): Agent => ({
   shortTermIntent: null,
   goal: null,
   autonomous: false,
+  awake: false,
   ...overrides,
 });
 const spark = (overrides: Partial<Agent> = {}): Agent => ({
@@ -53,6 +54,7 @@ const spark = (overrides: Partial<Agent> = {}): Agent => ({
   shortTermIntent: null,
   goal: 'survive',
   autonomous: false,
+  awake: false,
   ...overrides,
 });
 

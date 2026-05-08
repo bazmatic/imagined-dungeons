@@ -41,6 +41,7 @@ const paff: Agent = {
   shortTermIntent: null,
   goal: null,
   autonomous: false,
+  awake: false,
 };
 
 const takeEvent: DomainEvent = {

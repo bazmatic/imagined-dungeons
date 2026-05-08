@@ -29,6 +29,7 @@ beforeEach(async () => {
     shortTermIntent: null,
     goal: null,
     autonomous: false,
+    awake: false,
   });
   await handle.db.insert(schema.items).values({
     id: 'item_map',

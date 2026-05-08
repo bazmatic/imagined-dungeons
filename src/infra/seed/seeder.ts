@@ -94,6 +94,7 @@ async function ensureSystemAgent(db: DB, worldId: WorldId): Promise<void> {
     shortTermIntent: null,
     goal: 'Referee for the game',
     autonomous: false,
+    awake: false,
   });
 }
 
@@ -113,7 +114,11 @@ export async function seedIfEmpty(db: DB, campaign: Campaign): Promise<void> {
     .insert(schema.locations)
     .values(campaign.seed.locations.map((l) => ({ ...l, worldId: W })));
 
-  await db.insert(schema.agents).values(campaign.seed.agents.map((a) => ({ ...a, worldId: W })));
+  // `awake` is the runtime flag; campaign seeds never set it, so default
+  // every NPC to dormant. Always-on characters use `autonomous: true`.
+  await db
+    .insert(schema.agents)
+    .values(campaign.seed.agents.map((a) => ({ ...a, worldId: W, awake: false })));
 
   // Insert items in two passes: those owned by location/agent first, then those owned by other items.
   const flatItems = campaign.seed.items.filter((i) => i.ownerKind !== 'item');

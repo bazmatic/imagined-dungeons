@@ -15,12 +15,12 @@ export interface Repository {
   transferItem(item: ItemId, to: Owner): Promise<void>;
   setAgentHp(id: AgentId, hp: number): Promise<void>;
   /**
-   * Wake or sleep an NPC. The scheduler ticks an agent only when
-   * `autonomous === true`. Interactions targeting a dormant NPC wake them
-   * (see tick.ts). Sleep is currently never triggered by the engine — once
-   * woken, an NPC stays in the scene.
+   * Toggle the runtime "in the scene" flag. The scheduler ticks any agent
+   * that is `autonomous || awake`. The engine wakes an agent when something
+   * draws their attention (interaction, threat, vocative) and sleeps them
+   * once their `shortTermIntent` is null again.
    */
-  setAgentAutonomous(id: AgentId, autonomous: boolean): Promise<void>;
+  setAgentAwake(id: AgentId, awake: boolean): Promise<void>;
   appendEvent(event: DomainEvent): Promise<void>;
   recentEvents(limit: number): Promise<readonly DomainEvent[]>;
   /** Read the current world RNG seed. */

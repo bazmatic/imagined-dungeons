@@ -48,6 +48,7 @@ const paff: Agent = {
   shortTermIntent: null,
   goal: null,
   autonomous: false,
+  awake: false,
 };
 
 describe('handleTake', () => {

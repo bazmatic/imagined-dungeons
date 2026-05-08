@@ -29,6 +29,7 @@ const paff: Agent = {
   shortTermIntent: null,
   goal: null,
   autonomous: false,
+  awake: false,
 };
 const map: Item = {
   id: asItemId('item_map'),
@@ -55,6 +56,7 @@ const spark: Agent = {
   shortTermIntent: null,
   goal: null,
   autonomous: false,
+  awake: false,
 };
 
 const view = { actor: paff, location: tavern, items: [map], agents: [spark], exits: [] };

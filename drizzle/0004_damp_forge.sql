@@ -1,0 +1,1 @@
+ALTER TABLE `agents` ADD `awake` integer NOT NULL DEFAULT 0;

@@ -52,6 +52,7 @@ const npc: Agent = {
   shortTermIntent: null,
   goal: null,
   autonomous: false,
+  awake: false,
 };
 
 const exitN: Exit = {
@@ -182,6 +183,7 @@ describe('renderEmoteMechanical', () => {
     shortTermIntent: null,
     goal: null,
     autonomous: false,
+    awake: false,
   };
   const spark: Agent = {
     id: asAgentId('char_s'),
@@ -198,6 +200,7 @@ describe('renderEmoteMechanical', () => {
     shortTermIntent: null,
     goal: null,
     autonomous: false,
+    awake: false,
   };
   const ember: Agent = {
     id: asAgentId('char_e'),
@@ -214,6 +217,7 @@ describe('renderEmoteMechanical', () => {
     shortTermIntent: null,
     goal: null,
     autonomous: false,
+    awake: false,
   };
   const evWith = (
     description: string,

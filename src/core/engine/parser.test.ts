@@ -20,6 +20,7 @@ const ACTOR: Agent = {
   shortTermIntent: null,
   goal: null,
   autonomous: false,
+  awake: false,
 };
 const LOC: Location = {
   id: asLocationId('loc_a'),
@@ -84,6 +85,7 @@ const spark: Agent = {
   shortTermIntent: null,
   goal: null,
   autonomous: false,
+  awake: false,
 };
 const ember: Agent = {
   id: asAgentId('char_ember'),
@@ -100,6 +102,7 @@ const ember: Agent = {
   shortTermIntent: null,
   goal: null,
   autonomous: false,
+  awake: false,
 };
 
 const view = (items: Item[] = [map], agents: Agent[] = []): PerceptionView => ({
@@ -322,6 +325,7 @@ describe('parse', () => {
       shortTermIntent: null,
       goal: null,
       autonomous: false,
+      awake: false,
     };
     const speakerView: PerceptionView = {
       actor: spark,

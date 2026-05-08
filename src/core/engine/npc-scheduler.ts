@@ -33,7 +33,8 @@ export async function scheduleNpcs(args: ScheduleNpcsArgs): Promise<readonly Age
   const here = await repo.agentsAt(player.locationId);
   const eligible = here
     .filter((a) => a.id !== playerId)
-    .filter((a) => a.autonomous)
+    // Always-on (autonomous) OR drawn into the scene by a recent event (awake).
+    .filter((a) => a.autonomous || a.awake)
     // hp > 0 — corpses don't tick
     .filter((a) => a.hp > 0)
     .map((a) => a.id)

@@ -31,6 +31,7 @@ const agent = (id: string, locId: string): Agent => ({
   shortTermIntent: null,
   goal: null,
   autonomous: false,
+  awake: false,
 });
 
 const item = (id: string, ownerLoc: string, hidden = false): Item => ({

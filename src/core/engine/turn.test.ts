@@ -57,6 +57,7 @@ const paff: Agent = {
   shortTermIntent: null,
   goal: null,
   autonomous: false,
+  awake: false,
 };
 
 describe('runTurn', () => {
@@ -129,6 +130,7 @@ describe('runTurn with narrated events', () => {
     shortTermIntent: null,
     goal: 'observe',
     autonomous: false,
+    awake: false,
   };
 
   it('populates per-witness narrations on a speak event (mechanical fallback)', async () => {

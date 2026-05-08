@@ -39,6 +39,7 @@ const paff: Agent = {
   shortTermIntent: null,
   goal: null,
   autonomous: false,
+  awake: false,
 };
 const spark: Agent = {
   id: asAgentId('char_s'),
@@ -55,6 +56,7 @@ const spark: Agent = {
   shortTermIntent: null,
   goal: null,
   autonomous: true,
+  awake: true,
 };
 
 describe('handleUpdateDescription', () => {
