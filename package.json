@@ -16,6 +16,7 @@
     "lint": "biome check .",
     "format": "biome format --write .",
     "seed:gen": "tsx scripts/parse-world.ts",
+    "reset": "tsx scripts/reset-db.ts",
     "test:llm": "vitest run --config vitest.smoke.config.ts"
   },
   "dependencies": {
