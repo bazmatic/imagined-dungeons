@@ -23,7 +23,6 @@ export const ProblemKind = {
   ExitToMissing: 'exit_to_missing',
   ExitLockedByItemMissing: 'exit_locked_by_item_missing',
   ItemOwnerMissing: 'item_owner_missing',
-  ItemOwnerKindMismatch: 'item_owner_kind_mismatch',
   AgentLocationMissing: 'agent_location_missing',
   PlayerAgentNotSet: 'player_agent_not_set',
   PlayerAgentMissing: 'player_agent_missing',
