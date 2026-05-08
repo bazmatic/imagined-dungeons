@@ -76,13 +76,10 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
     '2. If someone is currently attacking you (and you have not yet retaliated), decide whether to fight back, flee through an exit, or speak.',
   );
   lines.push(
-    '3. If the user message contains a "Things YOU have recently committed to doing" section, make progress on those commitments this turn — pick up the item if you said you would carry it, take a step in the relevant direction, etc. Don\'t restart the conversation; act. If that section is absent, do NOT volunteer follow-up speech to elaborate on things you said earlier — keep quiet unless something new prompts you.',
+    "3. If you have a `Current short-term intent` (shown in the header above), make progress on it this turn — pick up the item, take a step in the relevant direction, etc. Don't restart the conversation; act. The intent is what you committed to most recently; the world will clear it once you fulfil it.",
   );
   lines.push(
-    '4. If you have a `Current short-term intent`, make progress on it. This is what you decided to do recently and it should usually drive your turn unless something more urgent (priority 1 or 2) interrupts.',
-  );
-  lines.push(
-    "5. Otherwise, pick something consistent with your long-term goal — move toward something useful, examine your surroundings, pick up something you'd want, emote a small in-character gesture, or wait. Don't repeat or rephrase things you've already said.",
+    "4. Otherwise, pick something consistent with your long-term goal — move toward something useful, examine your surroundings, pick up something you'd want, emote a small in-character gesture, or wait. Don't repeat or rephrase things you've already said, and do NOT volunteer follow-up speech about earlier exchanges.",
   );
   lines.push('');
   lines.push('Hard rules:');
@@ -267,45 +264,14 @@ async function buildUserPrompt(
     }
   }
 
-  // Foreground recent things the NPC has SAID *that look like a commitment*
-  // ("Sure, I'll take the fire map to the docks!" — yes; "I run around a lot,
-  // I think the static builds up!" — no). The NPC mind has no separate notion
-  // of pending tasks; the spoken utterance IS the commitment. Without this
-  // filter, every prior statement counts as a standing intent and the NPC
-  // keeps elaborating on past chatter. The check is conservative — if the
-  // utterance contains a future-tense self-pledge phrase, foreground it;
-  // otherwise leave it in the general memory log as context.
-  const COMMITMENT_PATTERNS: readonly RegExp[] = [
-    /\bi['’]?ll\b/i, // I'll, I'll', I’ll
-    /\bi will\b/i,
-    /\bi['’]?m going to\b/i, // I'm going to
-    /\bi am going to\b/i,
-    /\bi['’]?d (like|love) to\b/i, // I'd like to / I'd love to
-    /\blet me\b/i,
-    /\bi can\b/i, // "I can take it" — soft commitment
-    /\bi should\b/i,
-    /\bsure[,.!]/i, // "Sure, I'll..." — common agreement opener
-    /\bof course[,.!]/i,
-  ];
-  const looksLikeCommitment = (utterance: string): boolean =>
-    COMMITMENT_PATTERNS.some((p) => p.test(utterance));
-
-  const recentCommitments = memory.filter(
-    (m) =>
-      m.actorId === selfId &&
-      m.kind === EventKind.Speak &&
-      looksLikeCommitment((m as Extract<DomainEvent, { kind: 'speak' }>).utterance),
-  );
-  if (recentCommitments.length > 0) {
-    lines.push('');
-    lines.push(
-      'Things YOU have recently committed to doing (follow through — pick up what you said you would carry, head where you said you would head, etc.):',
-    );
-    for (const m of recentCommitments) {
-      const speakEvent = m as Extract<DomainEvent, { kind: 'speak' }>;
-      lines.push(`- you said: "${speakEvent.utterance}"`);
-    }
-  }
+  // Note: we used to derive "commitments" by pattern-matching recent self-
+  // speech here. That mechanism overlapped with `Agent.shortTermIntent` (which
+  // the consequence engine sets durably and structurally) and produced false
+  // positives ("I run around a lot" read as a commitment). Removed in favour
+  // of a single source of truth: the consequence engine watches outgoing
+  // speech and decides what is or isn't a commitment, persisting it as
+  // shortTermIntent. The NPC mind's prompt header already surfaces that field
+  // as "Current short-term intent" and priority #3 (below) acts on it.
 
   if (memory.length > 0) {
     lines.push('');

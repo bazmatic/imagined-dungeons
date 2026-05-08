@@ -169,9 +169,11 @@ describe('decideNpcIntent', () => {
     const call = llm.textCalls[0];
     if (!call) throw new Error('expected textCall');
     expect(call.system).toContain('short-term intent');
-    // Renumbered priority 5 used to be priority 4.
+    // After the recent-self-speech foregrounding was removed, the intent is
+    // now priority 3 and the long-term-goal fallback is priority 4.
+    expect(call.system).toMatch(/3\. If you have a `Current short-term intent`/);
     expect(call.system).toMatch(
-      /5\. Otherwise, pick something consistent with your long-term goal/,
+      /4\. Otherwise, pick something consistent with your long-term goal/,
     );
   });
 });
