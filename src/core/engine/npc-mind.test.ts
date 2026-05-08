@@ -95,7 +95,7 @@ describe('decideNpcIntent', () => {
       },
     });
     const repo = makeRepo();
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     try {
       const intent = await decideNpcIntent(SPARK_ID, repo, llm);
       expect(intent).toBe(NpcFallbackIntent);
@@ -108,7 +108,7 @@ describe('decideNpcIntent', () => {
   it('falls back to "wait" when the LLM returns an empty string', async () => {
     const llm = makeFakeLanguageModel({ textResponder: () => '   ' });
     const repo = makeRepo();
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     try {
       const intent = await decideNpcIntent(SPARK_ID, repo, llm);
       expect(intent).toBe(NpcFallbackIntent);

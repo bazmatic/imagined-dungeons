@@ -3,6 +3,7 @@ import type { Agent } from '@core/domain/entities';
 import type { DomainEvent } from '@core/domain/events';
 import { type AgentId, SYSTEM_AGENT_ID } from '@core/domain/ids';
 import { EventKind, NpcFallbackIntent, OwnerKind } from '@core/domain/kinds';
+import { log } from '@core/log';
 import { dispatch } from './actions/registry';
 import { MAX_CONSEQUENCE_DEPTH, consequencesFor } from './consequences';
 import type { LanguageModel } from './language-model';
@@ -196,7 +197,7 @@ async function wakeWitnessingNpcs(events: readonly DomainEvent[], repo: Reposito
         // No intent is seeded here — the agent owns their own intent. They
         // get one tick to set one; if they don't, the sleep sweep dismisses
         // them at end-of-tick.
-        console.info(`[wake] ${a.label} woken by witnessed event`);
+        log.info(`[wake] ${a.label} woken by witnessed event`);
       }
     } catch {
       // skip
@@ -208,17 +209,28 @@ async function wakeWitnessingNpcs(events: readonly DomainEvent[], repo: Reposito
  * Sleep any NPC who was woken (awake && !autonomous) but no longer has a
  * short-term intent — they've finished what drew them in. Autonomous agents
  * are never slept here; their `awake` flag is incidental.
+ *
+ * Critically, only NPCs who actually ticked this turn are eligible for the
+ * sweep. An NPC woken by another NPC's event during this same turn (e.g.
+ * Spark says "Captain, I have your map" → Serena wakes) hasn't had a chance
+ * to declare an intent yet; sleeping them immediately would dismiss them
+ * before they ever act. They get next turn.
  */
-async function sleepFinishedNpcs(repo: Repository, playerId: AgentId): Promise<void> {
+async function sleepFinishedNpcs(
+  repo: Repository,
+  playerId: AgentId,
+  tickedIds: ReadonlySet<AgentId>,
+): Promise<void> {
   const player = await repo.getAgent(playerId);
   const here = await repo.agentsAt(player.locationId);
   for (const a of here) {
     if (a.id === playerId) continue;
     if (a.autonomous) continue;
     if (!a.awake) continue;
+    if (!tickedIds.has(a.id)) continue;
     if (a.shortTermIntent !== null) continue;
     await repo.setAgentAwake(a.id, false);
-    console.info(`[sleep] ${a.label} returned to dormant (intent fulfilled)`);
+    log.info(`[sleep] ${a.label} returned to dormant (intent fulfilled)`);
   }
 }
 
@@ -240,7 +252,7 @@ async function runConsequencePass(
   for (const action of actions) {
     const r = await dispatch(action, repo);
     if (!r.ok) {
-      console.warn(`[consequence] dispatch failed: ${r.error}`);
+      log.warn(`[consequence] dispatch failed: ${r.error}`);
       continue;
     }
     out.push(r.value.event);
@@ -296,13 +308,14 @@ export async function runTick(
   // 3. Scheduler picks NPCs co-located with the player.
   const npcIds = await scheduleNpcs({ playerId, repo, cap });
   if (npcIds.length === 0) {
-    console.info('[scheduler] no NPCs eligible this tick');
+    log.info('[scheduler] no NPCs eligible this tick');
   } else {
-    console.info(`[scheduler] eligible: ${npcIds.join(', ')}`);
+    log.info(`[scheduler] eligible: ${npcIds.join(', ')}`);
   }
 
   // 4. NPC ticks.
   const npcEvents: DomainEvent[] = [];
+  const tickedIds = new Set<AgentId>();
   for (const npcId of npcIds) {
     // Re-check eligibility just before acting: the player's action may have
     // moved/killed/relocated the NPC mid-tick.
@@ -312,10 +325,13 @@ export async function runTick(
     } catch {
       continue;
     }
-    if (!npc.autonomous || npc.hp <= 0) continue;
+    // The scheduler eligibility is autonomous || awake; mirror it here so a
+    // newly-woken NPC gets to tick.
+    if ((!npc.autonomous && !npc.awake) || npc.hp <= 0) continue;
+    tickedIds.add(npcId);
 
     const intent = await decideNpcIntent(npcId, repo, llm);
-    console.info(`[npc] ${npc.label} intent: "${intent}"`);
+    log.info(`[npc] ${npc.label} intent: "${intent}"`);
 
     if (isWaitIntent(intent)) {
       // Benign no-op — don't bother the parser, don't pollute the player's
@@ -328,10 +344,10 @@ export async function runTick(
       // Intent didn't parse or dispatch failed. The reason is in npcResult.render
       // (a parse-error or action-error message). Surface it so the dev terminal
       // shows why the NPC produced nothing visible to the player.
-      console.info(`[npc] ${npc.label} produced no event: ${npcResult.render}`);
+      log.info(`[npc] ${npc.label} produced no event: ${npcResult.render}`);
     } else {
       for (const ev of npcResult.events) {
-        console.info(`[npc] ${npc.label} -> ${ev.kind}`);
+        log.info(`[npc] ${npc.label} -> ${ev.kind}`);
       }
     }
     for (const ev of npcResult.events) {
@@ -356,7 +372,7 @@ export async function runTick(
 
   // 7. Sleep any woken NPCs (awake && !autonomous) whose shortTermIntent
   // is now null — they've finished what drew them in.
-  await sleepFinishedNpcs(repo, playerId);
+  await sleepFinishedNpcs(repo, playerId, tickedIds);
 
   return {
     render: playerRender,

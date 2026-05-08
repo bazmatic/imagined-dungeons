@@ -1,6 +1,7 @@
 import type { ParseError } from '@core/domain/actions';
 import type { Agent, Item } from '@core/domain/entities';
 import { ParseErrorKind } from '@core/domain/kinds';
+import { log } from '@core/log';
 import type { LanguageModel } from '../language-model';
 import { llmInterpret } from '../llm-interpret';
 import { type ParseResult, parse as ruleParseDefault } from '../parser';
@@ -44,13 +45,13 @@ export function makeCompositeParser(deps: CompositeParserDeps): ParseFn {
     try {
       const action = await llmInterpret(text, actor, view, inventory, deps.llm);
       if (!action) {
-        console.info(`[llm] no action for input "${text}" — using rule-based ${ruleResult.kind}`);
+        log.info(`[llm] no action for input "${text}" — using rule-based ${ruleResult.kind}`);
         return ruleResult;
       }
-      console.info(`[llm] interpreted "${text}" as ${action.kind}`);
+      log.info(`[llm] interpreted "${text}" as ${action.kind}`);
       return action;
     } catch (err) {
-      console.warn(`[llm] error interpreting "${text}":`, err);
+      log.warn(`[llm] error interpreting "${text}": ${String(err)}`);
       return ruleResult;
     }
   };

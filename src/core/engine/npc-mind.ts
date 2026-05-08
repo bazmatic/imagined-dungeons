@@ -8,6 +8,7 @@ import {
   NpcFallbackIntent,
   OwnerKind,
 } from '@core/domain/kinds';
+import { log } from '@core/log';
 import type { LanguageModel } from './language-model';
 import { recallFor } from './memory';
 import { type PerceptionView, perceive } from './perception';
@@ -92,13 +93,13 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
   lines.push('');
   lines.push('Behavioural priorities (in order):');
   lines.push(
-    '1. If the user message contains a section "directed AT YOU that you have NOT yet responded to", respond — usually with `say "..." to <them>`. Be true to your mood and goal. If that section is absent or empty, you have nothing pending to respond to and you should NOT bring up earlier exchanges again — move on.',
+    '1. If something has been directed AT YOU that you have NOT yet responded to (it will appear under a section with that heading), respond — usually with `say "..." to <them>`. Be true to your mood and goal. If no such section appears, you have nothing pending to respond to and you should NOT bring up earlier exchanges again — move on.',
   );
   lines.push(
     '2. If someone is currently attacking you (and you have not yet retaliated), decide whether to fight back, flee through an exit, or speak.',
   );
   lines.push(
-    '3. Manage your own `Current short-term intent` (shown in the header above). Each turn, decide:\n   a. If you HAVE NO intent yet, ASK YOURSELF whether anything is worth doing right now — anything you observe in the room, anything you remember from earlier, anything you just thought of (a question to ask, a person to find, a long-term goal to take a step toward, a curiosity to satisfy, a worry to address, a passive stance like "watch what is happening" or "wait for Paff to leave before I act"). If yes, declare it with `INTENT: <full plan>`. Capture the WHOLE task, not just the first step.\n   b. If you HAVE an intent and have just carried it out (cross-reference your witnessed events and current state), prefix with `INTENT_DONE`. Then ask the same "anything worth doing?" question; if yes, include `INTENT: <new plan>` on the next line — that keeps you in the scene. Without a follow-up intent, you will go dormant after this turn.\n   c. If you HAVE an intent and your understanding of it has sharpened (you learned the destination, the recipient, etc.), restate it with `INTENT: <refined plan>`.\n   d. If you HAVE an intent and it is still in progress, do not emit a control line — just take the next concrete step (pick up the item, move toward the destination, hand it over, etc.).\n   IMPORTANT: An empty `Current short-term intent` at the end of a turn means you go dormant (you stop ticking). The trigger to declare an intent is anything you THINK of as worth doing — not only what you can see. Memories, hunches, follow-up questions, long-term goals you want to advance, even just "stay close to Paff in case they need me" — all of these are valid intents. "I genuinely have nothing on my mind" is fine and goes dormant; "I have something I want to pursue but did not declare it" is the failure mode to avoid.',
+    '3. Manage your own `Current short-term intent` (shown in the header above). Each turn, decide:\n   a. If you HAVE NO intent yet, ASK YOURSELF whether anything is worth doing right now — anything you observe, anything you remember, anything you just thought of (a question to ask, a person to find, a long-term goal to take a step toward, a curiosity to satisfy, a worry to address, a passive stance). If yes, declare it with `INTENT: <full plan>`. Phrase the intent as the END STATE you are working toward, not the next step on the way to it.\n   b. INTENT_DONE is ONLY for when the end state of your current intent is OBSERVABLY TRUE in this turn\'s events. Verbally agreeing to a task, beginning to work on it, taking the first step, arriving near the goal, or feeling confident you will succeed are NOT fulfilment — keep the intent in those cases. The test is: "if I look at what just happened, would another character watching agree this is finished?" If you cannot answer yes, omit INTENT_DONE.\n   c. If you HAVE an intent and your understanding of it has sharpened (new information, an obstacle, a refined plan), restate it with `INTENT: <refined plan>`.\n   d. If you HAVE an intent and it is still in progress, do not emit a control line — just take the next concrete step.\n   IMPORTANT: An empty `Current short-term intent` at the end of a turn means you go dormant. Declaring an intent is the way to stay in the scene. "I have something I want to pursue but did not declare it" is the failure mode to avoid.',
   );
   lines.push(
     "4. Otherwise, pick something consistent with your long-term goal — move toward something useful, examine your surroundings, pick up something you'd want, emote a small in-character gesture, or wait. Don't repeat or rephrase things you've already said, and do NOT volunteer follow-up speech about earlier exchanges.",
@@ -109,7 +110,7 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
     '- Use one of the verbs above. For purely physical/expressive actions like waving, grinning, nodding, or shrugging, use `emote <description>` (e.g. "I emote wave at Paff"). For greeting someone with words, use `say "..." to <them>` plus `emote wave at <them>` if you want both.',
   );
   lines.push(
-    '- Refer only to characters, items, and exits that appear in the user message. Inventing names will fail.',
+    '- Refer only to characters, items, and exits you actually perceive. Inventing names will fail.',
   );
   lines.push(
     '- For "say", quote the actual words in double quotes. Add "to <character>" ONLY when addressing one specific person; omit it for general remarks, vocatives, or rhetorical questions. Do not paraphrase.',
@@ -121,10 +122,7 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
     '- If nothing useful presents itself, reply exactly: I wait. (or "I look" to take in the room.)',
   );
   lines.push(
-    '- If your intent names a person or place that is NOT in this room (check the "Other characters here" and exits lists), DO NOT keep looking around. The next step is movement: pick the exit most likely to lead you closer and `move <direction>`. "look for X" is not a verb the parser supports — there is no "search this room for X" mechanic. If X is here you would already see them in the prompt; if X is not here, MOVE.',
-  );
-  lines.push(
-    '- Look at "What you have witnessed recently" before choosing an action. If your last 1-2 attempts failed for the same reason (e.g. "you tried \'I look for Captain Serena.\' but it failed"), CHANGE TACTIC. Repeating the same failed phrasing wastes the turn. If a target wasn\'t found by `look`, they aren\'t in the room — try `move <direction>` instead.',
+    '- Reason about what you actually perceive and remember. The information above lists what you can see right now and what you have witnessed recently. Use it: if a previous attempt failed, understand WHY before doing anything similar. If progress on your intent is blocked here, think about what would unblock it — moving, asking someone, trying a different approach, gathering information, making something happen — and act on that.',
   );
   return lines.join('\n');
 };
@@ -354,14 +352,23 @@ export async function decideNpcIntent(
     location: view.location,
   };
 
+  const systemPrompt = SYSTEM_PROMPT(actor);
+  const userPrompt = await buildUserPrompt(ctx, actorId, repo);
+  // Verbose prompt logging is gated because the prompt is long. Set
+  // NPC_MIND_DEBUG=1 (or =prompts) to see it in the dev terminal.
+  const debug = process.env.NPC_MIND_DEBUG;
+  if (debug) {
+    log.info(
+      `[npc-mind:debug] ${actor.label} prompt:\n--- system ---\n${systemPrompt}\n--- user ---\n${userPrompt}\n---`,
+    );
+  }
+
   try {
-    const prose = await llm.completeText({
-      system: SYSTEM_PROMPT(actor),
-      user: await buildUserPrompt(ctx, actorId, repo),
-    });
+    const prose = await llm.completeText({ system: systemPrompt, user: userPrompt });
     let body = prose.trim();
+    log.info(`[npc-mind] ${actor.label} raw reply: ${JSON.stringify(prose)}`);
     if (body.length === 0) {
-      console.warn(`[npc-mind] empty response for ${actor.label}; falling back to wait`);
+      log.warn(`[npc-mind] empty response for ${actor.label}; falling back to wait`);
       return NpcFallbackIntent;
     }
     // The NPC mind owns its own shortTermIntent. The reply format may begin
@@ -389,21 +396,39 @@ export async function decideNpcIntent(
       }
       break;
     }
-    body = lines.join('\n').trim();
+    // Body should be exactly one action line. If the LLM emitted multiple
+    // (which happens when it gets confused — e.g. `say ...` then `move ...`
+    // both as separate action lines), keep only the first non-empty one and
+    // warn so we notice. Subsequent lines are dropped on the floor.
+    const bodyLines = lines.map((l) => l.trim()).filter((l) => l.length > 0);
+    if (bodyLines.length > 1) {
+      log.warn(
+        `[npc-mind] ${actor.label} emitted ${bodyLines.length} action lines; keeping only the first: ${JSON.stringify(bodyLines)}`,
+      );
+    }
+    body = bodyLines[0] ?? '';
     if (cleared && setTo === null && actor.shortTermIntent !== null) {
       await repo.updateAgentDescription(actorId, { shortTermIntent: null });
-      console.info(`[npc-mind] ${actor.label} cleared own intent: "${actor.shortTermIntent}"`);
+      log.info(`[npc-mind] ${actor.label} cleared own intent: "${actor.shortTermIntent}"`);
     }
     if (setTo !== null && setTo !== actor.shortTermIntent) {
       await repo.updateAgentDescription(actorId, { shortTermIntent: setTo });
-      console.info(
+      log.info(
         `[npc-mind] ${actor.label} set own intent: "${actor.shortTermIntent ?? '(none)'}" -> "${setTo}"`,
       );
     }
+    // Final state for diagnostic purposes: the agent's intent after this
+    // tick's parse, plus the action we're about to dispatch.
+    const finalIntent = setTo !== null ? setTo : cleared ? null : (actor.shortTermIntent ?? null);
+    log.info(
+      `[npc-mind] ${actor.label} intent now: ${finalIntent === null ? '(none)' : `"${finalIntent}"`}; action: ${
+        body.length === 0 ? '(wait — empty after control lines)' : JSON.stringify(body)
+      }`,
+    );
     if (body.length === 0) return NpcFallbackIntent;
     return body;
   } catch (err) {
-    console.warn(`[npc-mind] error deciding intent for ${actor.label}:`, err);
+    log.warn(`[npc-mind] error deciding intent for ${actor.label}: ${String(err)}`);
     return NpcFallbackIntent;
   }
 }

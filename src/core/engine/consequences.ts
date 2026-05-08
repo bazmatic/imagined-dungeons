@@ -3,6 +3,7 @@ import type { Agent, Item, Location } from '@core/domain/entities';
 import type { DomainEvent } from '@core/domain/events';
 import { type AgentId, SYSTEM_AGENT_ID } from '@core/domain/ids';
 import { ActionKind, AttackOutcome, EventKind, OwnerKind } from '@core/domain/kinds';
+import { log } from '@core/log';
 import type { JsonSchema, LanguageModel } from './language-model';
 import { resolveAgent, resolveItem } from './parser';
 import type { Repository } from './repository';
@@ -413,7 +414,7 @@ export async function consequencesFor(
     });
     parsed = response.parsed;
   } catch (err) {
-    console.warn('[llm] consequence engine error:', err);
+    log.warn(`[llm] consequence engine error: ${String(err)}`);
     return [];
   }
 

@@ -3,6 +3,7 @@ import type {
   LanguageModelRequest,
   LanguageModelResponse,
 } from '@core/engine/language-model';
+import { log } from '@core/log';
 import OpenAI from 'openai';
 
 export interface OpenAIConfig {
@@ -64,11 +65,11 @@ async function attempt(
 export function makeOpenAILanguageModel(): LanguageModel | null {
   const cfg = readConfig();
   if (!cfg) {
-    console.info('[llm] OPENAI_API_KEY not set — LLM fallback disabled (rule-based parser only).');
+    log.info('[llm] OPENAI_API_KEY not set — LLM fallback disabled (rule-based parser only).');
     return null;
   }
   const where = cfg.baseUrl ? ` via ${cfg.baseUrl}` : '';
-  console.info(`[llm] enabled: model=${cfg.model}${where}`);
+  log.info(`[llm] enabled: model=${cfg.model}${where}`);
   const client = new OpenAI(
     cfg.baseUrl ? { apiKey: cfg.apiKey, baseURL: cfg.baseUrl } : { apiKey: cfg.apiKey },
   );

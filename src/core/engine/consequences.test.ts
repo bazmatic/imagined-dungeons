@@ -109,7 +109,7 @@ describe('consequencesFor', () => {
 
   it('returns [] on a malformed response and warns', async () => {
     const repo = repoFor();
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warn = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     const llm = makeFakeLanguageModel({
       responder: () => {
         throw new Error('boom');

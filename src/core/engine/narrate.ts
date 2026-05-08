@@ -1,6 +1,7 @@
 import type { Agent, Location } from '@core/domain/entities';
 import type { DomainEvent } from '@core/domain/events';
 import { AttackOutcome, EventKind, ExaminableKind } from '@core/domain/kinds';
+import { log } from '@core/log';
 import type { LanguageModel } from './language-model';
 import { recallFor } from './memory';
 import type { Repository } from './repository';
@@ -190,7 +191,7 @@ export async function narrate(
     if (trimmed.length === 0) return narrateMechanical(ctx);
     return trimmed;
   } catch (err) {
-    console.warn(`[llm] narrator error for event ${event.id}:`, err);
+    log.warn(`[llm] narrator error for event ${event.id}: ${String(err)}`);
     return narrateMechanical(ctx);
   }
 }

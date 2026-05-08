@@ -92,7 +92,7 @@ describe('narrate', () => {
 
   it('falls back to mechanical template on LLM error and warns', async () => {
     const repo = repoOf();
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warn = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     const llm = makeFakeLanguageModel({
       textResponder: () => {
         throw new Error('boom');
