@@ -150,14 +150,27 @@ describe('validatePlayerAction', () => {
     ).toEqual({ kind: 'speak', targetAgentRef: 'spark', utterance: 'hello' });
   });
 
-  it('rejects speak with missing or empty fields', () => {
+  it('accepts speak without an addressee — empty/missing targetAgentRef normalises to null (broadcast)', () => {
     expect(validatePlayerAction({ kind: 'speak', targetAgentRef: '', utterance: 'hi' })).toEqual({
-      kind: 'invalid',
+      kind: 'speak',
+      targetAgentRef: null,
+      utterance: 'hi',
     });
+    expect(validatePlayerAction({ kind: 'speak', targetAgentRef: null, utterance: 'hi' })).toEqual({
+      kind: 'speak',
+      targetAgentRef: null,
+      utterance: 'hi',
+    });
+    expect(validatePlayerAction({ kind: 'speak', utterance: 'hi' })).toEqual({
+      kind: 'speak',
+      targetAgentRef: null,
+      utterance: 'hi',
+    });
+  });
+
+  it('rejects speak with empty/missing utterance', () => {
     expect(validatePlayerAction({ kind: 'speak', targetAgentRef: 'spark', utterance: '' })).toEqual(
-      {
-        kind: 'invalid',
-      },
+      { kind: 'invalid' },
     );
     expect(validatePlayerAction({ kind: 'speak' })).toEqual({ kind: 'invalid' });
   });

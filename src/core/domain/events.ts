@@ -23,7 +23,7 @@ export type DomainEvent =
   | (BaseEvent & { kind: 'look'; locationId: LocationId; target: ExaminableTarget })
   | (BaseEvent & { kind: 'inventory' })
   | (BaseEvent & { kind: 'failed'; attempted: string; reason: string })
-  | (BaseEvent & { kind: 'speak'; targetAgentId: AgentId; utterance: string })
+  | (BaseEvent & { kind: 'speak'; targetAgentId: AgentId | null; utterance: string })
   | (BaseEvent & {
       kind: 'emote';
       description: string;

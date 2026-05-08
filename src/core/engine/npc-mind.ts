@@ -60,7 +60,7 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
     '  - inventory            — check what you are carrying (e.g. "I check my inventory")',
   );
   lines.push(
-    '  - say "<utterance>" to <character>   — speak to another character. Quote the words. (e.g. \'I say "hello there" to Paff\')',
+    '  - say "<utterance>" [to <character>]   — speak. Quote the words. The "to <character>" clause is OPTIONAL: include it only when you mean to address one specific person. Without it, the line is broadcast to the room and listeners decide for themselves whether you meant them. (e.g. \'I say "hello there" to Paff\', or just \'I say "anyone seen the captain?"\')',
   );
   lines.push(
     '  - emote <description>             — perform a brief gesture or expression for show, no state change. Use the base verb form (e.g. "I emote wave at Paff", "I emote grin", "I emote shake my head").',
@@ -90,7 +90,7 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
     '- Refer only to characters, items, and exits that appear in the user message. Inventing names will fail.',
   );
   lines.push(
-    '- For "say", quote the actual words in double quotes and name the listener. Do not paraphrase.',
+    '- For "say", quote the actual words in double quotes. Add "to <character>" ONLY when addressing one specific person; omit it for general remarks, vocatives, or rhetorical questions. Do not paraphrase.',
   );
   lines.push(
     '- Do not narrate. Do not describe yourself in third person. Do not address the reader.',
@@ -171,12 +171,17 @@ async function summariseEvent(
     case EventKind.Failed:
       return `${actorLabel} tried "${event.attempted}" but it failed: ${event.reason}`;
     case EventKind.Speak: {
-      const targetLabel = await labelOf(event.targetAgentId);
-      // When the NPC is the target, foreground that — direct address is the
-      // strongest cue for "you might want to respond".
+      // When the NPC is the explicit target, foreground that — direct
+      // address is the strongest cue for "you might want to respond".
       if (event.targetAgentId === selfId) {
         return `${actorLabel} said to you: "${event.utterance}"`;
       }
+      // Broadcast speech (no specific addressee) — the NPC heard it. The
+      // mind decides whether they think it was meant for them.
+      if (event.targetAgentId === null) {
+        return `${actorLabel} said (to the room): "${event.utterance}"`;
+      }
+      const targetLabel = await labelOf(event.targetAgentId);
       return `${actorLabel} said "${event.utterance}" to ${targetLabel}`;
     }
     case EventKind.Emote: {
@@ -215,7 +220,10 @@ async function buildUserPrompt(
   selfId: AgentId,
   repo: Repository,
 ): Promise<string> {
-  const { view, inventory, memory } = ctx;
+  const { actor, view, inventory, memory } = ctx;
+  const selfNameRegex = new RegExp(
+    `\\b${actor.label.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`,
+  );
   const items = view.items.map((i) => i.label);
   const agents = view.agents.map((a) => {
     if (a.mood) return `${a.label} (mood: ${a.mood})`;
@@ -243,8 +251,16 @@ async function buildUserPrompt(
   for (let i = 0; i < memory.length; i++) {
     const m = memory[i];
     if (!m) continue;
+    // Direct address (target === self) always counts. Broadcast speech
+    // (target === null) counts only if the NPC's own label appears as a
+    // whole word in the utterance — that's the vocative cue. The LLM may
+    // also choose to respond to broadcast lines that don't name the NPC,
+    // but those don't get foregrounded by this priority-1 filter.
     const isAddressedToMe =
-      (m.kind === EventKind.Speak || m.kind === EventKind.Attack) && m.targetAgentId === selfId;
+      ((m.kind === EventKind.Speak || m.kind === EventKind.Attack) && m.targetAgentId === selfId) ||
+      (m.kind === EventKind.Speak &&
+        m.targetAgentId === null &&
+        selfNameRegex.test(m.utterance.toLowerCase()));
     if (!isAddressedToMe) continue;
     // Has the NPC already responded to this? Look for any subsequent
     // speak/emote *by* selfId in memory.

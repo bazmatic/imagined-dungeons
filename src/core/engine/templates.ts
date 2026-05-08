@@ -109,11 +109,14 @@ export function renderActionError(reason: string): string {
 export function renderSpeakMechanical(
   event: Extract<DomainEvent, { kind: 'speak' }>,
   actor: Agent,
-  target: Agent,
+  target: Agent | null,
   observer: Agent,
 ): string {
   const actorName = observer.id === actor.id ? 'You' : actor.label;
   const verb = observer.id === actor.id ? 'say' : 'says';
+  if (target === null) {
+    return `${actorName} ${verb}: "${event.utterance}"`;
+  }
   const targetName = observer.id === target.id ? 'you' : target.label;
   return `${actorName} ${verb} to ${targetName}: "${event.utterance}"`;
 }

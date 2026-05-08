@@ -12,9 +12,11 @@ export async function handleSpeak(
   repo: Repository,
 ): Promise<Result<ActionOutcome, string>> {
   const view = await perceive(action.actorId, repo);
-  const target = await repo.getAgent(action.targetAgentId);
-  if (target.locationId !== view.location.id) {
-    return Err(`${target.label} isn't here.`);
+  if (action.targetAgentId !== null) {
+    const target = await repo.getAgent(action.targetAgentId);
+    if (target.locationId !== view.location.id) {
+      return Err(`${target.label} isn't here.`);
+    }
   }
 
   const witnesses = (await repo.agentsAt(view.location.id)).map((a) => a.id);

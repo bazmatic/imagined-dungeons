@@ -38,10 +38,11 @@ Available actions:
 - inventory: list what the player is carrying.
   Set: kind="inventory". All other fields null.
 
-- speak: say something to another agent in the location.
-  Set: kind="speak", targetAgentRef as a short natural-language reference to the agent, utterance as the words spoken.
+- speak: say something. Speech is broadcast — anyone present hears it. Set targetAgentRef only when the actor is unambiguously addressing one specific agent (e.g. "tell spark, hi", "say hi to the goblin"); otherwise leave targetAgentRef null and let listeners decide whether they were addressed.
+  Set: kind="speak", targetAgentRef = the addressed agent's name (when explicit) or null (broadcast / vocative / general remark), utterance = the words spoken.
   All other fields null.
   Example "talk to spark, hello" -> { "kind":"speak", "direction":null, "targetKind":null, "targetRef":null, "itemRef":null, "targetAgentRef":"spark", "utterance":"hello", "reason":null }.
+  Example "say what are you doing Spark?" -> { "kind":"speak", "direction":null, "targetKind":null, "targetRef":null, "itemRef":null, "targetAgentRef":null, "utterance":"what are you doing Spark?", "reason":null }.
   Example "tell the goblin to back off" -> { "kind":"speak", "direction":null, "targetKind":null, "targetRef":null, "itemRef":null, "targetAgentRef":"goblin", "utterance":"back off", "reason":null }.
 
 - emote: a brief gesture, expression, or for-show action. No state change — emote is purely physical performance (waving, grinning, shrugging, shaking the head). The body language IS the action.
@@ -66,7 +67,7 @@ Available actions:
 Rules:
 - itemRef, targetRef, and targetAgentRef are short natural-language references to visible objects, never ids.
 - If the player names an exit by its label, return move with the matching compass/vertical direction.
-- For speak, target only agents that are present in the location. Use unknown if no plausible target.
+- For speak, set targetAgentRef only when an agent is unambiguously addressed; otherwise leave it null.
 `;
 
 export function buildSystemPrompt(): string {

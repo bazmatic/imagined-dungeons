@@ -125,7 +125,9 @@ function summariseEvent(event: DomainEvent): string {
     case EventKind.Failed:
       return `${event.actorId} attempted: ${event.attempted}`;
     case EventKind.Speak:
-      return `${event.actorId} said "${event.utterance}" to ${event.targetAgentId}`;
+      return event.targetAgentId
+        ? `${event.actorId} said "${event.utterance}" to ${event.targetAgentId}`
+        : `${event.actorId} said "${event.utterance}" (to no one in particular)`;
     case EventKind.Emote:
       return event.targetAgentId
         ? `${event.actorId} ${event.description} at ${event.targetAgentId}`
@@ -139,8 +141,7 @@ function summariseEvent(event: DomainEvent): string {
 
 export function narrateMechanical(ctx: NarrateContext): string {
   const { event, observer, actor, target } = ctx;
-  if (event.kind === EventKind.Speak && target)
-    return renderSpeakMechanical(event, actor, target, observer);
+  if (event.kind === EventKind.Speak) return renderSpeakMechanical(event, actor, target, observer);
   if (event.kind === EventKind.Emote) return renderEmoteMechanical(event, actor, observer, target);
   if (event.kind === EventKind.Attack && target)
     return renderAttackMechanical(event, actor, target, observer);
@@ -163,9 +164,12 @@ export async function narrate(
   const actor = await repo.getAgent(event.actorId);
   // Emote events may not have a target. Speak/Attack always do.
   let target: Agent | null = null;
-  if (event.kind === EventKind.Speak || event.kind === EventKind.Attack) {
+  if (event.kind === EventKind.Attack) {
     target = await repo.getAgent(event.targetAgentId);
-  } else if (event.kind === EventKind.Emote && event.targetAgentId !== null) {
+  } else if (
+    (event.kind === EventKind.Speak || event.kind === EventKind.Emote) &&
+    event.targetAgentId !== null
+  ) {
     target = await repo.getAgent(event.targetAgentId);
   }
   const location = await repo.getLocation(actor.locationId);

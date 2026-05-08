@@ -13,7 +13,7 @@ export type Action =
   | { kind: 'take'; actorId: AgentId; itemId: ItemId }
   | { kind: 'drop'; actorId: AgentId; itemId: ItemId }
   | { kind: 'inventory'; actorId: AgentId }
-  | { kind: 'speak'; actorId: AgentId; targetAgentId: AgentId; utterance: string }
+  | { kind: 'speak'; actorId: AgentId; targetAgentId: AgentId | null; utterance: string }
   | {
       kind: 'emote';
       actorId: AgentId;

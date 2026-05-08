@@ -155,12 +155,25 @@ describe('llmInterpret', () => {
     });
   });
 
-  it('returns null when the speak targetAgentRef cannot be resolved', async () => {
+  it('falls back to broadcast (targetAgentId null) when the speak targetAgentRef cannot be resolved', async () => {
     const llm = makeFakeLanguageModel({
       responder: () => respond({ kind: 'speak', targetAgentRef: 'ghost', utterance: 'hi' }),
     });
     const r = await llmInterpret('talk to ghost, hi', paff, view, [], llm);
-    expect(r).toBeNull();
+    expect(r).toEqual({ kind: 'speak', actorId: paff.id, targetAgentId: null, utterance: 'hi' });
+  });
+
+  it('returns a broadcast speak when the model emits null targetAgentRef', async () => {
+    const llm = makeFakeLanguageModel({
+      responder: () => respond({ kind: 'speak', targetAgentRef: null, utterance: 'hello all' }),
+    });
+    const r = await llmInterpret('say hello all', paff, view, [], llm);
+    expect(r).toEqual({
+      kind: 'speak',
+      actorId: paff.id,
+      targetAgentId: null,
+      utterance: 'hello all',
+    });
   });
 
   it('returns an attack Action with the resolved targetAgentId', async () => {

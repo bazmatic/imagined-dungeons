@@ -110,7 +110,11 @@ export type ValidatedPlayerAction =
   | { readonly kind: 'take'; readonly itemRef: string }
   | { readonly kind: 'drop'; readonly itemRef: string }
   | { readonly kind: 'inventory' }
-  | { readonly kind: 'speak'; readonly targetAgentRef: string; readonly utterance: string }
+  | {
+      readonly kind: 'speak';
+      readonly targetAgentRef: string | null;
+      readonly utterance: string;
+    }
   | {
       readonly kind: 'emote';
       readonly emoteDescription: string;
@@ -180,14 +184,15 @@ export function validatePlayerAction(input: unknown): ValidatedPlayerAction {
     case ActionKind.Inventory:
       return { kind: ActionKind.Inventory };
     case ActionKind.Speak: {
-      const targetAgentRef = input.targetAgentRef;
+      const rawTargetAgentRef = input.targetAgentRef;
       const utterance = input.utterance;
-      if (typeof targetAgentRef !== 'string' || targetAgentRef.length === 0) {
-        return { kind: InvalidKind };
-      }
       if (typeof utterance !== 'string' || utterance.length === 0) {
         return { kind: InvalidKind };
       }
+      const targetAgentRef =
+        typeof rawTargetAgentRef === 'string' && rawTargetAgentRef.length > 0
+          ? rawTargetAgentRef
+          : null;
       return { kind: ActionKind.Speak, targetAgentRef, utterance };
     }
     case ActionKind.Attack: {

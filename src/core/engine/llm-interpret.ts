@@ -77,8 +77,25 @@ export async function llmInterpret(
     case ActionKind.Inventory:
       return { kind: ActionKind.Inventory, actorId: actor.id };
     case ActionKind.Speak: {
+      if (validated.targetAgentRef === null) {
+        return {
+          kind: ActionKind.Speak,
+          actorId: actor.id,
+          targetAgentId: null,
+          utterance: validated.utterance,
+        };
+      }
       const r = resolveAgent(validated.targetAgentRef, view.agents);
-      if (!r.ok) return null;
+      if (!r.ok) {
+        // Couldn't resolve the named addressee — broadcast instead. The
+        // listener mind will judge whether the utterance was meant for them.
+        return {
+          kind: ActionKind.Speak,
+          actorId: actor.id,
+          targetAgentId: null,
+          utterance: validated.utterance,
+        };
+      }
       return {
         kind: ActionKind.Speak,
         actorId: actor.id,

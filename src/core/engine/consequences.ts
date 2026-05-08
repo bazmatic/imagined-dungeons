@@ -213,6 +213,9 @@ async function summarise(event: DomainEvent, repo: Repository): Promise<string> 
       return `${await labelOf(event.actorId)} attempted: ${event.attempted}`;
     case EventKind.Speak: {
       const actor = await labelOf(event.actorId);
+      if (event.targetAgentId === null) {
+        return `${actor} said "${event.utterance}" (to no one in particular)`;
+      }
       const target = await labelOf(event.targetAgentId);
       return `${actor} said "${event.utterance}" to ${target}`;
     }
@@ -307,10 +310,10 @@ async function agentsInvolved(
   };
   for (const e of events) {
     if (e.actorId !== SYSTEM_AGENT_ID) await add(e.actorId);
-    if (e.kind === EventKind.Speak || e.kind === EventKind.Attack) {
+    if (e.kind === EventKind.Attack) {
       await add(e.targetAgentId);
     }
-    if (e.kind === EventKind.Emote && e.targetAgentId !== null) {
+    if ((e.kind === EventKind.Speak || e.kind === EventKind.Emote) && e.targetAgentId !== null) {
       await add(e.targetAgentId);
     }
   }

@@ -267,22 +267,32 @@ describe('parse', () => {
     expect(r.utterance).toBe('are you well?');
   });
 
-  it('"say hello" with one other agent in the room targets that agent implicitly', () => {
-    const r = parse('say hello', ACTOR, view([map], [spark]), inv());
-    if (r.kind !== 'speak') throw new Error('expected speak');
-    expect(r.targetAgentId).toBe(spark.id);
-    expect(r.utterance).toBe('hello');
+  it('"say hello" without an explicit target broadcasts (targetAgentId === null) regardless of who is present', () => {
+    // No agents, one agent, two agents — all the same: speech is broadcast.
+    // Listeners (their NPC mind) decide whether they think it was meant for
+    // them via vocative cues in the utterance.
+    expect(parse('say hello', ACTOR, view([map], []), inv())).toMatchObject({
+      kind: 'speak',
+      targetAgentId: null,
+      utterance: 'hello',
+    });
+    expect(parse('say hello', ACTOR, view([map], [spark]), inv())).toMatchObject({
+      kind: 'speak',
+      targetAgentId: null,
+      utterance: 'hello',
+    });
+    expect(parse('say hello', ACTOR, view([map], [spark, ember]), inv())).toMatchObject({
+      kind: 'speak',
+      targetAgentId: null,
+      utterance: 'hello',
+    });
   });
 
-  it('"say hello" with no other agents yields no_such_target', () => {
-    const r = parse('say hello', ACTOR, view([map], []), inv());
-    expect(r.kind).toBe('no_such_target');
-  });
-
-  it('"say hello" with two other agents yields ambiguous_target', () => {
-    const r = parse('say hello', ACTOR, view([map], [spark, ember]), inv());
-    if (r.kind !== 'ambiguous_target') throw new Error('expected ambiguous_target');
-    expect(r.candidates).toEqual(expect.arrayContaining(['Spark', 'Ember']));
+  it('"say \\"what are you doing Spark?\\"" broadcasts; listener mind handles the vocative', () => {
+    const r = parse('say "what are you doing Spark?"', ACTOR, view([map], [spark, ember]), inv());
+    if (r.kind !== 'speak') throw new Error(`expected speak, got ${r.kind}`);
+    expect(r.targetAgentId).toBeNull();
+    expect(r.utterance).toBe('what are you doing Spark?');
   });
 
   it('"say \\"hi\\" to spark" parses utterance + explicit target with two agents present', () => {

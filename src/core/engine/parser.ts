@@ -214,22 +214,14 @@ export function parse(
           return { kind: ParseErrorKind.MissingArgument, verb: 'say' };
         }
       }
-      if (view.agents.length === 0) {
-        return { kind: ParseErrorKind.NoSuchTarget, ref: '' };
-      }
-      if (view.agents.length > 1) {
-        return {
-          kind: ParseErrorKind.AmbiguousTarget,
-          ref: '',
-          candidates: view.agents.map((a) => a.label),
-        };
-      }
-      const target = view.agents[0];
-      if (!target) return { kind: ParseErrorKind.NoSuchTarget, ref: '' };
+      // No explicit `to <agent>` — broadcast to the room. Anyone present
+      // hears it; each listener decides whether they think it was addressed
+      // to them. Speech without a target is fine even when the room is empty
+      // (mumbling to yourself is a valid action).
       return {
         kind: ActionKind.Speak,
         actorId: actor.id,
-        targetAgentId: target.id,
+        targetAgentId: null,
         utterance,
       };
     }
