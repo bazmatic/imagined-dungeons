@@ -33,8 +33,16 @@ async function main() {
         content: [{ type: 'text', text: `unknown tool: ${req.params.name}` }],
       };
     }
-    const result = await tool.run(repo, (req.params.arguments ?? {}) as Record<string, unknown>);
-    return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+    try {
+      const result = await tool.run(repo, (req.params.arguments ?? {}) as Record<string, unknown>);
+      return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      return {
+        isError: true,
+        content: [{ type: 'text', text: `tool ${req.params.name} threw: ${message}` }],
+      };
+    }
   });
 
   const transport = new StdioServerTransport();
