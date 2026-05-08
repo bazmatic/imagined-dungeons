@@ -74,6 +74,18 @@ export async function llmInterpret(
       if (!r.ok) return null;
       return { kind: ActionKind.Drop, actorId: actor.id, itemId: r.item.id };
     }
+    case ActionKind.Give: {
+      const itemR = resolveItem(validated.itemRef, inventory);
+      if (!itemR.ok) return null;
+      const agentR = resolveAgent(validated.targetAgentRef, view.agents);
+      if (!agentR.ok) return null;
+      return {
+        kind: ActionKind.Give,
+        actorId: actor.id,
+        itemId: itemR.item.id,
+        targetAgentId: agentR.agent.id,
+      };
+    }
     case ActionKind.Inventory:
       return { kind: ActionKind.Inventory, actorId: actor.id };
     case ActionKind.Speak: {

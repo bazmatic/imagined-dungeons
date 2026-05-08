@@ -35,6 +35,11 @@ Available actions:
 - drop: drop an item the player is carrying.
   Set: kind="drop", itemRef as a short natural-language reference. All other fields null.
 
+- give: hand an item from the player's inventory to another character in the same location.
+  Set: kind="give", itemRef as a short natural-language reference to the carried item, targetAgentRef as the recipient's name. All other fields null.
+  Example "give the fire map to spark" -> { "kind":"give", "direction":null, "targetKind":null, "targetRef":null, "itemRef":"fire map", "targetAgentRef":"spark", "utterance":null, "emoteDescription":null, "reason":null }.
+  Example "I give the fire map to Captain Serena." -> { "kind":"give", "direction":null, "targetKind":null, "targetRef":null, "itemRef":"fire map", "targetAgentRef":"Captain Serena", "utterance":null, "emoteDescription":null, "reason":null }.
+
 - inventory: list what the player is carrying.
   Set: kind="inventory". All other fields null.
 

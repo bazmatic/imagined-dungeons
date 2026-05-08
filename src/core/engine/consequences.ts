@@ -201,6 +201,16 @@ async function summarise(event: DomainEvent, repo: Repository): Promise<string> 
         return `${actor} dropped an item`;
       }
     }
+    case EventKind.Give: {
+      const actor = await labelOf(event.actorId);
+      const recipient = await labelOf(event.targetAgentId);
+      try {
+        const item = await repo.getItem(event.itemId);
+        return `${actor} gave the ${item.label} to ${recipient}`;
+      } catch {
+        return `${actor} gave an item to ${recipient}`;
+      }
+    }
     case EventKind.Look:
       return `${await labelOf(event.actorId)} looked around`;
     case EventKind.Inventory:
@@ -276,7 +286,8 @@ async function itemsInvolved(
   const seen = new Set<string>();
   const out: Item[] = [];
   for (const e of events) {
-    if (e.kind !== EventKind.Take && e.kind !== EventKind.Drop) continue;
+    if (e.kind !== EventKind.Take && e.kind !== EventKind.Drop && e.kind !== EventKind.Give)
+      continue;
     if (seen.has(e.itemId)) continue;
     seen.add(e.itemId);
     try {
@@ -306,7 +317,7 @@ async function agentsInvolved(
   };
   for (const e of events) {
     if (e.actorId !== SYSTEM_AGENT_ID) await add(e.actorId);
-    if (e.kind === EventKind.Attack) {
+    if (e.kind === EventKind.Attack || e.kind === EventKind.Give) {
       await add(e.targetAgentId);
     }
     if ((e.kind === EventKind.Speak || e.kind === EventKind.Emote) && e.targetAgentId !== null) {

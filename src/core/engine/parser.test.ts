@@ -199,6 +199,42 @@ describe('parse', () => {
     expect(r.itemId).toBe(map.id);
   });
 
+  it('"give fire map to spark" parses to a give action with both refs resolved', () => {
+    const r = parse('give fire map to spark', ACTOR, view([], [spark]), inv([map]));
+    if (r.kind !== 'give') throw new Error(`expected give, got ${r.kind}`);
+    expect(r.itemId).toBe(map.id);
+    expect(r.targetAgentId).toBe(spark.id);
+  });
+
+  it('"hand the fire map to Spark" works as an alias for give', () => {
+    const r = parse('hand the fire map to Spark', ACTOR, view([], [spark]), inv([map]));
+    if (r.kind !== 'give') throw new Error(`expected give, got ${r.kind}`);
+    expect(r.itemId).toBe(map.id);
+  });
+
+  it('"I give the fire map to Spark." (NPC sentence form) resolves cleanly', () => {
+    const r = parse('I give the fire map to Spark.', ACTOR, view([], [spark]), inv([map]));
+    if (r.kind !== 'give') throw new Error(`expected give, got ${r.kind}`);
+    expect(r.itemId).toBe(map.id);
+    expect(r.targetAgentId).toBe(spark.id);
+  });
+
+  it('"give to spark" yields missing_argument (no item)', () => {
+    const r = parse('give to spark', ACTOR, view([], [spark]), inv([map]));
+    expect(r.kind).toBe('missing_argument');
+  });
+
+  it('"give fire map to nobody" yields no_such_target on the recipient', () => {
+    const r = parse('give fire map to nobody', ACTOR, view([], [spark]), inv([map]));
+    expect(r.kind).toBe('no_such_target');
+  });
+
+  it('"give fire map to spark" when fire map is on the floor (not held) yields no_such_target', () => {
+    // Item is in the room, not in inventory: you can't give what you don't carry.
+    const r = parse('give fire map to spark', ACTOR, view([map], [spark]), inv());
+    expect(r.kind).toBe('no_such_target');
+  });
+
   it('"take fire map" with empty view yields no_such_target', () => {
     const r = parse('take fire map', ACTOR, view([]), inv());
     if (r.kind !== 'no_such_target') throw new Error();

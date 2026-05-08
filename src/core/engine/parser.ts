@@ -149,6 +149,50 @@ export function parse(
       return { kind: ActionKind.Drop, actorId: actor.id, itemId: r.item.id };
     }
 
+    case 'give':
+    case 'hand': {
+      // "give <item> to <character>" / "hand <item> to <character>"
+      // Split on the LAST " to " so multi-word item labels containing "to"
+      // (rare, but possible) don't break. We need pre-stop-word tokens
+      // because `stripStopWords` would discard "to".
+      if (toks.length < 2) return { kind: ParseErrorKind.MissingArgument, verb: first };
+      const after = toks.slice(1);
+      const toIdx = after.lastIndexOf('to');
+      if (toIdx < 1 || toIdx >= after.length - 1) {
+        // No "to" clause, or it's at the very start/end. Missing recipient.
+        return { kind: ParseErrorKind.MissingArgument, verb: first };
+      }
+      const itemTokens = stripStopWords(after.slice(0, toIdx));
+      const recipientTokens = stripStopWords(after.slice(toIdx + 1));
+      if (itemTokens.length === 0) {
+        return { kind: ParseErrorKind.MissingArgument, verb: first };
+      }
+      if (recipientTokens.length === 0) {
+        return { kind: ParseErrorKind.MissingArgument, verb: first };
+      }
+      const itemRef = itemTokens.join(' ');
+      const recipientRef = recipientTokens.join(' ');
+      // Item must be in the actor's inventory — you can't give what you
+      // aren't holding.
+      const itemR = resolveItem(itemRef, inventory);
+      if (!itemR.ok) {
+        // If the item is in the room (not held) surface a clearer error.
+        const inRoom = resolveItem(itemRef, view.items);
+        if (inRoom.ok) {
+          return { kind: ParseErrorKind.NoSuchTarget, ref: itemRef };
+        }
+        return itemR.error;
+      }
+      const agentR = resolveAgent(recipientRef, view.agents);
+      if (!agentR.ok) return agentR.error;
+      return {
+        kind: ActionKind.Give,
+        actorId: actor.id,
+        itemId: itemR.item.id,
+        targetAgentId: agentR.agent.id,
+      };
+    }
+
     case 'inventory':
     case 'i':
     case 'inv':

@@ -22,6 +22,7 @@ const INTERPRETER_KINDS = [
   ActionKind.Look,
   ActionKind.Take,
   ActionKind.Drop,
+  ActionKind.Give,
   ActionKind.Inventory,
   ActionKind.Speak,
   ActionKind.Emote,
@@ -109,6 +110,7 @@ export type ValidatedPlayerAction =
   | { readonly kind: 'look'; readonly target: ValidatedLookTarget }
   | { readonly kind: 'take'; readonly itemRef: string }
   | { readonly kind: 'drop'; readonly itemRef: string }
+  | { readonly kind: 'give'; readonly itemRef: string; readonly targetAgentRef: string }
   | { readonly kind: 'inventory' }
   | {
       readonly kind: 'speak';
@@ -180,6 +182,15 @@ export function validatePlayerAction(input: unknown): ValidatedPlayerAction {
       const itemRef = input.itemRef;
       if (typeof itemRef !== 'string' || itemRef.length === 0) return { kind: InvalidKind };
       return { kind: ActionKind.Drop, itemRef };
+    }
+    case ActionKind.Give: {
+      const itemRef = input.itemRef;
+      const targetAgentRef = input.targetAgentRef;
+      if (typeof itemRef !== 'string' || itemRef.length === 0) return { kind: InvalidKind };
+      if (typeof targetAgentRef !== 'string' || targetAgentRef.length === 0) {
+        return { kind: InvalidKind };
+      }
+      return { kind: ActionKind.Give, itemRef, targetAgentRef };
     }
     case ActionKind.Inventory:
       return { kind: ActionKind.Inventory };

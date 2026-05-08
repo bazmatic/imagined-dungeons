@@ -16,6 +16,8 @@ import {
   renderAgentStateUpdatedObserved,
   renderDescriptionUpdatedObserved,
   renderDropObserved,
+  renderGiveByActor,
+  renderGiveObserved,
   renderLook,
   renderLookObserved,
   renderMoveObserved,
@@ -110,6 +112,14 @@ async function renderWitnessForPlayer(
       const item = await repo.getItem(event.itemId);
       return renderDropObserved(actor, item);
     }
+    case EventKind.Give: {
+      const item = await repo.getItem(event.itemId);
+      const recipient = await repo.getAgent(event.targetAgentId);
+      // The recipient gets a second-person line; everyone else (including
+      // the player as a bystander) gets the third-person observed line.
+      if (event.targetAgentId === playerId) return renderGiveByActor(actor, item);
+      return renderGiveObserved(actor, item, recipient);
+    }
     case EventKind.Look:
       return renderLookObserved(actor);
     case EventKind.Inventory:
@@ -165,6 +175,7 @@ const WAKING_EVENT_KINDS: ReadonlySet<DomainEvent['kind']> = new Set<DomainEvent
   EventKind.Move,
   EventKind.Take,
   EventKind.Drop,
+  EventKind.Give,
   EventKind.Speak,
   EventKind.Attack,
   EventKind.Emote,

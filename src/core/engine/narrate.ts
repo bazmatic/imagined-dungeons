@@ -104,6 +104,8 @@ function summariseEvent(event: DomainEvent): string {
       return `${event.actorId} took ${event.itemId}`;
     case EventKind.Drop:
       return `${event.actorId} dropped ${event.itemId}`;
+    case EventKind.Give:
+      return `${event.actorId} gave ${event.itemId} to ${event.targetAgentId}`;
     case EventKind.Look: {
       const t = event.target;
       if (!t) return `${event.actorId} looked around`;

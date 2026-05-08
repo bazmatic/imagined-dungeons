@@ -20,6 +20,7 @@ export type DomainEvent =
   | (BaseEvent & { kind: 'move'; from: LocationId; to: LocationId; direction: Direction })
   | (BaseEvent & { kind: 'take'; itemId: ItemId; from: LocationId })
   | (BaseEvent & { kind: 'drop'; itemId: ItemId; to: LocationId })
+  | (BaseEvent & { kind: 'give'; itemId: ItemId; targetAgentId: AgentId })
   | (BaseEvent & { kind: 'look'; locationId: LocationId; target: ExaminableTarget })
   | (BaseEvent & { kind: 'inventory' })
   | (BaseEvent & { kind: 'failed'; attempted: string; reason: string })

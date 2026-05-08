@@ -5,6 +5,7 @@ import type { Repository } from '../repository';
 import { handleAttack } from './attack';
 import { handleDrop } from './drop';
 import { handleEmote } from './emote';
+import { handleGive } from './give';
 import { handleInventory } from './inventory';
 import { handleLook } from './look';
 import { handleMove } from './move';
@@ -26,6 +27,8 @@ export async function dispatch(
       return handleTake(action, repo);
     case ActionKind.Drop:
       return handleDrop(action, repo);
+    case ActionKind.Give:
+      return handleGive(action, repo);
     case ActionKind.Inventory:
       return handleInventory(action, repo);
     case ActionKind.Speak:

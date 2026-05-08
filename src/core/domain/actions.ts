@@ -12,6 +12,7 @@ export type Action =
   | { kind: 'look'; actorId: AgentId; target: ExaminableTarget }
   | { kind: 'take'; actorId: AgentId; itemId: ItemId }
   | { kind: 'drop'; actorId: AgentId; itemId: ItemId }
+  | { kind: 'give'; actorId: AgentId; itemId: ItemId; targetAgentId: AgentId }
   | { kind: 'inventory'; actorId: AgentId }
   | { kind: 'speak'; actorId: AgentId; targetAgentId: AgentId | null; utterance: string }
   | {

@@ -74,6 +74,18 @@ export function renderDropSelf(item: Item): string {
   return `Dropped: ${item.label}.`;
 }
 
+export function renderGiveSelf(item: Item, recipient: Agent): string {
+  return `You give ${item.label} to ${recipient.label}.`;
+}
+
+export function renderGiveByActor(actor: Agent, item: Item): string {
+  return `${actor.label} hands you ${item.label}.`;
+}
+
+export function renderGiveObserved(actor: Agent, item: Item, recipient: Agent): string {
+  return `${actor.label} gives ${item.label} to ${recipient.label}.`;
+}
+
 export function renderInventory(items: readonly Item[]): string {
   if (items.length === 0) return 'You are carrying nothing.';
   return `You are carrying: ${list(items)}.`;

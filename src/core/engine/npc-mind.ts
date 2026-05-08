@@ -67,9 +67,9 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
   lines.push('  I take the fire map.');
   lines.push('');
   lines.push(
-    '  THOUGHT: I am on the ship and Captain Serena is here. I have the map. The next step is to hand it to her — there is no `give` verb, so I will offer it and let her take it.',
+    '  THOUGHT: I am on the ship and Captain Serena is here. I have the map. The next step is to hand it to her.',
   );
-  lines.push('  I say "Captain, I brought you the fire map." to Captain Serena.');
+  lines.push('  I give the fire map to Captain Serena.');
   lines.push('');
   lines.push('  THOUGHT: I just delivered the map. The end state is true now.');
   lines.push('  INTENT_DONE');
@@ -89,6 +89,9 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
   );
   lines.push(
     '  - drop <item>          — drop an item from your inventory (e.g. "I drop the lantern")',
+  );
+  lines.push(
+    '  - give <item> to <character>   — hand an item from your inventory to another character in the same room (e.g. "I give the fire map to Captain Serena")',
   );
   lines.push(
     '  - inventory            — check what you are carrying (e.g. "I check my inventory")',
@@ -171,6 +174,18 @@ async function summariseEvent(
         return `${actorLabel} dropped the ${item.label}`;
       } catch {
         return `${actorLabel} dropped an item`;
+      }
+    }
+    case EventKind.Give: {
+      const recipientLabel = await labelOf(event.targetAgentId);
+      try {
+        const item = await repo.getItem(event.itemId);
+        if (event.targetAgentId === selfId) {
+          return `${actorLabel} gave you the ${item.label}`;
+        }
+        return `${actorLabel} gave the ${item.label} to ${recipientLabel}`;
+      } catch {
+        return `${actorLabel} gave an item to ${recipientLabel}`;
       }
     }
     case EventKind.Look: {
