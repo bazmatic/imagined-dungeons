@@ -4,6 +4,12 @@ export const worlds = sqliteTable('worlds', {
   id: text('id').primaryKey(),
   label: text('label').notNull(),
   rngSeed: integer('rng_seed').notNull().default(1),
+  kind: text('kind', { enum: ['draft', 'live'] })
+    .notNull()
+    .default('live'),
+  parentDraftId: text('parent_draft_id'),
+  displayName: text('display_name').notNull().default(''),
+  playerAgentId: text('player_agent_id'),
 });
 
 export const locations = sqliteTable('locations', {
@@ -82,4 +88,12 @@ export const events = sqliteTable('events', {
   witnesses: text('witnesses', { mode: 'json' }).notNull(),
   createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
   narrations: text('narrations', { mode: 'json' }),
+});
+
+export const worldSnapshots = sqliteTable('world_snapshots', {
+  worldId: text('world_id')
+    .primaryKey()
+    .references(() => worlds.id),
+  snapshotJson: text('snapshot_json').notNull(),
+  takenAt: integer('taken_at', { mode: 'timestamp_ms' }).notNull(),
 });

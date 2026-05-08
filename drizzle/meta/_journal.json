@@ -36,6 +36,13 @@
       "when": 1778213088803,
       "tag": "0004_damp_forge",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1778232780399,
+      "tag": "0005_campaign_builder",
+      "breakpoints": true
     }
   ]
 }
