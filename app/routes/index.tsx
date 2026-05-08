@@ -101,10 +101,8 @@ function Page() {
     return e.locked ? `${base} 🔒` : base;
   };
 
-  const renderCharacter = (c: SurroundingsCharacter): string => {
-    const base = `${c.label} — ${c.shortDescription}`;
-    return c.mood ? `${base} (${c.mood})` : base;
-  };
+  const renderCharacter = (c: SurroundingsCharacter): string =>
+    c.mood ? `${c.label} (${c.mood})` : c.label;
 
   const sectionHeaderStyle: React.CSSProperties = {
     opacity: 0.6,
