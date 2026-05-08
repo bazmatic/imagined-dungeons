@@ -42,8 +42,9 @@ const SYSTEM_PROMPT_LINES: readonly string[] = [
   '- Routine actions do NOT change mood.',
   '',
   'When to update shortTermIntent (agent target only):',
-  '- After an agent commits to something verbally ("Sure, I\'ll take the map"): set their shortTermIntent to that commitment.',
-  '- **CRITICAL**: After an agent fulfils their existing shortTermIntent, you MUST clear it (set it to ""). The intent is shown next to each agent below; cross-reference it against this batch of events. If the events show the intent has been carried out — e.g. intent "deliver the map to Serena" and the events include "Spark went south" + "Spark said \\"here is your map\\" to Captain Serena" or a drop of the map in Serena\'s location — emit an update_description that sets shortTermIntent to "" for that agent. If you do not clear it, the agent will pursue the same already-completed goal forever.',
+  '- **CRITICAL — set on commitment**: When an agent says ANYTHING in this batch that commits them to a future action ("Sure, I\'ll take the map", "I\'ll deliver it right now", "On my way", "I\'ll find out", "Let me check"), you MUST emit an update_description that sets THAT speaker\'s shortTermIntent to a concrete phrasing of the commitment ("deliver the fire map to Captain Serena"). Without this set, the speaker will forget what they just promised the moment they take their next step. The set is required even if you are also clearing a previous intent in the same response — clears and sets both happen, never one without the other when both apply.',
+  '- **CRITICAL — clear on fulfilment**: After an agent fulfils their existing shortTermIntent, you MUST clear it (set it to ""). The intent is shown next to each agent below; cross-reference it against this batch of events. If the events show the intent has been carried out — e.g. intent "deliver the map to Serena" and the events include "Spark went south" + "Spark said \\"here is your map\\" to Captain Serena" or a drop of the map in Serena\'s location — emit an update_description that sets shortTermIntent to "" for that agent. If you do not clear it, the agent will pursue the same already-completed goal forever.',
+  '- A single batch can produce BOTH a clear and a new set on the SAME agent — e.g. an agent finishes one task and immediately commits to another. Emit two update_description entries (or one entry only if the new commitment immediately supersedes the old). Never clear without setting when the agent has just made a fresh commitment in the same batch.',
   '- After a major event reorients them: set a new intent.',
   '- Routine actions do NOT change shortTermIntent.',
   '',
@@ -375,6 +376,27 @@ async function buildUserPrompt(events: readonly DomainEvent[], repo: Repository)
       );
       for (const a of withIntent) {
         lines.push(`- ${a.label} currently intends: "${a.shortTermIntent}"`);
+      }
+    }
+
+    // Symmetric commitment-detection check: every speak event in this batch
+    // is a candidate for a fresh shortTermIntent on the SPEAKER. Surfacing
+    // them explicitly makes it harder to miss a commitment, and prevents
+    // the partial-update bug where an old intent gets cleared but the new
+    // commitment in the same batch produces no replacement.
+    const speakEvents = events.filter(
+      (e): e is Extract<DomainEvent, { kind: 'speak' }> => e.kind === EventKind.Speak,
+    );
+    if (speakEvents.length > 0) {
+      lines.push('');
+      lines.push('Commitment-detection check — for each speech act below, decide:');
+      lines.push(
+        'does the speaker commit themselves to a future action ("I\'ll deliver it", "on my way", "I\'ll find out")? If yes, emit an update_description that sets THAT SPEAKER\'s shortTermIntent to a concrete phrasing of the commitment. If the speaker also has a current intent that this commitment supersedes or fulfils, the new set replaces it (no separate clear needed).',
+      );
+      for (const e of speakEvents) {
+        const speaker = await repo.getAgent(e.actorId).catch(() => null);
+        const speakerLabel = speaker?.label ?? e.actorId;
+        lines.push(`- ${speakerLabel} said: "${e.utterance}"`);
       }
     }
   }
