@@ -101,6 +101,21 @@ function Page() {
                 {l.text}
               </div>
             ))}
+            {busy && (
+              <div
+                aria-label="Thinking"
+                style={{
+                  color: '#666',
+                  fontStyle: 'italic',
+                  marginBottom: 8,
+                  letterSpacing: 2,
+                }}
+              >
+                <span className="id-dot id-dot-1">·</span>
+                <span className="id-dot id-dot-2">·</span>
+                <span className="id-dot id-dot-3">·</span>
+              </div>
+            )}
             <div ref={endRef} />
           </div>
           <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 12, marginTop: 16 }}>
