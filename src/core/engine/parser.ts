@@ -31,7 +31,16 @@ const STOP_WORDS = new Set(['the', 'a', 'an', 'at', 'to', 'on']);
 
 export type ParseResult = Action | ParseError;
 
-const tokens = (s: string): string[] => s.trim().toLowerCase().split(/\s+/).filter(Boolean);
+// NPCs phrase intents as full sentences ending in punctuation ("I take the
+// fire map."). Strip a trailing `.`/`!`/`?`/`,` from each token so the noun
+// phrase matches item labels exactly. Quotes are handled separately by `say`.
+const tokens = (s: string): string[] =>
+  s
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .map((t) => t.replace(/[.,!?]+$/, ''))
+    .filter(Boolean);
 
 const stripStopWords = (toks: string[]): string[] => toks.filter((t) => !STOP_WORDS.has(t));
 

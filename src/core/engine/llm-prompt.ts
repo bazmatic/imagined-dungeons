@@ -2,7 +2,8 @@ import type { Agent, Item } from '@core/domain/entities';
 import type { PerceptionView } from './perception';
 
 const SYSTEM_PROMPT = `You are the interpreter for a turn-based text adventure.
-Your only job is to map the player's natural-language input to exactly one of the actions listed below.
+Your only job is to map the actor's natural-language input to exactly one of the actions listed below.
+The input may be a player command ("take the fire map") OR a first-person intent statement from an NPC ("I take the fire map.", "I go north."). Treat both forms identically — strip a leading "I " and any trailing period, then map to the matching action. First-person intents are NEVER narration to ignore; they are action requests.
 You must never invent verbs, items, exits, agents, or directions that are not present.
 If the input does not unambiguously map to a listed action, set kind="unknown".
 
@@ -29,6 +30,7 @@ Available actions:
 
 - take: pick up an item visible in the location.
   Set: kind="take", itemRef as a short natural-language reference. All other fields null.
+  Example "I take the fire map." -> { "kind":"take", "direction":null, "targetKind":null, "targetRef":null, "itemRef":"fire map", "targetAgentRef":null, "utterance":null, "emoteDescription":null, "reason":null }.
 
 - drop: drop an item the player is carrying.
   Set: kind="drop", itemRef as a short natural-language reference. All other fields null.

@@ -173,6 +173,12 @@ describe('parse', () => {
     expect(r.itemId).toBe(map.id);
   });
 
+  it('"I take the fire map." (NPC sentence with trailing period) resolves the item', () => {
+    const r = parse('I take the fire map.', ACTOR, view(), inv());
+    if (r.kind !== 'take') throw new Error();
+    expect(r.itemId).toBe(map.id);
+  });
+
   it('"take" alone yields missing_argument', () => {
     const r = parse('take', ACTOR, view(), inv());
     if (r.kind !== 'missing_argument') throw new Error();
