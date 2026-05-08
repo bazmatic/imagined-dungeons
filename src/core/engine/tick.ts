@@ -130,10 +130,14 @@ async function renderWitnessForPlayer(
       // Otherwise — for an agent target — a mood-only change is a subtle
       // visible cue keyed on the *target* (whose mood changed), not the actor
       // (which is the synthetic system agent for consequence-emitted events).
-      // Suppress entirely if the target is the system agent — the system is
-      // bookkeeping; the player should never see a line about its mood.
+      // Suppress entirely if:
+      //   - the target is the system agent (bookkeeping; never narrate),
+      //   - the target IS the player (telling the player "your expression
+      //     shifts" reads weirdly in third person, and second-person would
+      //     leak the supposedly-private mood change anyway).
       if (event.target.kind === OwnerKind.Agent && moodChanged) {
         if (event.target.id === SYSTEM_AGENT_ID) return null;
+        if (event.target.id === playerId) return null;
         try {
           const targetAgent = await repo.getAgent(event.target.id);
           return renderAgentStateUpdatedObserved(targetAgent);
