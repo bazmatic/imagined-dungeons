@@ -389,6 +389,12 @@ async function resolveTarget(
   const agents = await agentsInvolved(events, repo);
   const r = resolveAgent(raw.targetRef, agents);
   if (!r.ok) return null;
+  // The synthetic system agent is bookkeeping, not a character. The
+  // consequence engine must never durably mutate its mood / intent /
+  // descriptions — those changes would surface as nonsense witness lines
+  // ("System's expression shifts.") and pollute the prompt context for
+  // any future tick. Drop these silently.
+  if (r.agent.id === SYSTEM_AGENT_ID) return null;
   return { kind: OwnerKind.Agent, id: r.agent.id };
 }
 

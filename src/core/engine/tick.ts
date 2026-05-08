@@ -1,7 +1,7 @@
 import type { Action } from '@core/domain/actions';
 import type { Agent } from '@core/domain/entities';
 import type { DomainEvent } from '@core/domain/events';
-import type { AgentId } from '@core/domain/ids';
+import { type AgentId, SYSTEM_AGENT_ID } from '@core/domain/ids';
 import { EventKind, NpcFallbackIntent, OwnerKind } from '@core/domain/kinds';
 import { dispatch } from './actions/registry';
 import { MAX_CONSEQUENCE_DEPTH, consequencesFor } from './consequences';
@@ -128,10 +128,18 @@ async function renderWitnessForPlayer(
       // Description changes are the broad "world shifts" line.
       if (descriptionChanged) return renderDescriptionUpdatedObserved();
       // Otherwise — for an agent target — a mood-only change is a subtle
-      // visible cue. An intent-only change is private to the NPC and should
-      // not surface to the player.
+      // visible cue keyed on the *target* (whose mood changed), not the actor
+      // (which is the synthetic system agent for consequence-emitted events).
+      // Suppress entirely if the target is the system agent — the system is
+      // bookkeeping; the player should never see a line about its mood.
       if (event.target.kind === OwnerKind.Agent && moodChanged) {
-        return renderAgentStateUpdatedObserved(actor);
+        if (event.target.id === SYSTEM_AGENT_ID) return null;
+        try {
+          const targetAgent = await repo.getAgent(event.target.id);
+          return renderAgentStateUpdatedObserved(targetAgent);
+        } catch {
+          return null;
+        }
       }
       if (intentChanged) return null;
       return null;

@@ -168,8 +168,14 @@ export function parse(
         explicitTargetRef = toMatch[2].trim();
       }
 
-      // Strip surrounding quotes from the utterance if the speaker quoted it.
-      utterance = utterance.replace(/^["'](.*)["']\.?$/s, '$1').trim();
+      // Strip surrounding quotes from the utterance, including unbalanced
+      // ones (the player may forget the closing quote, especially on long
+      // sentences). Strip optional trailing punctuation immediately after a
+      // closing quote.
+      utterance = utterance
+        .replace(/^["']/, '')
+        .replace(/["']\.?$/, '')
+        .trim();
       if (utterance.length === 0) {
         return { kind: ParseErrorKind.MissingArgument, verb: 'say' };
       }
