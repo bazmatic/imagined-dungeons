@@ -8,6 +8,7 @@ import type {
 } from './builder-kinds';
 import type { Agent, Exit, Item, Location } from './entities';
 import type { AgentId, ExitId, ItemId, LocationId, WorldId } from './ids';
+import type { OwnerKind } from './kinds';
 
 export interface WorldSummary {
   readonly id: WorldId;
@@ -105,7 +106,7 @@ export interface UpsertItemInput {
   readonly label: string;
   readonly shortDescription: string;
   readonly longDescription: string;
-  readonly ownerKind: 'location' | 'agent' | 'item';
+  readonly ownerKind: OwnerKind;
   readonly ownerId: string;
   readonly weight: number;
   readonly hidden: boolean;
