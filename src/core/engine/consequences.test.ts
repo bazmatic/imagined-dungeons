@@ -167,7 +167,12 @@ describe('consequencesFor', () => {
     expect(a.shortTermIntent).toBeNull();
   });
 
-  it('produces an update_description action carrying shortTermIntent when the LLM sets it', async () => {
+  it('forces shortTermIntent to null even if the LLM emits one (agent owns intent)', async () => {
+    // shortTermIntent is set/cleared by the agent's own NPC-mind reply, not
+    // by the consequence engine. This is the hard guard: a consequence
+    // emitting an intent string must be silently dropped, and on its own
+    // it should not satisfy the "must change something" rule, so the
+    // entire consequence is dropped if it has nothing else to change.
     const repo = repoFor();
     const llm = makeFakeLanguageModel({
       responder: () => ({
@@ -188,10 +193,35 @@ describe('consequencesFor', () => {
       }),
     });
     const r = await consequencesFor([takeEvent], repo, llm);
+    expect(r).toEqual([]);
+  });
+
+  it('mood-only consequence still applies (intent guard does not break mood path)', async () => {
+    const repo = repoFor();
+    const llm = makeFakeLanguageModel({
+      responder: () => ({
+        raw: '',
+        parsed: {
+          consequences: [
+            {
+              kind: 'update_description',
+              targetKind: 'agent',
+              targetRef: 'Paff',
+              shortDescription: null,
+              longDescription: null,
+              mood: 'thoughtful',
+              shortTermIntent: 'this should be ignored',
+            },
+          ],
+        },
+      }),
+    });
+    const r = await consequencesFor([takeEvent], repo, llm);
     expect(r).toHaveLength(1);
     const a = r[0];
     if (!a || a.kind !== ActionKind.UpdateDescription) throw new Error();
-    expect(a.shortTermIntent).toBe('take the lantern to the docks');
+    expect(a.mood).toBe('thoughtful');
+    expect(a.shortTermIntent).toBeNull();
   });
 
   it('strips mood/shortTermIntent set on a non-agent target rather than rejecting', async () => {

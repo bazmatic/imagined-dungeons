@@ -193,18 +193,9 @@ async function wakeWitnessingNpcs(events: readonly DomainEvent[], repo: Reposito
       const a = await repo.getAgent(id);
       if (!a.autonomous && !a.awake && a.hp > 0) {
         await repo.setAgentAwake(id, true);
-        // Seed a short-term intent so the NPC has a reason to tick. The
-        // consequence engine and the NPC mind itself will refine or replace
-        // this as the scene develops; clearing it (back to null) is the
-        // signal that they're "done" and the sleep sweep can dismiss them.
-        // Don't overwrite an existing intent — they may have been mid-task
-        // when we last slept them, in which case picking up where they left
-        // off is the right behavior.
-        if (a.shortTermIntent === null) {
-          await repo.updateAgentDescription(id, {
-            shortTermIntent: 'figure out what just happened and respond appropriately',
-          });
-        }
+        // No intent is seeded here — the agent owns their own intent. They
+        // get one tick to set one; if they don't, the sleep sweep dismisses
+        // them at end-of-tick.
         console.info(`[wake] ${a.label} woken by witnessed event`);
       }
     } catch {

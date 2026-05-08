@@ -203,18 +203,53 @@ describe('decideNpcIntent', () => {
     expect((await repo.getAgent(SPARK_ID)).shortTermIntent).toBeNull();
   });
 
-  it('behavioural priorities mention the short-term intent', async () => {
+  it('behavioural priorities tell the agent to manage their own short-term intent', async () => {
     const llm = makeFakeLanguageModel({ textResponder: () => 'I wait.' });
     const repo = makeRepo();
     await decideNpcIntent(SPARK_ID, repo, llm);
     const call = llm.textCalls[0];
     if (!call) throw new Error('expected textCall');
     expect(call.system).toContain('short-term intent');
-    // After the recent-self-speech foregrounding was removed, the intent is
-    // now priority 3 and the long-term-goal fallback is priority 4.
-    expect(call.system).toMatch(/3\. If you have a `Current short-term intent`/);
-    expect(call.system).toMatch(
-      /4\. Otherwise, pick something consistent with your long-term goal/,
+    expect(call.system).toMatch(/3\. Manage your own `Current short-term intent`/);
+    expect(call.system).toMatch(/4\. Otherwise, pick something consistent with your long-term/);
+  });
+
+  it('reply format documents INTENT and INTENT_DONE control lines', async () => {
+    const llm = makeFakeLanguageModel({ textResponder: () => 'I wait.' });
+    const repo = makeRepo();
+    await decideNpcIntent(SPARK_ID, repo, llm);
+    const call = llm.textCalls[0];
+    if (!call) throw new Error('expected textCall');
+    expect(call.system).toContain('INTENT_DONE');
+    expect(call.system).toContain('INTENT: <full plan>');
+  });
+
+  it('reply with `INTENT: <plan>` sets the agent shortTermIntent before the action runs', async () => {
+    const llm = makeFakeLanguageModel({
+      textResponder: () => 'INTENT: deliver the fire map to Captain Serena\nI take the fire map.',
+    });
+    const repo = makeRepo();
+    expect((await repo.getAgent(SPARK_ID)).shortTermIntent).toBeNull();
+    const intent = await decideNpcIntent(SPARK_ID, repo, llm);
+    expect(intent).toBe('I take the fire map.');
+    expect((await repo.getAgent(SPARK_ID)).shortTermIntent).toBe(
+      'deliver the fire map to Captain Serena',
     );
+  });
+
+  it('reply with `INTENT_DONE` followed by `INTENT: <new>` clears and re-sets in one tick', async () => {
+    const llm = makeFakeLanguageModel({
+      textResponder: () => 'INTENT_DONE\nINTENT: head back to the tavern\nI move north.',
+    });
+    const sparkWithIntent: Agent = { ...spark, shortTermIntent: 'deliver the map' };
+    const repo = new MemoryRepository(W, {
+      locations: [loc],
+      exits: [],
+      items: [],
+      agents: [sparkWithIntent, paff],
+    });
+    const intent = await decideNpcIntent(SPARK_ID, repo, llm);
+    expect(intent).toBe('I move north.');
+    expect((await repo.getAgent(SPARK_ID)).shortTermIntent).toBe('head back to the tavern');
   });
 });

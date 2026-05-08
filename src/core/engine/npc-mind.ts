@@ -41,8 +41,30 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
   if (npc.goal) lines.push(`Long-term goal: ${npc.goal}.`);
   lines.push('');
   lines.push('Decide what you want to do this turn given what you can perceive right now.');
+  lines.push('');
+  lines.push('Reply format:');
+  lines.push('- Optional control lines come first (zero, one, or both, in either order):');
   lines.push(
-    'Your reply will be parsed by a verb-noun command interpreter, so you MUST phrase your intent as a single command in the first person, using exactly one of these verbs:',
+    '    INTENT_DONE              — clear your current short-term intent (use when you have just finished it).',
+  );
+  lines.push(
+    '    INTENT: <full plan>      — set or replace your short-term intent. Phrase it as the WHOLE multi-step task ("deliver the fire map to Captain Serena near the docks"), not the next single step ("take the fire map"). Use this whenever you form a new plan, accept a request, or want to refine an existing intent.',
+  );
+  lines.push(
+    '- Then exactly one action command for this turn, in the first person, using one of the verbs below.',
+  );
+  lines.push('');
+  lines.push('Examples:');
+  lines.push('  INTENT: deliver the fire map to Captain Serena near the docks');
+  lines.push('  I take the fire map.');
+  lines.push('');
+  lines.push('  INTENT_DONE');
+  lines.push('  I wait.');
+  lines.push('');
+  lines.push('  I move south.');
+  lines.push('');
+  lines.push(
+    'Your action will be parsed by a verb-noun command interpreter, so phrase the action line as a single command in the first person, using exactly one of these verbs:',
   );
   lines.push(
     '  - move <direction>     — travel through one of the listed exits (e.g. "I move north", "I go south")',
@@ -76,7 +98,7 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
     '2. If someone is currently attacking you (and you have not yet retaliated), decide whether to fight back, flee through an exit, or speak.',
   );
   lines.push(
-    "3. If you have a `Current short-term intent` (shown in the header above), FIRST decide whether you have already carried it out — looking at the events you've witnessed and your current state (location, inventory, who's here). If you HAVE finished it, your reply MUST begin with the literal line `INTENT_DONE` on its own (nothing else on that line), then a newline, then your next action command for this turn (which can be `I wait.` if there's nothing else to do). If you have NOT yet carried it out, do the next concrete step toward it — pick up the item, take a step in the relevant direction, deliver the item, etc. Don't restart the conversation; act. Use `INTENT_DONE` only when the intent is genuinely complete; otherwise omit it.",
+    '3. Manage your own `Current short-term intent` (shown in the header above). Each turn, decide:\n   a. If you HAVE NO intent yet but the situation calls for one (someone asked you to do something multi-step, or you decided to pursue a goal), declare it with `INTENT: <full plan>`. Capture the WHOLE task ("deliver the fire map to Captain Serena near the docks"), not just the first step.\n   b. If you HAVE an intent and have just carried it out (cross-reference your witnessed events and current state), prefix with `INTENT_DONE`.\n   c. If you HAVE an intent and your understanding of it has sharpened (you learned the destination, the recipient, etc.), restate it with `INTENT: <refined plan>`.\n   d. If you HAVE an intent and it is still in progress, do not emit a control line — just take the next concrete step (pick up the item, move toward the destination, hand it over, etc.).',
   );
   lines.push(
     "4. Otherwise, pick something consistent with your long-term goal — move toward something useful, examine your surroundings, pick up something you'd want, emote a small in-character gesture, or wait. Don't repeat or rephrase things you've already said, and do NOT volunteer follow-up speech about earlier exchanges.",
@@ -331,24 +353,49 @@ export async function decideNpcIntent(
       system: SYSTEM_PROMPT(actor),
       user: await buildUserPrompt(ctx, actorId, repo),
     });
-    let trimmed = prose.trim();
-    if (trimmed.length === 0) {
+    let body = prose.trim();
+    if (body.length === 0) {
       console.warn(`[npc-mind] empty response for ${actor.label}; falling back to wait`);
       return NpcFallbackIntent;
     }
-    // Self-fulfilment signal: when the NPC believes their current
-    // shortTermIntent has been carried out, they prefix the reply with the
-    // line `INTENT_DONE`. Clear the intent and strip the marker so the
-    // remainder is the action command for this turn.
-    if (/^INTENT_DONE\b/.test(trimmed)) {
-      trimmed = trimmed.replace(/^INTENT_DONE\b[ \t]*\r?\n?/, '').trim();
-      if (actor.shortTermIntent !== null) {
-        await repo.updateAgentDescription(actorId, { shortTermIntent: null });
-        console.info(`[npc-mind] ${actor.label} cleared own intent: "${actor.shortTermIntent}"`);
+    // The NPC mind owns its own shortTermIntent. The reply format may begin
+    // with control lines that update intent; remaining lines are the action
+    // command for this turn.
+    //   INTENT_DONE          — clear the current intent.
+    //   INTENT: <text>       — set or replace the intent.
+    // Both can appear (clear-and-replace), in either order. Lines after the
+    // last control line are the action.
+    let cleared = false;
+    let setTo: string | null = null;
+    const lines = body.split(/\r?\n/);
+    while (lines.length > 0) {
+      const first = lines[0]?.trim() ?? '';
+      if (/^INTENT_DONE\b/.test(first)) {
+        cleared = true;
+        lines.shift();
+        continue;
       }
-      if (trimmed.length === 0) return NpcFallbackIntent;
+      const setMatch = first.match(/^INTENT:\s*(.+?)\s*$/);
+      if (setMatch?.[1]) {
+        setTo = setMatch[1];
+        lines.shift();
+        continue;
+      }
+      break;
     }
-    return trimmed;
+    body = lines.join('\n').trim();
+    if (cleared && setTo === null && actor.shortTermIntent !== null) {
+      await repo.updateAgentDescription(actorId, { shortTermIntent: null });
+      console.info(`[npc-mind] ${actor.label} cleared own intent: "${actor.shortTermIntent}"`);
+    }
+    if (setTo !== null && setTo !== actor.shortTermIntent) {
+      await repo.updateAgentDescription(actorId, { shortTermIntent: setTo });
+      console.info(
+        `[npc-mind] ${actor.label} set own intent: "${actor.shortTermIntent ?? '(none)'}" -> "${setTo}"`,
+      );
+    }
+    if (body.length === 0) return NpcFallbackIntent;
+    return body;
   } catch (err) {
     console.warn(`[npc-mind] error deciding intent for ${actor.label}:`, err);
     return NpcFallbackIntent;

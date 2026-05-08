@@ -27,7 +27,7 @@ import type { Repository } from './repository';
 const SYSTEM_PROMPT_LINES: readonly string[] = [
   'You are the consequence engine of a fantasy text adventure.',
   '',
-  "Given a batch of events that just happened, decide whether the world's stored short/long descriptions should change to reflect those events durably, and whether any agent's mood or short-term intent should be updated.",
+  "Given a batch of events that just happened, decide whether the world's stored short/long descriptions should change to reflect those events durably, and whether any agent's mood should be updated. (Agents manage their own shortTermIntent — DO NOT touch it here.)",
   '',
   'You can only emit `update_description` actions. Be conservative — most batches need no consequences. Reply with a JSON object containing a `consequences` array (possibly empty).',
   '',
@@ -41,17 +41,12 @@ const SYSTEM_PROMPT_LINES: readonly string[] = [
   '- After a positive interaction: shift toward warmer or more relaxed.',
   '- Routine actions do NOT change mood.',
   '',
-  'When to update shortTermIntent (agent target only):',
-  '- **CRITICAL — set on commitment**: When an agent says ANYTHING in this batch that commits them to a future action ("Sure, I\'ll take the map", "I\'ll deliver it right now", "On my way", "I\'ll find out", "Let me check"), you MUST emit an update_description that sets THAT speaker\'s shortTermIntent to a concrete phrasing of the commitment ("deliver the fire map to Captain Serena"). Without this set, the speaker will forget what they just promised the moment they take their next step. The set is required even if you are also clearing a previous intent in the same response — clears and sets both happen, never one without the other when both apply.',
-  '- **CRITICAL — clear on fulfilment**: After an agent fulfils their existing shortTermIntent, you MUST clear it (set it to ""). The intent is shown next to each agent below; cross-reference it against this batch of events. If the events show the intent has been carried out — e.g. intent "deliver the map to Serena" and the events include "Spark went south" + "Spark said \\"here is your map\\" to Captain Serena" or a drop of the map in Serena\'s location — emit an update_description that sets shortTermIntent to "" for that agent. If you do not clear it, the agent will pursue the same already-completed goal forever.',
-  '- A single batch can produce BOTH a clear and a new set on the SAME agent — e.g. an agent finishes one task and immediately commits to another. Emit two update_description entries (or one entry only if the new commitment immediately supersedes the old). Never clear without setting when the agent has just made a fresh commitment in the same batch.',
-  '- After a major event reorients them: set a new intent.',
-  '- Routine actions do NOT change shortTermIntent.',
+  'shortTermIntent is OWNED BY THE AGENT THEMSELVES via the NPC-mind reply. Never set or clear it from a consequence. Always pass shortTermIntent: null on every consequence you emit (which means "leave unchanged" — the only legal value here).',
   '',
   'When NOT to emit a consequence:',
   '- Routine movement (move): people enter and leave rooms constantly; that does not change the room.',
   '- Routine looking, inventory checks, or failed actions.',
-  '- Speech that does not damage anything (but speech that contains a commitment IS a reason to set shortTermIntent on the speaker).',
+  '- Speech that does not damage anything. (Commitments and instructions in speech are NOT a consequence concern — agents handle their own intent.)',
   '- Any change you would have to invent details for that the events do not support.',
   '',
   'Output rules:',
@@ -146,21 +141,20 @@ function parseResponse(parsed: unknown): readonly RawConsequence[] {
     const longDescription = entry.longDescription;
     if (shortDescription !== null && typeof shortDescription !== 'string') continue;
     if (longDescription !== null && typeof longDescription !== 'string') continue;
-    // mood / shortTermIntent are optional in older fakes/tests; default to null.
+    // mood is optional in older fakes/tests; default to null.
     const moodRaw = 'mood' in entry ? entry.mood : null;
-    const intentRaw = 'shortTermIntent' in entry ? entry.shortTermIntent : null;
     if (moodRaw !== null && typeof moodRaw !== 'string') continue;
-    if (intentRaw !== null && typeof intentRaw !== 'string') continue;
     const isAgent = targetKind === OwnerKind.Agent;
-    // mood/shortTermIntent are only meaningful for agents; if the LLM sets
-    // them on a non-agent we drop them silently rather than reject the
-    // whole consequence.
+    // mood is only meaningful for agents; drop on non-agents silently.
     const mood = isAgent ? (moodRaw as string | null) : null;
-    const shortTermIntent = isAgent ? (intentRaw as string | null) : null;
+    // shortTermIntent is owned by the agent's own mind, NOT the consequence
+    // engine — always force it to null here regardless of what the LLM
+    // emitted. This is the hard guard that keeps the agent's plan from
+    // being overwritten by a third-party judgment.
+    const shortTermIntent = null;
     // A consequence must change SOMETHING. For agents an empty-string mood
-    // or intent counts as a change (clear). For non-agents only the
-    // descriptions count.
-    const agentSideChange = isAgent && (mood !== null || shortTermIntent !== null);
+    // counts as a change (clear). For non-agents only the descriptions count.
+    const agentSideChange = isAgent && mood !== null;
     if (shortDescription === null && longDescription === null && !agentSideChange) continue;
     out.push({
       kind: ActionKind.UpdateDescription,
@@ -360,44 +354,6 @@ async function buildUserPrompt(events: readonly DomainEvent[], repo: Repository)
       lines.push(`    short: ${a.shortDescription}`);
       lines.push(`    long: ${a.longDescription}`);
       lines.push(`    mood: ${a.mood ?? '(none)'}`);
-      lines.push(`    shortTermIntent: ${a.shortTermIntent ?? '(none)'}`);
-    }
-
-    // Foreground a fulfilment check for any agent that currently has a
-    // short-term intent. The system prompt says "clear it on fulfilment";
-    // putting the question explicitly here makes it much harder for the
-    // model to silently leave the intent stale.
-    const withIntent = agents.filter((a) => a.shortTermIntent !== null);
-    if (withIntent.length > 0) {
-      lines.push('');
-      lines.push('Intent fulfilment check — for each of the following, decide:');
-      lines.push(
-        'do the events above show that this agent has now CARRIED OUT this intent? If yes, emit an update_description with shortTermIntent="" for them.',
-      );
-      for (const a of withIntent) {
-        lines.push(`- ${a.label} currently intends: "${a.shortTermIntent}"`);
-      }
-    }
-
-    // Symmetric commitment-detection check: every speak event in this batch
-    // is a candidate for a fresh shortTermIntent on the SPEAKER. Surfacing
-    // them explicitly makes it harder to miss a commitment, and prevents
-    // the partial-update bug where an old intent gets cleared but the new
-    // commitment in the same batch produces no replacement.
-    const speakEvents = events.filter(
-      (e): e is Extract<DomainEvent, { kind: 'speak' }> => e.kind === EventKind.Speak,
-    );
-    if (speakEvents.length > 0) {
-      lines.push('');
-      lines.push('Commitment-detection check — for each speech act below, decide:');
-      lines.push(
-        'does the speaker commit themselves to a future action ("I\'ll deliver it", "on my way", "I\'ll find out")? If yes, emit an update_description that sets THAT SPEAKER\'s shortTermIntent to a concrete phrasing of the commitment. If the speaker also has a current intent that this commitment supersedes or fulfils, the new set replaces it (no separate clear needed).',
-      );
-      for (const e of speakEvents) {
-        const speaker = await repo.getAgent(e.actorId).catch(() => null);
-        const speakerLabel = speaker?.label ?? e.actorId;
-        lines.push(`- ${speakerLabel} said: "${e.utterance}"`);
-      }
     }
   }
 
