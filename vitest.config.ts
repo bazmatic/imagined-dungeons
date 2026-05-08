@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [tsconfigPaths()],
   test: {
     globals: false,
-    include: ['tests/**/*.test.ts', 'src/**/*.test.ts'],
+    include: ['tests/**/*.test.ts', 'src/**/*.test.ts', 'app/**/*.test.ts'],
     exclude: ['**/node_modules/**', '**/*.smoke.test.ts'],
     environment: 'node',
   },

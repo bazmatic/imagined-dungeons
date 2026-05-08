@@ -19,10 +19,40 @@ interface InventoryItem {
   label: string;
 }
 
+interface SurroundingsItem {
+  id: string;
+  label: string;
+}
+
+interface SurroundingsExit {
+  id: string;
+  direction: string;
+  label: string | null;
+  locked: boolean;
+}
+
+interface SurroundingsCharacter {
+  id: string;
+  label: string;
+  shortDescription: string;
+  mood: string | null;
+}
+
+interface Surroundings {
+  items: readonly SurroundingsItem[];
+  exits: readonly SurroundingsExit[];
+  characters: readonly SurroundingsCharacter[];
+}
+
+const EMPTY_SURROUNDINGS: Surroundings = { items: [], exits: [], characters: [] };
+
 function Page() {
   const initial = Route.useLoaderData();
   const [lines, setLines] = useState<Line[]>([{ id: 0, kind: 'system', text: initial.render }]);
   const [inventory, setInventory] = useState<InventoryItem[]>(initial.inventory ?? []);
+  const [surroundings, setSurroundings] = useState<Surroundings>(
+    initial.surroundings ?? EMPTY_SURROUNDINGS,
+  );
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const idRef = useRef(1);
@@ -32,9 +62,6 @@ function Page() {
   // biome-ignore lint/correctness/useExhaustiveDependencies: scroll + refocus on update is the intent
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
-    // Only refocus if focus has been lost (e.g. after busy=true disabled the
-    // input). Calling .focus() while the user is mid-keystroke can race with
-    // React's render cycle and drop characters.
     if (!busy && document.activeElement !== inputRef.current) {
       inputRef.current?.focus();
     }
@@ -57,6 +84,7 @@ function Page() {
         return next;
       });
       if (r.inventory) setInventory(r.inventory);
+      if (r.surroundings) setSurroundings(r.surroundings);
     } finally {
       setBusy(false);
     }
@@ -67,6 +95,28 @@ function Page() {
     if (kind === 'witnessed') return '#888888';
     return '#cfcfcf';
   };
+
+  const renderExit = (e: SurroundingsExit): string => {
+    const base = e.label ? `${e.direction} (${e.label})` : e.direction;
+    return e.locked ? `${base} 🔒` : base;
+  };
+
+  const renderCharacter = (c: SurroundingsCharacter): string => {
+    const base = `${c.label} — ${c.shortDescription}`;
+    return c.mood ? `${base} (${c.mood})` : base;
+  };
+
+  const sectionHeaderStyle: React.CSSProperties = {
+    opacity: 0.6,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    fontSize: 11,
+    marginBottom: 8,
+  };
+  const sectionWrapperStyle: React.CSSProperties = { marginBottom: 16 };
+  const emptyStyle: React.CSSProperties = { opacity: 0.5, fontStyle: 'italic' };
+  const listStyle: React.CSSProperties = { listStyle: 'none', margin: 0, padding: 0 };
+  const itemStyle: React.CSSProperties = { padding: '3px 0' };
 
   return (
     <main style={{ display: 'flex', flexDirection: 'column', height: '100vh', padding: 16 }}>
@@ -152,7 +202,7 @@ function Page() {
         </div>
         <aside
           style={{
-            width: 220,
+            width: 260,
             flexShrink: 0,
             borderLeft: '1px solid #222',
             paddingLeft: 16,
@@ -161,28 +211,65 @@ function Page() {
             overflowY: 'auto',
           }}
         >
-          <div
-            style={{
-              opacity: 0.6,
-              textTransform: 'uppercase',
-              letterSpacing: 1,
-              fontSize: 11,
-              marginBottom: 8,
-            }}
-          >
-            Inventory
-          </div>
-          {inventory.length === 0 ? (
-            <div style={{ opacity: 0.5, fontStyle: 'italic' }}>(empty)</div>
-          ) : (
-            <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-              {inventory.map((it) => (
-                <li key={it.id} style={{ padding: '3px 0' }}>
-                  {it.label}
-                </li>
-              ))}
-            </ul>
-          )}
+          <section style={sectionWrapperStyle}>
+            <div style={sectionHeaderStyle}>Here</div>
+            {surroundings.items.length === 0 ? (
+              <div style={emptyStyle}>(none)</div>
+            ) : (
+              <ul style={listStyle}>
+                {surroundings.items.map((it) => (
+                  <li key={it.id} style={itemStyle}>
+                    {it.label}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section style={sectionWrapperStyle}>
+            <div style={sectionHeaderStyle}>Exits</div>
+            {surroundings.exits.length === 0 ? (
+              <div style={emptyStyle}>(none)</div>
+            ) : (
+              <ul style={listStyle}>
+                {surroundings.exits.map((e) => (
+                  <li key={e.id} style={itemStyle}>
+                    {renderExit(e)}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section style={sectionWrapperStyle}>
+            <div style={sectionHeaderStyle}>Characters</div>
+            {surroundings.characters.length === 0 ? (
+              <div style={emptyStyle}>(none)</div>
+            ) : (
+              <ul style={listStyle}>
+                {surroundings.characters.map((c) => (
+                  <li key={c.id} style={itemStyle}>
+                    {renderCharacter(c)}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section style={sectionWrapperStyle}>
+            <div style={sectionHeaderStyle}>Inventory</div>
+            {inventory.length === 0 ? (
+              <div style={emptyStyle}>(empty)</div>
+            ) : (
+              <ul style={listStyle}>
+                {inventory.map((it) => (
+                  <li key={it.id} style={itemStyle}>
+                    {it.label}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
         </aside>
       </div>
     </main>

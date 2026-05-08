@@ -1,6 +1,7 @@
 import { OwnerKind } from '@core/domain/kinds';
 import { runTick } from '@core/engine/tick';
 import { createServerFn } from '@tanstack/react-start';
+import { buildSurroundings } from './surroundings';
 import { PLAYER_ID, getNarratorLlm, getParse, getRepo } from './world';
 
 export const submitCommand = createServerFn({ method: 'POST' })
@@ -16,9 +17,11 @@ export const submitCommand = createServerFn({ method: 'POST' })
     const llm = getNarratorLlm();
     const result = await runTick(PLAYER_ID, data.text, repo, { parse, llm });
     const inventoryItems = await repo.itemsOwnedBy({ kind: OwnerKind.Agent, id: PLAYER_ID });
+    const surroundings = await buildSurroundings(PLAYER_ID, repo);
     return {
       render: result.render,
       witnessed: [...result.witnessed],
       inventory: inventoryItems.map((i) => ({ id: i.id as string, label: i.label })),
+      surroundings,
     };
   });
