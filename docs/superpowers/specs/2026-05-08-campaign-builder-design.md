@@ -142,9 +142,9 @@ One file per concern, each exporting TanStack server functions that wrap the bui
 
 Server functions return the project's existing `Result` type. They are thin wrappers — each one validates input, opens a DB connection, calls the corresponding builder-module function, and returns the result. No business logic lives at this layer.
 
-### HTTP API (`app/routes/api/admin/`)
+### HTTP API (`app/routes/api/admin/`) — DEFERRED in v1
 
-The same builder operations are exposed as HTTP endpoints under `/api/admin/`. These are also thin wrappers over the builder module — they share the same validation and the same `Result`-shaped responses (serialised as JSON, with HTTP status codes derived from `Result.ok` and the typed error). The UI's server functions and the HTTP API are sibling adapters over one core; neither calls the other, and neither contains business logic.
+The same builder operations were planned to be exposed as HTTP endpoints under `/api/admin/`, as thin wrappers over the builder module sharing validation and `Result`-shaped JSON responses. **Implementation is deferred** because the installed `@tanstack/react-start@1.167.x` does not export `createAPIFileRoute` (the documented mechanism for file-based API routes). The framework's canonical surface in this version is `createServerFn`, which the admin UI already uses (Task 10). For v1 the two consumers — the in-app admin UI and the MCP server — are both covered by adapters that share the same builder facade. A standalone HTTP API can be added in a later slice once TanStack Start ships API routes, or wired via a sibling Hono/Fastify server if a non-browser HTTP consumer appears before then.
 
 Endpoints (all JSON, all validate input with a shared schema):
 
