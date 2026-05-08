@@ -184,13 +184,26 @@ export function parse(
       // (only one other agent in the room) wins; otherwise ambiguous.
       if (explicitTargetRef) {
         const r = resolveAgent(explicitTargetRef, view.agents);
-        if (!r.ok) return r.error;
-        return {
-          kind: ActionKind.Speak,
-          actorId: actor.id,
-          targetAgentId: r.agent.id,
-          utterance,
-        };
+        if (r.ok) {
+          return {
+            kind: ActionKind.Speak,
+            actorId: actor.id,
+            targetAgentId: r.agent.id,
+            utterance,
+          };
+        }
+        // The "to <agent>" tail didn't resolve. The player probably wasn't
+        // actually addressing a specific agent — the "to ..." was part of the
+        // utterance content (e.g. `say more things to praise Paff`). Re-treat
+        // the whole afterSay as the utterance and fall through to the
+        // implicit-target path below.
+        utterance = afterSay
+          .replace(/^["']/, '')
+          .replace(/["']\.?$/, '')
+          .trim();
+        if (utterance.length === 0) {
+          return { kind: ParseErrorKind.MissingArgument, verb: 'say' };
+        }
       }
       if (view.agents.length === 0) {
         return { kind: ParseErrorKind.NoSuchTarget, ref: '' };

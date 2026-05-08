@@ -76,7 +76,7 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
     '2. If someone is currently attacking you (and you have not yet retaliated), decide whether to fight back, flee through an exit, or speak.',
   );
   lines.push(
-    '3. If "Things YOU have recently said" includes a commitment (e.g. "I\'ll take the X to the Y", "I\'ll head north"), make progress on it this turn — pick up the item if you said you would carry it, take a step in the relevant direction, etc. Don\'t restart the conversation; act.',
+    '3. If the user message contains a "Things YOU have recently committed to doing" section, make progress on those commitments this turn — pick up the item if you said you would carry it, take a step in the relevant direction, etc. Don\'t restart the conversation; act. If that section is absent, do NOT volunteer follow-up speech to elaborate on things you said earlier — keep quiet unless something new prompts you.',
   );
   lines.push(
     '4. If you have a `Current short-term intent`, make progress on it. This is what you decided to do recently and it should usually drive your turn unless something more urgent (priority 1 or 2) interrupts.',
@@ -267,19 +267,41 @@ async function buildUserPrompt(
     }
   }
 
-  // Foreground recent things the NPC has SAID — most importantly any
-  // commitments ("Sure, I'll take the fire map to the docks!"). The NPC mind
-  // has no separate notion of pending tasks; the spoken utterance IS the
-  // commitment. Show recent outgoing speak events so the model treats them as
-  // standing intentions rather than past chatter.
-  const recentSelfSpeech = memory.filter((m) => m.actorId === selfId && m.kind === EventKind.Speak);
-  if (recentSelfSpeech.length > 0) {
+  // Foreground recent things the NPC has SAID *that look like a commitment*
+  // ("Sure, I'll take the fire map to the docks!" — yes; "I run around a lot,
+  // I think the static builds up!" — no). The NPC mind has no separate notion
+  // of pending tasks; the spoken utterance IS the commitment. Without this
+  // filter, every prior statement counts as a standing intent and the NPC
+  // keeps elaborating on past chatter. The check is conservative — if the
+  // utterance contains a future-tense self-pledge phrase, foreground it;
+  // otherwise leave it in the general memory log as context.
+  const COMMITMENT_PATTERNS: readonly RegExp[] = [
+    /\bi['’]?ll\b/i, // I'll, I'll', I’ll
+    /\bi will\b/i,
+    /\bi['’]?m going to\b/i, // I'm going to
+    /\bi am going to\b/i,
+    /\bi['’]?d (like|love) to\b/i, // I'd like to / I'd love to
+    /\blet me\b/i,
+    /\bi can\b/i, // "I can take it" — soft commitment
+    /\bi should\b/i,
+    /\bsure[,.!]/i, // "Sure, I'll..." — common agreement opener
+    /\bof course[,.!]/i,
+  ];
+  const looksLikeCommitment = (utterance: string): boolean =>
+    COMMITMENT_PATTERNS.some((p) => p.test(utterance));
+
+  const recentCommitments = memory.filter(
+    (m) =>
+      m.actorId === selfId &&
+      m.kind === EventKind.Speak &&
+      looksLikeCommitment((m as Extract<DomainEvent, { kind: 'speak' }>).utterance),
+  );
+  if (recentCommitments.length > 0) {
     lines.push('');
     lines.push(
-      'Things YOU have recently said (treat these as standing commitments — if you said you would do something, follow through):',
+      'Things YOU have recently committed to doing (follow through — pick up what you said you would carry, head where you said you would head, etc.):',
     );
-    for (const m of recentSelfSpeech) {
-      // m is narrowed to the speak variant by the filter above.
+    for (const m of recentCommitments) {
       const speakEvent = m as Extract<DomainEvent, { kind: 'speak' }>;
       lines.push(`- you said: "${speakEvent.utterance}"`);
     }
