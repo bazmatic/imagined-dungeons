@@ -14,6 +14,13 @@ export interface Repository {
   moveAgent(agent: AgentId, to: LocationId): Promise<void>;
   transferItem(item: ItemId, to: Owner): Promise<void>;
   setAgentHp(id: AgentId, hp: number): Promise<void>;
+  /**
+   * Wake or sleep an NPC. The scheduler ticks an agent only when
+   * `autonomous === true`. Interactions targeting a dormant NPC wake them
+   * (see tick.ts). Sleep is currently never triggered by the engine — once
+   * woken, an NPC stays in the scene.
+   */
+  setAgentAutonomous(id: AgentId, autonomous: boolean): Promise<void>;
   appendEvent(event: DomainEvent): Promise<void>;
   recentEvents(limit: number): Promise<readonly DomainEvent[]>;
   /** Read the current world RNG seed. */

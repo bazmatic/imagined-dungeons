@@ -148,6 +148,10 @@ export class SqliteRepository implements Repository {
     await this.db.update(schema.agents).set({ hp }).where(eq(schema.agents.id, id));
   }
 
+  async setAgentAutonomous(id: AgentId, autonomous: boolean): Promise<void> {
+    await this.db.update(schema.agents).set({ autonomous }).where(eq(schema.agents.id, id));
+  }
+
   async appendEvent(event: DomainEvent): Promise<void> {
     const { id, worldId, actorId, kind, witnesses, createdAt, narrations, ...rest } = event;
     await this.db.insert(schema.events).values({

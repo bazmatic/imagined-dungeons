@@ -153,6 +153,59 @@ async function renderWitnessForPlayer(
   }
 }
 
+const escapeRegex = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * Wake any dormant NPCs whose attention these events demand. An NPC is
+ * "demanded" when an event:
+ *   - speaks/attacks/emotes directly AT them (targetAgentId === their id), or
+ *   - is broadcast speech (targetAgentId === null) whose utterance names them.
+ *
+ * Sleeping is intentionally not symmetric here: once woken, an NPC stays in
+ * the scene. The user's mental model is "interaction wakes them up"; if we
+ * over-eagerly slept them after one response, they'd vanish from the
+ * conversation again the next turn.
+ */
+async function wakeAddressedNpcs(events: readonly DomainEvent[], repo: Repository): Promise<void> {
+  const targeted = new Set<AgentId>();
+  for (const e of events) {
+    if (
+      (e.kind === EventKind.Speak || e.kind === EventKind.Attack || e.kind === EventKind.Emote) &&
+      'targetAgentId' in e &&
+      e.targetAgentId !== null
+    ) {
+      targeted.add(e.targetAgentId);
+    }
+    if (e.kind === EventKind.Speak && e.targetAgentId === null) {
+      // Broadcast: anyone present whose label appears as a whole word in the
+      // utterance is being addressed by name.
+      const utteranceLower = e.utterance.toLowerCase();
+      try {
+        const here = await repo.agentsAt((await repo.getAgent(e.actorId)).locationId);
+        for (const a of here) {
+          if (a.id === e.actorId) continue;
+          const re = new RegExp(`\\b${escapeRegex(a.label.toLowerCase())}\\b`);
+          if (re.test(utteranceLower)) targeted.add(a.id);
+        }
+      } catch {
+        // Actor lookup failed — skip vocative scan; explicit-target wakes
+        // already happened above.
+      }
+    }
+  }
+  for (const id of targeted) {
+    try {
+      const a = await repo.getAgent(id);
+      if (!a.autonomous && a.hp > 0) {
+        await repo.setAgentAutonomous(id, true);
+        console.info(`[wake] ${a.label} woken by interaction`);
+      }
+    } catch {
+      // skip
+    }
+  }
+}
+
 /**
  * Run the consequence engine over a slice of newly-emitted events and apply
  * each returned action through the standard dispatch pipeline. Returns the
@@ -210,6 +263,10 @@ export async function runTick(
       const view = await perceive(playerId, repo);
       playerRender = `${playerRender}\n\n${renderLook(view)}`;
     }
+
+    // Wake any dormant NPCs the player just addressed/attacked/emoted at,
+    // so the scheduler picks them up this same tick.
+    await wakeAddressedNpcs(playerResult.events, repo);
 
     // 2. Consequence pass over the player's events (depth 0).
     const postPlayerConsequences = await runConsequencePass(playerResult.events, repo, llm, 0);
@@ -269,7 +326,11 @@ export async function runTick(
     }
   }
 
-  // 5. Consequence pass over the NPC events only (depth 1).
+  // 5. Wake NPCs that other NPCs just addressed (e.g. Spark says "Captain,
+  // I have your map" — Serena needs to be eligible next tick).
+  await wakeAddressedNpcs(npcEvents, repo);
+
+  // 6. Consequence pass over the NPC events only (depth 1).
   const postNpcConsequences = await runConsequencePass(npcEvents, repo, llm, 1);
   for (const ev of postNpcConsequences) {
     events.push(ev);
