@@ -328,7 +328,14 @@ function RawJsonForm(props: {
         <button
           type="button"
           onClick={async () => {
-            const parsed = JSON.parse(json);
+            // biome-ignore lint/suspicious/noExplicitAny: JSON.parse returns any; we validate in try/catch
+            let parsed: any;
+            try {
+              parsed = JSON.parse(json);
+            } catch (e) {
+              alert(`Invalid JSON: ${e instanceof Error ? e.message : String(e)}`);
+              return;
+            }
             // Items use `owner: { kind, id }` in the entity; the upsert input takes
             // `ownerKind` + `ownerId`. Translate here.
             const payload =
