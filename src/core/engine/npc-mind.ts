@@ -44,7 +44,10 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
   lines.push('Decide what you want to do this turn given what you can perceive right now.');
   lines.push('');
   lines.push('Reply format:');
-  lines.push('- Optional control lines come first (zero, one, or both, in either order):');
+  lines.push(
+    '- ALWAYS START with one or more `THOUGHT: <reasoning>` lines. Use them to think out loud — what you currently see, what you remember, what your intent (if any) means in context, what step would actually achieve it, what obstacles you face, what you should do this turn and why. Two or three thoughts is usually enough; one is fine. These lines do not affect the world; they are your private reasoning and they help you avoid careless mistakes.',
+  );
+  lines.push('- Then optional control lines (zero, one, or both, in either order):');
   lines.push(
     '    INTENT_DONE              — clear your current short-term intent (use when you have just finished it).',
   );
@@ -56,13 +59,21 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
   );
   lines.push('');
   lines.push('Examples:');
+  lines.push(
+    '  THOUGHT: Paff just asked me to deliver the fire map to Captain Serena. I do not have it yet.',
+  );
+  lines.push('  THOUGHT: It is on the table here. I should take it first.');
   lines.push('  INTENT: deliver the fire map to Captain Serena near the docks');
   lines.push('  I take the fire map.');
   lines.push('');
+  lines.push(
+    '  THOUGHT: I am on the ship and Captain Serena is here. I have the map. The next step is to hand it to her — there is no `give` verb, so I will offer it and let her take it.',
+  );
+  lines.push('  I say "Captain, I brought you the fire map." to Captain Serena.');
+  lines.push('');
+  lines.push('  THOUGHT: I just delivered the map. The end state is true now.');
   lines.push('  INTENT_DONE');
   lines.push('  I wait.');
-  lines.push('');
-  lines.push('  I move south.');
   lines.push('');
   lines.push(
     'Your action will be parsed by a verb-noun command interpreter, so phrase the action line as a single command in the first person, using exactly one of these verbs:',
@@ -371,36 +382,50 @@ export async function decideNpcIntent(
       log.warn(`[npc-mind] empty response for ${actor.label}; falling back to wait`);
       return NpcFallbackIntent;
     }
-    // The NPC mind owns its own shortTermIntent. The reply format may begin
-    // with control lines that update intent; remaining lines are the action
-    // command for this turn.
-    //   INTENT_DONE          — clear the current intent.
-    //   INTENT: <text>       — set or replace the intent.
-    // Both can appear (clear-and-replace), in either order. Lines after the
-    // last control line are the action.
+    // The NPC mind owns its own shortTermIntent and reasons out loud before
+    // acting. The reply format is:
+    //   THOUGHT: <reasoning>   — private reasoning. Logged, not dispatched.
+    //   INTENT_DONE            — clear the current intent.
+    //   INTENT: <text>         — set or replace the intent.
+    //   <action command>       — exactly one action line, in first person.
+    //
+    // Thoughts and control lines can be interleaved in any order; everything
+    // that isn't a control line and isn't a thought is treated as the action.
     let cleared = false;
     let setTo: string | null = null;
-    const lines = body.split(/\r?\n/);
-    while (lines.length > 0) {
-      const first = lines[0]?.trim() ?? '';
-      if (/^INTENT_DONE\b/.test(first)) {
-        cleared = true;
-        lines.shift();
+    const thoughts: string[] = [];
+    const remaining: string[] = [];
+    for (const raw of body.split(/\r?\n/)) {
+      const line = raw.trim();
+      if (line.length === 0) continue;
+      const thoughtMatch = line.match(/^THOUGHT:\s*(.+?)\s*$/);
+      if (thoughtMatch?.[1]) {
+        thoughts.push(thoughtMatch[1]);
         continue;
       }
-      const setMatch = first.match(/^INTENT:\s*(.+?)\s*$/);
+      if (/^INTENT_DONE\b/.test(line)) {
+        cleared = true;
+        continue;
+      }
+      const setMatch = line.match(/^INTENT:\s*(.+?)\s*$/);
       if (setMatch?.[1]) {
         setTo = setMatch[1];
-        lines.shift();
         continue;
       }
-      break;
+      remaining.push(line);
+    }
+    if (thoughts.length > 0) {
+      for (const t of thoughts) {
+        log.info(`[npc-mind] ${actor.label} thought: ${JSON.stringify(t)}`);
+      }
+    } else {
+      log.warn(`[npc-mind] ${actor.label} emitted no THOUGHT lines this turn`);
     }
     // Body should be exactly one action line. If the LLM emitted multiple
     // (which happens when it gets confused — e.g. `say ...` then `move ...`
     // both as separate action lines), keep only the first non-empty one and
     // warn so we notice. Subsequent lines are dropped on the floor.
-    const bodyLines = lines.map((l) => l.trim()).filter((l) => l.length > 0);
+    const bodyLines = remaining;
     if (bodyLines.length > 1) {
       log.warn(
         `[npc-mind] ${actor.label} emitted ${bodyLines.length} action lines; keeping only the first: ${JSON.stringify(bodyLines)}`,

@@ -126,6 +126,14 @@ export class SqliteRepository implements Repository {
     return rows.map((r) => toAgent(r, this.worldId));
   }
 
+  async allAgents(): Promise<readonly Agent[]> {
+    const rows = await this.db
+      .select()
+      .from(schema.agents)
+      .where(eq(schema.agents.worldId, this.worldId));
+    return rows.map((r) => toAgent(r, this.worldId));
+  }
+
   async exitsFrom(loc: LocationId): Promise<readonly Exit[]> {
     const rows = await this.db
       .select()

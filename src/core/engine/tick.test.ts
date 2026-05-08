@@ -174,7 +174,7 @@ describe('runTick', () => {
     // No throw, no infinite loop.
   });
 
-  it('does not tick non-co-located NPCs', async () => {
+  it('still ticks non-co-located NPCs (so offstage agents can pursue their own intents) but the player witnesses nothing of their actions', async () => {
     const remote: Agent = { ...spark, id: asAgentId('char_remote'), locationId: B };
     const repo = makeWorld([player, remote]);
     let calls = 0;
@@ -186,7 +186,8 @@ describe('runTick', () => {
     });
     const parse = makeCompositeParser({ llm: null });
     const r = await runTick(player.id, 'look', repo, { parse, llm });
-    expect(calls).toBe(0);
+    // Remote NPC ticks, but in another room; player sees nothing of it.
+    expect(calls).toBe(1);
     expect(r.witnessed).toEqual([]);
   });
 

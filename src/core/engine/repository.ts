@@ -10,6 +10,8 @@ export interface Repository {
   getExit(id: ExitId): Promise<Exit>;
   itemsOwnedBy(owner: Owner): Promise<readonly Item[]>;
   agentsAt(loc: LocationId): Promise<readonly Agent[]>;
+  /** Every agent in the world (used by the scheduler to tick offstage NPCs). */
+  allAgents(): Promise<readonly Agent[]>;
   exitsFrom(loc: LocationId): Promise<readonly Exit[]>;
   moveAgent(agent: AgentId, to: LocationId): Promise<void>;
   transferItem(item: ItemId, to: Owner): Promise<void>;

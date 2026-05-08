@@ -57,7 +57,7 @@ describe('scheduleNpcs', () => {
     expect(ids).toEqual([npc.id]);
   });
 
-  it('excludes NPCs in other locations', async () => {
+  it('includes NPCs in other locations (offstage NPCs still tick so they can pursue intents)', async () => {
     const here_npc = mkAgent(asAgentId('char_here'), { autonomous: true });
     const there_npc = mkAgent(asAgentId('char_there'), {
       autonomous: true,
@@ -71,6 +71,23 @@ describe('scheduleNpcs', () => {
       agents: [mkAgent(PLAYER, {}), here_npc, there_npc],
     });
     const ids = await scheduleNpcs({ playerId: PLAYER, repo });
+    // Both eligible. Co-located NPC ranks first (visible to the player).
+    expect(ids).toEqual([here_npc.id, there_npc.id]);
+  });
+
+  it('prefers co-located NPCs over offstage ones when the cap is tight', async () => {
+    const here_npc = mkAgent(asAgentId('char_here'), { autonomous: true });
+    const there_npc = mkAgent(asAgentId('char_there'), {
+      autonomous: true,
+      locationId: ELSEWHERE,
+    });
+    const repo = new MemoryRepository(W, {
+      locations: [here, elsewhere],
+      exits: [],
+      items: [],
+      agents: [mkAgent(PLAYER, {}), here_npc, there_npc],
+    });
+    const ids = await scheduleNpcs({ playerId: PLAYER, repo, cap: 1 });
     expect(ids).toEqual([here_npc.id]);
   });
 

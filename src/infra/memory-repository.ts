@@ -67,6 +67,10 @@ export class MemoryRepository implements Repository {
     return [...this.agents.values()].filter((a) => a.locationId === loc);
   }
 
+  async allAgents(): Promise<readonly Agent[]> {
+    return [...this.agents.values()];
+  }
+
   async exitsFrom(loc: LocationId): Promise<readonly Exit[]> {
     return [...this.exits.values()].filter((e) => e.from === loc);
   }
