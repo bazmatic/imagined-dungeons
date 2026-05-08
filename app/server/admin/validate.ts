@@ -12,7 +12,7 @@ export const validate = createServerFn({ method: 'GET' })
     return d as { id: string };
   })
   .handler(async ({ data }) => {
-    const tree = await getWorldTree(getBuilderRepo(), asWorldId(data.id));
+    const tree = await getWorldTree(await getBuilderRepo(), asWorldId(data.id));
     if (!tree.ok) return { ok: false as const, error: tree.error };
     return { ok: true as const, value: validateCore(tree.value) };
   });

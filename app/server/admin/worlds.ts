@@ -9,7 +9,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { getBuilderRepo } from './repo';
 
 export const listWorlds = createServerFn({ method: 'GET' }).handler(async () => {
-  return listWorldsCore(getBuilderRepo());
+  return listWorldsCore(await getBuilderRepo());
 });
 
 export const createDraft = createServerFn({ method: 'POST' })
@@ -24,7 +24,7 @@ export const createDraft = createServerFn({ method: 'POST' })
     }
     return d as { displayName: string; label: string };
   })
-  .handler(async ({ data }) => createDraftCore(getBuilderRepo(), data));
+  .handler(async ({ data }) => createDraftCore(await getBuilderRepo(), data));
 
 export const cloneLive = createServerFn({ method: 'POST' })
   .inputValidator((d: unknown) => {
@@ -33,7 +33,7 @@ export const cloneLive = createServerFn({ method: 'POST' })
     }
     return d as { id: string };
   })
-  .handler(async ({ data }) => cloneLiveAsDraftCore(getBuilderRepo(), asWorldId(data.id)));
+  .handler(async ({ data }) => cloneLiveAsDraftCore(await getBuilderRepo(), asWorldId(data.id)));
 
 export const getWorld = createServerFn({ method: 'GET' })
   .inputValidator((d: unknown) => {
@@ -42,4 +42,4 @@ export const getWorld = createServerFn({ method: 'GET' })
     }
     return d as { id: string };
   })
-  .handler(async ({ data }) => getWorldTree(getBuilderRepo(), asWorldId(data.id)));
+  .handler(async ({ data }) => getWorldTree(await getBuilderRepo(), asWorldId(data.id)));

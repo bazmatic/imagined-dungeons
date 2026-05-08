@@ -33,7 +33,7 @@ export const saveEntity = createServerFn({ method: 'POST' })
     return d as SaveInput;
   })
   .handler(async ({ data }) => {
-    const repo = getBuilderRepo();
+    const repo = await getBuilderRepo();
     const W = asWorldId(data.worldId);
     const p = data.payload as Record<string, unknown>;
     if (data.entity === EntityKind.Location) {
@@ -106,7 +106,7 @@ export const deleteEntity = createServerFn({ method: 'POST' })
     return d as DeleteInput;
   })
   .handler(async ({ data }) => {
-    const repo = getBuilderRepo();
+    const repo = await getBuilderRepo();
     const W = asWorldId(data.worldId);
     if (data.entity === EntityKind.Location)
       return deleteLocationCore(repo, W, asLocationId(data.id));

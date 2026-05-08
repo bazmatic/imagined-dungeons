@@ -12,8 +12,8 @@ const idInput = (d: unknown) => {
 
 export const publish = createServerFn({ method: 'POST' })
   .inputValidator(idInput)
-  .handler(async ({ data }) => publishCore(getBuilderRepo(), asWorldId(data.id)));
+  .handler(async ({ data }) => publishCore(await getBuilderRepo(), asWorldId(data.id)));
 
 export const resetLive = createServerFn({ method: 'POST' })
   .inputValidator(idInput)
-  .handler(async ({ data }) => resetCore(getBuilderRepo(), asWorldId(data.id)));
+  .handler(async ({ data }) => resetCore(await getBuilderRepo(), asWorldId(data.id)));
