@@ -120,6 +120,12 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
   lines.push(
     '- If nothing useful presents itself, reply exactly: I wait. (or "I look" to take in the room.)',
   );
+  lines.push(
+    '- If your intent names a person or place that is NOT in this room (check the "Other characters here" and exits lists), DO NOT keep looking around. The next step is movement: pick the exit most likely to lead you closer and `move <direction>`. "look for X" is not a verb the parser supports — there is no "search this room for X" mechanic. If X is here you would already see them in the prompt; if X is not here, MOVE.',
+  );
+  lines.push(
+    '- Look at "What you have witnessed recently" before choosing an action. If your last 1-2 attempts failed for the same reason (e.g. "you tried \'I look for Captain Serena.\' but it failed"), CHANGE TACTIC. Repeating the same failed phrasing wastes the turn. If a target wasn\'t found by `look`, they aren\'t in the room — try `move <direction>` instead.',
+  );
   return lines.join('\n');
 };
 
