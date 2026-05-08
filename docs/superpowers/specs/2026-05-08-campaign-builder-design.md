@@ -175,7 +175,7 @@ A standalone MCP server that exposes the builder operations as tools, suitable f
 
 - Implemented with the official MCP TypeScript SDK.
 - Each tool is a thin wrapper over the corresponding builder-module function — the MCP server runs in-process against the same `Repository` interface, so it does not call the HTTP API; it shares the core directly. (The HTTP API exists for non-MCP clients and for the UI's server-function path.)
-- Tool surface mirrors the HTTP endpoints: `list_worlds`, `create_draft`, `clone_live_as_draft`, `get_world`, `validate_world`, `publish_world`, `reset_live_to_draft`, `upsert_location`, `upsert_exit`, `upsert_item`, `upsert_agent`, `delete_location`, `delete_exit`, `delete_item`, `delete_agent`.
+- Tool surface mirrors most of the HTTP endpoints: `list_worlds`, `create_draft`, `clone_live_as_draft`, `get_world`, `validate_world`, `publish_world`, `upsert_location`, `upsert_exit`, `upsert_item`, `upsert_agent`, `delete_location`, `delete_exit`, `delete_item`, `delete_agent`. **`reset_live_to_draft` is intentionally not exposed via MCP** — it is the one operation that wipes gameplay state, and it stays behind the confirmation modal in the UI (and the HTTP API for scripted use, where the caller is presumed authorised).
 - Tool input schemas are the same schemas used to validate HTTP request bodies — one definition per operation, used by both surfaces. Tool outputs return the same `Result`-shaped JSON.
 - The MCP server is launched as a separate entry point (e.g. `pnpm mcp`) wired to stdio transport. It does not boot the TanStack server; it opens its own DB connection via the existing `db.ts` factory.
 - For AI-driven authoring, the validator's `Problem[]` output is the feedback loop: an AI client edits, calls `validate_world`, reads the structured problem list, and iterates. `publish_world`'s `skipped` report is similarly machine-readable.
@@ -217,6 +217,18 @@ Optimistic concurrency: the server records the snapshot's `takenAt` when it comp
 - Validation problems are data, not errors.
 - Publish and reset run in single transactions; partial application is impossible.
 - Concurrency conflict on publish (snapshot `takenAt` mismatch) returns a typed error; UI prompts the admin to refresh and re-publish.
+
+## Integrity invariants
+
+The builder facade — not the underlying repository — is the API exposed to all three adapters (UI, HTTP, MCP). The facade enforces:
+
+1. **Live worlds are read-only from outside the publish flow.** Every direct structural write (`upsertLocation`, `upsertExit`, `upsertItem`, `upsertAgent`, `delete*`) refuses with `WorldKindMismatch` if the target world's `kind` is `live`. The only paths that mutate a live world are `publish` (which runs validation + three-way merge) and `resetLiveToDraft` (which is destructive by design and is *not* exposed via MCP).
+2. **Runtime fields on existing agents are never overwritten by authoring.** The SQLite `upsertAgent` implementation's update set omits `hp`, `mood`, `shortTermIntent`, and `awake`. These are gameplay state; an AI driving the builder cannot reach in and set a player's HP, clear an NPC's intent, or change wake state. New agents created by `publish` initialise these to seed defaults; the columns are then off-limits.
+3. **Validation gates publish.** Any structural problem (`Problem[]` non-empty) aborts publish with `ValidationFailed` carrying the full problem list. Live worlds therefore can never reach an invalid state via the builder.
+4. **Three-way merge preserves gameplay drift.** Even on a valid draft, publish skips any row where the live world has diverged from the snapshot. Authored changes never silently overwrite changes the engine made during play.
+5. **`resetLiveToDraft` is the explicit escape hatch.** It bypasses #4 (but not #3). It is exposed via the UI (confirmation modal) and the HTTP API. **It is not exposed as an MCP tool** — an AI client should not be able to wipe gameplay state with a single tool call. If an AI workflow needs to reset, the human admin runs it.
+
+These invariants make the MCP surface safe to point at an AI: drafts are sandboxed work-in-progress; live worlds can only be reached through the validate-and-merge gate; gameplay state is structurally unreachable.
 
 ## Testing
 
