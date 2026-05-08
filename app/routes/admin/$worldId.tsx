@@ -1,5 +1,6 @@
 import { EntityKind, WorldKind } from '@core/domain/builder-kinds';
 import type { WorldTree } from '@core/domain/builder-types';
+import { OwnerKind } from '@core/domain/kinds';
 import { createFileRoute, useRouter } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
 import { deleteEntity, saveEntity } from '~/server/admin/entities';
@@ -89,63 +90,89 @@ function AdminWorld() {
 
         <h3 style={{ fontSize: 12, marginTop: 16 }}>Locations</h3>
         <ul>
-          {t.locations.map((l) => (
-            <li key={l.id as string}>
-              <button
-                type="button"
-                onClick={() => setSel({ kind: EntityKind.Location, id: l.id as string })}
-              >
-                {l.label}
-              </button>
-              {dot(EntityKind.Location, l.id as string)}
-            </li>
-          ))}
+          {t.locations.map((l) => {
+            const locId = l.id as string;
+            const exitsHere = t.exits.filter((e) => (e.from as string) === locId);
+            const agentsHere = t.agents.filter((a) => (a.locationId as string) === locId);
+            const itemsHere = t.items.filter(
+              (i) => i.owner.kind === OwnerKind.Location && (i.owner.id as string) === locId,
+            );
+            return (
+              <li key={locId} style={{ marginBottom: 6 }}>
+                <button
+                  type="button"
+                  onClick={() => setSel({ kind: EntityKind.Location, id: locId })}
+                >
+                  {l.label}
+                </button>
+                {dot(EntityKind.Location, locId)}
+                {(exitsHere.length > 0 || agentsHere.length > 0 || itemsHere.length > 0) && (
+                  <ul style={{ marginLeft: 16, marginTop: 2 }}>
+                    {exitsHere.map((e) => (
+                      <li key={e.id as string}>
+                        <button
+                          type="button"
+                          onClick={() => setSel({ kind: EntityKind.Exit, id: e.id as string })}
+                          style={{ opacity: 0.85 }}
+                        >
+                          ↪ {e.direction} → {e.to}
+                        </button>
+                        {dot(EntityKind.Exit, e.id as string)}
+                      </li>
+                    ))}
+                    {agentsHere.map((a) => (
+                      <li key={a.id as string}>
+                        <button
+                          type="button"
+                          onClick={() => setSel({ kind: EntityKind.Agent, id: a.id as string })}
+                          style={{ opacity: 0.85 }}
+                        >
+                          ☻ {a.label}
+                        </button>
+                        {dot(EntityKind.Agent, a.id as string)}
+                      </li>
+                    ))}
+                    {itemsHere.map((i) => (
+                      <li key={i.id as string}>
+                        <button
+                          type="button"
+                          onClick={() => setSel({ kind: EntityKind.Item, id: i.id as string })}
+                          style={{ opacity: 0.85 }}
+                        >
+                          ◆ {i.label}
+                        </button>
+                        {dot(EntityKind.Item, i.id as string)}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            );
+          })}
         </ul>
 
-        <h3 style={{ fontSize: 12, marginTop: 16 }}>Agents</h3>
-        <ul>
-          {t.agents.map((a) => (
-            <li key={a.id as string}>
-              <button
-                type="button"
-                onClick={() => setSel({ kind: EntityKind.Agent, id: a.id as string })}
-              >
-                {a.label}
-              </button>
-              {dot(EntityKind.Agent, a.id as string)}
-            </li>
-          ))}
-        </ul>
-
-        <h3 style={{ fontSize: 12, marginTop: 16 }}>Items</h3>
-        <ul>
-          {t.items.map((i) => (
-            <li key={i.id as string}>
-              <button
-                type="button"
-                onClick={() => setSel({ kind: EntityKind.Item, id: i.id as string })}
-              >
-                {i.label}
-              </button>
-              {dot(EntityKind.Item, i.id as string)}
-            </li>
-          ))}
-        </ul>
-
-        <h3 style={{ fontSize: 12, marginTop: 16 }}>Exits</h3>
-        <ul>
-          {t.exits.map((e) => (
-            <li key={e.id as string}>
-              <button
-                type="button"
-                onClick={() => setSel({ kind: EntityKind.Exit, id: e.id as string })}
-              >
-                {e.from} → {e.to} ({e.direction})
-              </button>
-              {dot(EntityKind.Exit, e.id as string)}
-            </li>
-          ))}
-        </ul>
+        {(() => {
+          const orphanItems = t.items.filter((i) => i.owner.kind !== OwnerKind.Location);
+          if (orphanItems.length === 0) return null;
+          return (
+            <>
+              <h3 style={{ fontSize: 12, marginTop: 16 }}>Items (carried / nested)</h3>
+              <ul>
+                {orphanItems.map((i) => (
+                  <li key={i.id as string}>
+                    <button
+                      type="button"
+                      onClick={() => setSel({ kind: EntityKind.Item, id: i.id as string })}
+                    >
+                      ◆ {i.label}
+                    </button>
+                    {dot(EntityKind.Item, i.id as string)}
+                  </li>
+                ))}
+              </ul>
+            </>
+          );
+        })()}
       </aside>
 
       <main style={{ padding: 24, overflowY: 'auto' }}>
