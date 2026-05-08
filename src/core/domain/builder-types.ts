@@ -41,10 +41,10 @@ export interface BuilderError {
 }
 
 export type EntityRef =
-  | { kind: 'location'; id: LocationId }
-  | { kind: 'exit'; id: ExitId }
-  | { kind: 'item'; id: ItemId }
-  | { kind: 'agent'; id: AgentId };
+  | { kind: typeof EntityKind.Location; id: LocationId }
+  | { kind: typeof EntityKind.Exit; id: ExitId }
+  | { kind: typeof EntityKind.Item; id: ItemId }
+  | { kind: typeof EntityKind.Agent; id: AgentId };
 
 export interface SkipReport {
   readonly ref: EntityRef;

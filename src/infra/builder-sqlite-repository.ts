@@ -1,5 +1,5 @@
 import type { BuilderRepository } from '@core/builder/repository';
-import { type WorldKind, WorldKind as WorldKindConst } from '@core/domain/builder-kinds';
+import type { WorldKind } from '@core/domain/builder-kinds';
 import type {
   UpsertAgentInput,
   UpsertExitInput,
@@ -299,6 +299,3 @@ const toAgent = (r: typeof schema.agents.$inferSelect, w: WorldId): Agent => ({
   autonomous: r.autonomous,
   awake: r.awake,
 });
-
-// `WorldKindConst` is exported so callers using the const path keep working.
-export { WorldKindConst };

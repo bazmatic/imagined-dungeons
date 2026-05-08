@@ -116,6 +116,7 @@ export class MemoryBuilderRepository implements BuilderRepository {
     });
   }
   async upsertAgent(w: WorldId, i: UpsertAgentInput) {
+    const existing = this.bucket(this.agents, w).get(i.id);
     this.bucket(this.agents, w).set(i.id, {
       id: asAgentId(i.id),
       worldId: w,
@@ -123,15 +124,15 @@ export class MemoryBuilderRepository implements BuilderRepository {
       shortDescription: i.shortDescription,
       longDescription: i.longDescription,
       locationId: i.locationId,
-      hp: i.hp,
+      hp: existing ? existing.hp : i.hp,
       damage: i.damage,
       defense: i.defense,
       capacity: i.capacity,
-      mood: i.mood,
-      shortTermIntent: null,
+      mood: existing ? existing.mood : i.mood,
+      shortTermIntent: existing ? existing.shortTermIntent : null,
       goal: i.goal,
       autonomous: i.autonomous,
-      awake: false,
+      awake: existing ? existing.awake : false,
     });
   }
 
