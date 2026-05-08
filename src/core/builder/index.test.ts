@@ -1,8 +1,17 @@
-import { WorldKind } from '@core/domain/builder-kinds';
+import { PublishOutcomeKind, WorldKind } from '@core/domain/builder-kinds';
 import { asAgentId, asLocationId, asWorldId } from '@core/domain/ids';
 import { MemoryBuilderRepository } from '@infra/builder-memory-repository';
 import { describe, expect, it } from 'vitest';
-import { createDraft, deleteLocation, getWorldTree, upsertAgent, upsertLocation } from './index';
+import {
+  cloneLiveAsDraft,
+  createDraft,
+  deleteLocation,
+  getWorldTree,
+  publish,
+  resetLiveToDraft,
+  upsertAgent,
+  upsertLocation,
+} from './index';
 
 describe('builder facade — simple ops', () => {
   it('creates a draft world', async () => {
@@ -99,5 +108,137 @@ describe('builder facade — simple ops', () => {
     });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error.kind).toBe('world_kind_mismatch');
+  });
+});
+
+const seedMinimalDraft = async (repo: MemoryBuilderRepository) => {
+  const created = await createDraft(repo, { displayName: 'D', label: 'L' });
+  if (!created.ok) throw new Error('create');
+  const W = created.value;
+  await upsertLocation(repo, W, {
+    id: asLocationId('loc_a'),
+    label: 'A',
+    shortDescription: '',
+    longDescription: '',
+  });
+  await upsertAgent(repo, W, {
+    id: asAgentId('char_p'),
+    label: 'P',
+    shortDescription: '',
+    longDescription: '',
+    locationId: asLocationId('loc_a'),
+    hp: 10,
+    damage: 0,
+    defense: 0,
+    capacity: 10,
+    mood: null,
+    goal: null,
+    autonomous: false,
+  });
+  await repo.updateWorldSummary(W, { playerAgentId: asAgentId('char_p') });
+  return W;
+};
+
+describe('publish', () => {
+  it('refuses to publish a draft with validation problems', async () => {
+    const repo = new MemoryBuilderRepository();
+    const created = await createDraft(repo, { displayName: 'D', label: 'L' });
+    if (!created.ok) throw new Error();
+    const r = await publish(repo, created.value);
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.error.kind).toBe('validation_failed');
+      expect((r.error.problems ?? []).length).toBeGreaterThan(0);
+    }
+  });
+
+  it('creates a live world on first publish', async () => {
+    const repo = new MemoryBuilderRepository();
+    const draftId = await seedMinimalDraft(repo);
+    const r = await publish(repo, draftId);
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.value.outcome).toBe(PublishOutcomeKind.Created);
+      const live = await repo.getWorldSummary(r.value.liveWorldId);
+      expect(live?.kind).toBe('live');
+      expect(live?.parentDraftId).toBe(draftId);
+      const snap = await repo.readSnapshot(r.value.liveWorldId);
+      expect(snap).not.toBeNull();
+    }
+  });
+
+  it('merges the second publish without clobbering live drift', async () => {
+    const repo = new MemoryBuilderRepository();
+    const draftId = await seedMinimalDraft(repo);
+    const first = await publish(repo, draftId);
+    if (!first.ok) throw new Error();
+    const liveId = first.value.liveWorldId;
+
+    // Simulate gameplay drift on a structural field.
+    await repo.upsertLocation(liveId, {
+      id: asLocationId('loc_a'),
+      label: 'A from gameplay',
+      shortDescription: '',
+      longDescription: '',
+    });
+    // Author edits the same location.
+    await upsertLocation(repo, draftId, {
+      id: asLocationId('loc_a'),
+      label: 'A from author',
+      shortDescription: '',
+      longDescription: '',
+    });
+
+    const second = await publish(repo, draftId);
+    expect(second.ok).toBe(true);
+    if (second.ok) {
+      expect(second.value.outcome).toBe(PublishOutcomeKind.Merged);
+      expect(second.value.skipped).toHaveLength(1);
+      const liveLocs = await repo.listLocations(liveId);
+      const [firstLoc] = liveLocs;
+      if (!firstLoc) throw new Error('expected loc');
+      expect(firstLoc.label).toBe('A from gameplay');
+    }
+  });
+});
+
+describe('cloneLiveAsDraft', () => {
+  it('copies a live world into a fresh draft', async () => {
+    const repo = new MemoryBuilderRepository();
+    const draftId = await seedMinimalDraft(repo);
+    const first = await publish(repo, draftId);
+    if (!first.ok) throw new Error();
+    const liveId = first.value.liveWorldId;
+    const cloned = await cloneLiveAsDraft(repo, liveId);
+    expect(cloned.ok).toBe(true);
+    if (cloned.ok) {
+      const tree = await getWorldTree(repo, cloned.value);
+      if (!tree.ok) throw new Error();
+      expect(tree.value.summary.kind).toBe('draft');
+      expect(tree.value.locations.map((l) => l.id as string)).toEqual(['loc_a']);
+    }
+  });
+});
+
+describe('resetLiveToDraft', () => {
+  it('replaces live rows with the draft', async () => {
+    const repo = new MemoryBuilderRepository();
+    const draftId = await seedMinimalDraft(repo);
+    const first = await publish(repo, draftId);
+    if (!first.ok) throw new Error();
+    const liveId = first.value.liveWorldId;
+    // Drift live.
+    await repo.upsertLocation(liveId, {
+      id: asLocationId('loc_a'),
+      label: 'A drifted',
+      shortDescription: '',
+      longDescription: '',
+    });
+    const r = await resetLiveToDraft(repo, draftId);
+    expect(r.ok).toBe(true);
+    const liveLocs = await repo.listLocations(liveId);
+    const [first2] = liveLocs;
+    if (!first2) throw new Error('expected loc');
+    expect(first2.label).toBe('A');
   });
 });

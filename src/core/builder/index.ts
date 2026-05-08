@@ -1,13 +1,20 @@
-import { BuilderErrorKind, WorldKind } from '@core/domain/builder-kinds';
+import {
+  BuilderErrorKind,
+  EntityKind,
+  PublishOutcomeKind,
+  WorldKind,
+} from '@core/domain/builder-kinds';
 import type {
   BuilderError,
   CreateDraftInput,
+  PublishResult,
   UpsertAgentInput,
   UpsertExitInput,
   UpsertItemInput,
   UpsertLocationInput,
   WorldTree,
 } from '@core/domain/builder-types';
+import type { Agent, Exit, Item, Location } from '@core/domain/entities';
 import {
   type AgentId,
   type ExitId,
@@ -17,7 +24,9 @@ import {
   asWorldId,
 } from '@core/domain/ids';
 import { Err, Ok, type Result } from '@core/domain/result';
+import { computeMergePlan } from './diff';
 import type { BuilderRepository } from './repository';
+import { validateWorld } from './validate';
 
 const newDraftId = (): WorldId => asWorldId(`w_draft_${Math.random().toString(36).slice(2, 10)}`);
 
@@ -170,4 +179,239 @@ export async function deleteAgent(
 
 export async function listWorlds(repo: BuilderRepository) {
   return repo.listWorlds();
+}
+
+const newLiveId = (): WorldId => asWorldId(`w_live_${Math.random().toString(36).slice(2, 10)}`);
+
+async function findLiveForDraft(
+  repo: BuilderRepository,
+  draftId: WorldId,
+): Promise<WorldId | null> {
+  const all = await repo.listWorlds();
+  const hit = all.find((w) => w.kind === WorldKind.Live && w.parentDraftId === draftId);
+  return hit?.id ?? null;
+}
+
+const asLocInput = (l: Location): UpsertLocationInput => ({
+  id: l.id,
+  label: l.label,
+  shortDescription: l.shortDescription,
+  longDescription: l.longDescription,
+});
+const asExitInput = (e: Exit): UpsertExitInput => ({
+  id: e.id,
+  from: e.from,
+  to: e.to,
+  direction: e.direction,
+  label: e.label,
+  locked: e.locked,
+  lockedByItem: e.lockedByItem,
+});
+const asItemInput = (i: Item): UpsertItemInput => ({
+  id: i.id,
+  label: i.label,
+  shortDescription: i.shortDescription,
+  longDescription: i.longDescription,
+  ownerKind: i.owner.kind,
+  ownerId: i.owner.id as string,
+  weight: i.weight,
+  hidden: i.hidden,
+});
+const asAgentInput = (a: Agent): UpsertAgentInput => ({
+  id: a.id,
+  label: a.label,
+  shortDescription: a.shortDescription,
+  longDescription: a.longDescription,
+  locationId: a.locationId,
+  hp: a.hp,
+  damage: a.damage,
+  defense: a.defense,
+  capacity: a.capacity,
+  mood: a.mood,
+  goal: a.goal,
+  autonomous: a.autonomous,
+});
+
+async function copyTreeIntoWorld(
+  repo: BuilderRepository,
+  source: WorldTree,
+  destWorldId: WorldId,
+): Promise<void> {
+  for (const l of source.locations) await repo.upsertLocation(destWorldId, asLocInput(l));
+  for (const a of source.agents) await repo.upsertAgent(destWorldId, asAgentInput(a));
+  for (const it of source.items) await repo.upsertItem(destWorldId, asItemInput(it));
+  for (const e of source.exits) await repo.upsertExit(destWorldId, asExitInput(e));
+}
+
+function snapshotJson(tree: WorldTree): string {
+  return JSON.stringify({
+    locations: tree.locations,
+    exits: tree.exits,
+    items: tree.items,
+    agents: tree.agents,
+  });
+}
+
+export async function publish(
+  repo: BuilderRepository,
+  draftId: WorldId,
+): Promise<Result<PublishResult, BuilderError>> {
+  const draftSummary = await requireWorld(repo, draftId);
+  if (!draftSummary.ok) return draftSummary;
+  if (draftSummary.value.kind !== WorldKind.Draft) {
+    return Err(err(BuilderErrorKind.WorldKindMismatch, `world ${draftId} is not a draft`));
+  }
+  const draftTree = await getWorldTree(repo, draftId);
+  if (!draftTree.ok) return draftTree;
+
+  const problems = validateWorld(draftTree.value);
+  if (problems.length > 0) {
+    return Err({
+      kind: BuilderErrorKind.ValidationFailed,
+      message: 'draft has validation problems',
+      problems,
+    });
+  }
+
+  const liveId = await findLiveForDraft(repo, draftId);
+  return repo.transaction<Result<PublishResult, BuilderError>>(async (tx) => {
+    if (!liveId) {
+      const newId = newLiveId();
+      await tx.createWorld({
+        id: newId,
+        kind: WorldKind.Live,
+        label: draftSummary.value.label,
+        displayName: draftSummary.value.displayName,
+        parentDraftId: draftId,
+        playerAgentId: draftSummary.value.playerAgentId,
+      });
+      await copyTreeIntoWorld(tx, draftTree.value, newId);
+      await tx.writeSnapshot(newId, snapshotJson(draftTree.value), Date.now());
+      return Ok({
+        outcome: PublishOutcomeKind.Created,
+        liveWorldId: newId,
+        applied: {
+          inserts:
+            draftTree.value.locations.length +
+            draftTree.value.exits.length +
+            draftTree.value.items.length +
+            draftTree.value.agents.length,
+          updates: 0,
+          deletes: 0,
+        },
+        skipped: [],
+      });
+    }
+
+    const snap = await tx.readSnapshot(liveId);
+    const liveTree = await getWorldTree(tx, liveId);
+    if (!liveTree.ok) return liveTree;
+    const snapTree: WorldTree = snap
+      ? {
+          summary: liveTree.value.summary,
+          ...(JSON.parse(snap.json) as Pick<WorldTree, 'locations' | 'exits' | 'items' | 'agents'>),
+        }
+      : { ...liveTree.value };
+    const plan = computeMergePlan(snapTree, draftTree.value, liveTree.value);
+
+    for (const l of plan.inserts.locations) await tx.upsertLocation(liveId, asLocInput(l));
+    for (const a of plan.inserts.agents) await tx.upsertAgent(liveId, asAgentInput(a));
+    for (const it of plan.inserts.items) await tx.upsertItem(liveId, asItemInput(it));
+    for (const e of plan.inserts.exits) await tx.upsertExit(liveId, asExitInput(e));
+    for (const l of plan.updates.locations) await tx.upsertLocation(liveId, asLocInput(l));
+    for (const a of plan.updates.agents) await tx.upsertAgent(liveId, asAgentInput(a));
+    for (const it of plan.updates.items) await tx.upsertItem(liveId, asItemInput(it));
+    for (const e of plan.updates.exits) await tx.upsertExit(liveId, asExitInput(e));
+    for (const ref of plan.deletes) {
+      if (ref.kind === EntityKind.Location) await tx.deleteLocation(liveId, ref.id);
+      else if (ref.kind === EntityKind.Exit) await tx.deleteExit(liveId, ref.id);
+      else if (ref.kind === EntityKind.Item) await tx.deleteItem(liveId, ref.id);
+      else await tx.deleteAgent(liveId, ref.id);
+    }
+    await tx.writeSnapshot(liveId, snapshotJson(draftTree.value), Date.now());
+
+    return Ok({
+      outcome: PublishOutcomeKind.Merged,
+      liveWorldId: liveId,
+      applied: {
+        inserts:
+          plan.inserts.locations.length +
+          plan.inserts.exits.length +
+          plan.inserts.items.length +
+          plan.inserts.agents.length,
+        updates:
+          plan.updates.locations.length +
+          plan.updates.exits.length +
+          plan.updates.items.length +
+          plan.updates.agents.length,
+        deletes: plan.deletes.length,
+      },
+      skipped: plan.skipped,
+    });
+  });
+}
+
+export async function cloneLiveAsDraft(
+  repo: BuilderRepository,
+  liveWorldId: WorldId,
+): Promise<Result<WorldId, BuilderError>> {
+  const live = await requireWorld(repo, liveWorldId);
+  if (!live.ok) return live;
+  if (live.value.kind !== WorldKind.Live) {
+    return Err(err(BuilderErrorKind.WorldKindMismatch, `world ${liveWorldId} is not live`));
+  }
+  const liveTree = await getWorldTree(repo, liveWorldId);
+  if (!liveTree.ok) return liveTree;
+
+  const draftId = newDraftId();
+  await repo.createWorld({
+    id: draftId,
+    kind: WorldKind.Draft,
+    label: live.value.label,
+    displayName: live.value.displayName,
+    parentDraftId: null,
+    playerAgentId: live.value.playerAgentId,
+  });
+  await copyTreeIntoWorld(repo, liveTree.value, draftId);
+  await repo.updateWorldSummary(liveWorldId, { parentDraftId: draftId });
+  return Ok(draftId);
+}
+
+export async function resetLiveToDraft(
+  repo: BuilderRepository,
+  draftId: WorldId,
+): Promise<Result<void, BuilderError>> {
+  const draft = await requireWorld(repo, draftId);
+  if (!draft.ok) return draft;
+  if (draft.value.kind !== WorldKind.Draft) {
+    return Err(err(BuilderErrorKind.WorldKindMismatch, `world ${draftId} is not a draft`));
+  }
+  const liveId = await findLiveForDraft(repo, draftId);
+  if (!liveId) {
+    return Err(
+      err(BuilderErrorKind.NoLiveWorldForDraft, `no live world published from ${draftId}`),
+    );
+  }
+  const draftTree = await getWorldTree(repo, draftId);
+  if (!draftTree.ok) return draftTree;
+  const problems = validateWorld(draftTree.value);
+  if (problems.length > 0) {
+    return Err({
+      kind: BuilderErrorKind.ValidationFailed,
+      message: 'draft has validation problems',
+      problems,
+    });
+  }
+
+  return repo.transaction<Result<void, BuilderError>>(async (tx) => {
+    const live = await getWorldTree(tx, liveId);
+    if (!live.ok) return live;
+    for (const e of live.value.exits) await tx.deleteExit(liveId, e.id);
+    for (const it of live.value.items) await tx.deleteItem(liveId, it.id);
+    for (const a of live.value.agents) await tx.deleteAgent(liveId, a.id);
+    for (const l of live.value.locations) await tx.deleteLocation(liveId, l.id);
+    await copyTreeIntoWorld(tx, draftTree.value, liveId);
+    await tx.writeSnapshot(liveId, snapshotJson(draftTree.value), Date.now());
+    return Ok(undefined);
+  });
 }
