@@ -81,7 +81,10 @@ describe('runTurn', () => {
     });
     const r = await runTurn(paff.id, 'frobnicate', repo);
     expect(r.render).toContain('frobnicate');
-    expect(r.events).toEqual([]);
+    // A failed parse now emits a private `failed` event so the actor remembers
+    // the mistake on their next turn (NPCs were previously dumbly retrying).
+    expect(r.events).toHaveLength(1);
+    expect(r.events[0]?.kind).toBe('failed');
   });
 
   it('returns an action-error message when the action fails', async () => {

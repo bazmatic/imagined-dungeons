@@ -169,7 +169,7 @@ async function summariseEvent(
     case EventKind.Inventory:
       return `${actorLabel} checked inventory`;
     case EventKind.Failed:
-      return `${actorLabel} attempted: ${event.attempted}`;
+      return `${actorLabel} tried "${event.attempted}" but it failed: ${event.reason}`;
     case EventKind.Speak: {
       const targetLabel = await labelOf(event.targetAgentId);
       // When the NPC is the target, foreground that — direct address is the
@@ -221,9 +221,10 @@ async function buildUserPrompt(
     if (a.mood) return `${a.label} (mood: ${a.mood})`;
     return a.label;
   });
-  const exits = view.exits.map((e) =>
-    e.label && e.label !== e.direction ? `${e.direction} (${e.label})` : e.direction,
-  );
+  const exits = view.exits.map((e) => {
+    const base = e.label && e.label !== e.direction ? `${e.direction} (${e.label})` : e.direction;
+    return e.locked ? `${base} [LOCKED]` : base;
+  });
   const inv = inventory.map((i) => i.label);
   const lines: string[] = [];
   lines.push(`Location: ${view.location.label}`);

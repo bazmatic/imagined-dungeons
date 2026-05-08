@@ -3,6 +3,7 @@ import type { DomainEvent } from '@core/domain/events';
 import type { AgentId } from '@core/domain/ids';
 import { OwnerKind } from '@core/domain/kinds';
 import { dispatch } from './actions/registry';
+import { nextEventId } from './ids-gen';
 import type { LanguageModel } from './language-model';
 import { narrate } from './narrate';
 import { parse as ruleParse } from './parser';
@@ -41,12 +42,36 @@ export async function runTurn(
 
   const parsed = await parse(text, actor, view, inventory);
   if (!('actorId' in parsed)) {
-    return { render: renderParseError(parsed), events: [] };
+    const reason = renderParseError(parsed);
+    const failed: DomainEvent = {
+      id: nextEventId(),
+      worldId: await repo.getWorldId(),
+      actorId,
+      witnesses: [actorId],
+      createdAt: new Date(),
+      kind: 'failed',
+      attempted: text,
+      reason,
+    };
+    await repo.appendEvent(failed);
+    return { render: reason, events: [failed] };
   }
 
   const r = await dispatch(parsed, repo);
   if (!r.ok) {
-    return { render: renderActionError(r.error), events: [] };
+    const reason = renderActionError(r.error);
+    const failed: DomainEvent = {
+      id: nextEventId(),
+      worldId: await repo.getWorldId(),
+      actorId,
+      witnesses: [actorId],
+      createdAt: new Date(),
+      kind: 'failed',
+      attempted: text,
+      reason,
+    };
+    await repo.appendEvent(failed);
+    return { render: reason, events: [failed] };
   }
 
   const outcome = r.value;
