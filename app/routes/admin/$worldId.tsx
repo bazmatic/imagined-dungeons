@@ -66,8 +66,15 @@ function AdminWorld() {
   };
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', minHeight: '100vh' }}>
-      <aside style={{ borderRight: '1px solid #222', padding: 16, overflowY: 'auto' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '480px 1fr', minHeight: '100vh' }}>
+      <aside
+        style={{
+          borderRight: '1px solid #222',
+          padding: 16,
+          overflowY: 'auto',
+          whiteSpace: 'nowrap',
+        }}
+      >
         <h2 style={{ fontSize: 14, marginBottom: 8 }}>
           {t.summary.displayName || t.summary.label}{' '}
           <small style={{ opacity: 0.6 }}>({t.summary.kind})</small>
