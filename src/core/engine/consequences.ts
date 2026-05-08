@@ -43,7 +43,7 @@ const SYSTEM_PROMPT_LINES: readonly string[] = [
   '',
   'When to update shortTermIntent (agent target only):',
   '- After an agent commits to something verbally ("Sure, I\'ll take the map"): set their shortTermIntent to that commitment.',
-  '- After an agent fulfils their commitment (e.g. they said they\'d take the map and now they did): clear shortTermIntent (set it to "").',
+  '- **CRITICAL**: After an agent fulfils their existing shortTermIntent, you MUST clear it (set it to ""). The intent is shown next to each agent below; cross-reference it against this batch of events. If the events show the intent has been carried out — e.g. intent "deliver the map to Serena" and the events include "Spark went south" + "Spark said \\"here is your map\\" to Captain Serena" or a drop of the map in Serena\'s location — emit an update_description that sets shortTermIntent to "" for that agent. If you do not clear it, the agent will pursue the same already-completed goal forever.',
   '- After a major event reorients them: set a new intent.',
   '- Routine actions do NOT change shortTermIntent.',
   '',
@@ -360,6 +360,22 @@ async function buildUserPrompt(events: readonly DomainEvent[], repo: Repository)
       lines.push(`    long: ${a.longDescription}`);
       lines.push(`    mood: ${a.mood ?? '(none)'}`);
       lines.push(`    shortTermIntent: ${a.shortTermIntent ?? '(none)'}`);
+    }
+
+    // Foreground a fulfilment check for any agent that currently has a
+    // short-term intent. The system prompt says "clear it on fulfilment";
+    // putting the question explicitly here makes it much harder for the
+    // model to silently leave the intent stale.
+    const withIntent = agents.filter((a) => a.shortTermIntent !== null);
+    if (withIntent.length > 0) {
+      lines.push('');
+      lines.push('Intent fulfilment check — for each of the following, decide:');
+      lines.push(
+        'do the events above show that this agent has now CARRIED OUT this intent? If yes, emit an update_description with shortTermIntent="" for them.',
+      );
+      for (const a of withIntent) {
+        lines.push(`- ${a.label} currently intends: "${a.shortTermIntent}"`);
+      }
     }
   }
 
