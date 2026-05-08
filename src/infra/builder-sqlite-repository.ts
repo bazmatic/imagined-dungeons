@@ -20,7 +20,7 @@ import {
   asLocationId,
 } from '@core/domain/ids';
 import { type Direction, OwnerKind } from '@core/domain/kinds';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import type { DB } from './db';
 import * as schema from './schema';
 
@@ -91,7 +91,7 @@ export class SqliteBuilderRepository implements BuilderRepository {
         longDescription: i.longDescription,
       })
       .onConflictDoUpdate({
-        target: schema.locations.id,
+        target: [schema.locations.worldId, schema.locations.id],
         set: {
           label: i.label,
           shortDescription: i.shortDescription,
@@ -113,7 +113,7 @@ export class SqliteBuilderRepository implements BuilderRepository {
         lockedByItemId: i.lockedByItem,
       })
       .onConflictDoUpdate({
-        target: schema.exits.id,
+        target: [schema.exits.worldId, schema.exits.id],
         set: {
           fromLocationId: i.from,
           toLocationId: i.to,
@@ -139,7 +139,7 @@ export class SqliteBuilderRepository implements BuilderRepository {
         hidden: i.hidden,
       })
       .onConflictDoUpdate({
-        target: schema.items.id,
+        target: [schema.items.worldId, schema.items.id],
         set: {
           label: i.label,
           shortDescription: i.shortDescription,
@@ -175,7 +175,7 @@ export class SqliteBuilderRepository implements BuilderRepository {
         awake: false,
       })
       .onConflictDoUpdate({
-        target: schema.agents.id,
+        target: [schema.agents.worldId, schema.agents.id],
         set: {
           label: i.label,
           shortDescription: i.shortDescription,
@@ -190,17 +190,25 @@ export class SqliteBuilderRepository implements BuilderRepository {
       });
   }
 
-  async deleteLocation(_w: WorldId, id: LocationId) {
-    await this.db.delete(schema.locations).where(eq(schema.locations.id, id));
+  async deleteLocation(w: WorldId, id: LocationId) {
+    await this.db
+      .delete(schema.locations)
+      .where(and(eq(schema.locations.worldId, w), eq(schema.locations.id, id)));
   }
-  async deleteExit(_w: WorldId, id: ExitId) {
-    await this.db.delete(schema.exits).where(eq(schema.exits.id, id));
+  async deleteExit(w: WorldId, id: ExitId) {
+    await this.db
+      .delete(schema.exits)
+      .where(and(eq(schema.exits.worldId, w), eq(schema.exits.id, id)));
   }
-  async deleteItem(_w: WorldId, id: ItemId) {
-    await this.db.delete(schema.items).where(eq(schema.items.id, id));
+  async deleteItem(w: WorldId, id: ItemId) {
+    await this.db
+      .delete(schema.items)
+      .where(and(eq(schema.items.worldId, w), eq(schema.items.id, id)));
   }
-  async deleteAgent(_w: WorldId, id: AgentId) {
-    await this.db.delete(schema.agents).where(eq(schema.agents.id, id));
+  async deleteAgent(w: WorldId, id: AgentId) {
+    await this.db
+      .delete(schema.agents)
+      .where(and(eq(schema.agents.worldId, w), eq(schema.agents.id, id)));
   }
 
   async readSnapshot(w: WorldId) {

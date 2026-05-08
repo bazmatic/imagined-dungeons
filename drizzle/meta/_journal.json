@@ -43,6 +43,13 @@
       "when": 1778232780399,
       "tag": "0005_campaign_builder",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1778243729361,
+      "tag": "0006_composite_primary_keys",
+      "breakpoints": true
     }
   ]
 }

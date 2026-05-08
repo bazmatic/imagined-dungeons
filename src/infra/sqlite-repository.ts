@@ -83,28 +83,40 @@ export class SqliteRepository implements Repository {
   }
 
   async getAgent(id: AgentId): Promise<Agent> {
-    const rows = await this.db.select().from(schema.agents).where(eq(schema.agents.id, id));
+    const rows = await this.db
+      .select()
+      .from(schema.agents)
+      .where(and(eq(schema.agents.id, id), eq(schema.agents.worldId, this.worldId)));
     const row = rows[0];
     if (!row) throw new Error(`agent not found: ${id}`);
     return toAgent(row, this.worldId);
   }
 
   async getLocation(id: LocationId): Promise<Location> {
-    const rows = await this.db.select().from(schema.locations).where(eq(schema.locations.id, id));
+    const rows = await this.db
+      .select()
+      .from(schema.locations)
+      .where(and(eq(schema.locations.id, id), eq(schema.locations.worldId, this.worldId)));
     const row = rows[0];
     if (!row) throw new Error(`location not found: ${id}`);
     return toLocation(row, this.worldId);
   }
 
   async getItem(id: ItemId): Promise<Item> {
-    const rows = await this.db.select().from(schema.items).where(eq(schema.items.id, id));
+    const rows = await this.db
+      .select()
+      .from(schema.items)
+      .where(and(eq(schema.items.id, id), eq(schema.items.worldId, this.worldId)));
     const row = rows[0];
     if (!row) throw new Error(`item not found: ${id}`);
     return toItem(row, this.worldId);
   }
 
   async getExit(id: ExitId): Promise<Exit> {
-    const rows = await this.db.select().from(schema.exits).where(eq(schema.exits.id, id));
+    const rows = await this.db
+      .select()
+      .from(schema.exits)
+      .where(and(eq(schema.exits.id, id), eq(schema.exits.worldId, this.worldId)));
     const row = rows[0];
     if (!row) throw new Error(`exit not found: ${id}`);
     return toExit(row, this.worldId);
@@ -114,7 +126,13 @@ export class SqliteRepository implements Repository {
     const rows = await this.db
       .select()
       .from(schema.items)
-      .where(and(eq(schema.items.ownerKind, owner.kind), eq(schema.items.ownerId, owner.id)));
+      .where(
+        and(
+          eq(schema.items.worldId, this.worldId),
+          eq(schema.items.ownerKind, owner.kind),
+          eq(schema.items.ownerId, owner.id),
+        ),
+      );
     return rows.map((r) => toItem(r, this.worldId));
   }
 
@@ -122,7 +140,7 @@ export class SqliteRepository implements Repository {
     const rows = await this.db
       .select()
       .from(schema.agents)
-      .where(eq(schema.agents.locationId, loc));
+      .where(and(eq(schema.agents.worldId, this.worldId), eq(schema.agents.locationId, loc)));
     return rows.map((r) => toAgent(r, this.worldId));
   }
 
@@ -138,27 +156,36 @@ export class SqliteRepository implements Repository {
     const rows = await this.db
       .select()
       .from(schema.exits)
-      .where(eq(schema.exits.fromLocationId, loc));
+      .where(and(eq(schema.exits.worldId, this.worldId), eq(schema.exits.fromLocationId, loc)));
     return rows.map((r) => toExit(r, this.worldId));
   }
 
   async moveAgent(id: AgentId, to: LocationId): Promise<void> {
-    await this.db.update(schema.agents).set({ locationId: to }).where(eq(schema.agents.id, id));
+    await this.db
+      .update(schema.agents)
+      .set({ locationId: to })
+      .where(and(eq(schema.agents.worldId, this.worldId), eq(schema.agents.id, id)));
   }
 
   async transferItem(id: ItemId, to: Owner): Promise<void> {
     await this.db
       .update(schema.items)
       .set({ ownerKind: to.kind, ownerId: to.id })
-      .where(eq(schema.items.id, id));
+      .where(and(eq(schema.items.worldId, this.worldId), eq(schema.items.id, id)));
   }
 
   async setAgentHp(id: AgentId, hp: number): Promise<void> {
-    await this.db.update(schema.agents).set({ hp }).where(eq(schema.agents.id, id));
+    await this.db
+      .update(schema.agents)
+      .set({ hp })
+      .where(and(eq(schema.agents.worldId, this.worldId), eq(schema.agents.id, id)));
   }
 
   async setAgentAwake(id: AgentId, awake: boolean): Promise<void> {
-    await this.db.update(schema.agents).set({ awake }).where(eq(schema.agents.id, id));
+    await this.db
+      .update(schema.agents)
+      .set({ awake })
+      .where(and(eq(schema.agents.worldId, this.worldId), eq(schema.agents.id, id)));
   }
 
   async appendEvent(event: DomainEvent): Promise<void> {
@@ -200,7 +227,10 @@ export class SqliteRepository implements Repository {
     if (patch.short !== undefined) set.shortDescription = patch.short;
     if (patch.long !== undefined) set.longDescription = patch.long;
     if (Object.keys(set).length === 0) return;
-    await this.db.update(schema.locations).set(set).where(eq(schema.locations.id, id));
+    await this.db
+      .update(schema.locations)
+      .set(set)
+      .where(and(eq(schema.locations.worldId, this.worldId), eq(schema.locations.id, id)));
   }
 
   async updateItemDescription(id: ItemId, patch: { short?: string; long?: string }): Promise<void> {
@@ -208,7 +238,10 @@ export class SqliteRepository implements Repository {
     if (patch.short !== undefined) set.shortDescription = patch.short;
     if (patch.long !== undefined) set.longDescription = patch.long;
     if (Object.keys(set).length === 0) return;
-    await this.db.update(schema.items).set(set).where(eq(schema.items.id, id));
+    await this.db
+      .update(schema.items)
+      .set(set)
+      .where(and(eq(schema.items.worldId, this.worldId), eq(schema.items.id, id)));
   }
 
   async updateAgentDescription(
@@ -231,11 +264,18 @@ export class SqliteRepository implements Repository {
     if (patch.mood !== undefined) set.mood = patch.mood;
     if (patch.shortTermIntent !== undefined) set.shortTermIntent = patch.shortTermIntent;
     if (Object.keys(set).length === 0) return;
-    await this.db.update(schema.agents).set(set).where(eq(schema.agents.id, id));
+    await this.db
+      .update(schema.agents)
+      .set(set)
+      .where(and(eq(schema.agents.worldId, this.worldId), eq(schema.agents.id, id)));
   }
 
   async recentEvents(limit: number): Promise<readonly DomainEvent[]> {
-    const rows = await this.db.select().from(schema.events).orderBy(schema.events.createdAt);
+    const rows = await this.db
+      .select()
+      .from(schema.events)
+      .where(eq(schema.events.worldId, this.worldId))
+      .orderBy(schema.events.createdAt);
     const slice = rows.slice(-limit);
     return slice.map((r) => {
       const narrations = r.narrations as Record<string, string> | null;
