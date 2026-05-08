@@ -90,6 +90,7 @@ export class MemoryBuilderRepository implements BuilderRepository {
       worldId: w,
       from: i.from,
       to: i.to,
+      // UpsertExitInput.direction is `string`; validation lives in the builder validator (validate.ts), not here.
       direction: i.direction as Direction,
       label: i.label,
       locked: i.locked,
