@@ -76,7 +76,7 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
     '2. If someone is currently attacking you (and you have not yet retaliated), decide whether to fight back, flee through an exit, or speak.',
   );
   lines.push(
-    "3. If you have a `Current short-term intent` (shown in the header above), make progress on it this turn — pick up the item, take a step in the relevant direction, etc. Don't restart the conversation; act. The intent is what you committed to most recently; the world will clear it once you fulfil it.",
+    "3. If you have a `Current short-term intent` (shown in the header above), FIRST decide whether you have already carried it out — looking at the events you've witnessed and your current state (location, inventory, who's here). If you HAVE finished it, your reply MUST begin with the literal line `INTENT_DONE` on its own (nothing else on that line), then a newline, then your next action command for this turn (which can be `I wait.` if there's nothing else to do). If you have NOT yet carried it out, do the next concrete step toward it — pick up the item, take a step in the relevant direction, deliver the item, etc. Don't restart the conversation; act. Use `INTENT_DONE` only when the intent is genuinely complete; otherwise omit it.",
   );
   lines.push(
     "4. Otherwise, pick something consistent with your long-term goal — move toward something useful, examine your surroundings, pick up something you'd want, emote a small in-character gesture, or wait. Don't repeat or rephrase things you've already said, and do NOT volunteer follow-up speech about earlier exchanges.",
@@ -331,10 +331,22 @@ export async function decideNpcIntent(
       system: SYSTEM_PROMPT(actor),
       user: await buildUserPrompt(ctx, actorId, repo),
     });
-    const trimmed = prose.trim();
+    let trimmed = prose.trim();
     if (trimmed.length === 0) {
       console.warn(`[npc-mind] empty response for ${actor.label}; falling back to wait`);
       return NpcFallbackIntent;
+    }
+    // Self-fulfilment signal: when the NPC believes their current
+    // shortTermIntent has been carried out, they prefix the reply with the
+    // line `INTENT_DONE`. Clear the intent and strip the marker so the
+    // remainder is the action command for this turn.
+    if (/^INTENT_DONE\b/.test(trimmed)) {
+      trimmed = trimmed.replace(/^INTENT_DONE\b[ \t]*\r?\n?/, '').trim();
+      if (actor.shortTermIntent !== null) {
+        await repo.updateAgentDescription(actorId, { shortTermIntent: null });
+        console.info(`[npc-mind] ${actor.label} cleared own intent: "${actor.shortTermIntent}"`);
+      }
+      if (trimmed.length === 0) return NpcFallbackIntent;
     }
     return trimmed;
   } catch (err) {

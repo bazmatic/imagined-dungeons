@@ -164,6 +164,45 @@ describe('decideNpcIntent', () => {
     expect(call.system).not.toMatch(/Current short-term intent:/);
   });
 
+  it('clears own shortTermIntent when reply begins with INTENT_DONE; returns the trailing action', async () => {
+    const llm = makeFakeLanguageModel({
+      textResponder: () => 'INTENT_DONE\nI wait.',
+    });
+    const sparkWithIntent: Agent = {
+      ...spark,
+      shortTermIntent: 'deliver the fire map to Captain Serena',
+    };
+    const repo = new MemoryRepository(W, {
+      locations: [loc],
+      exits: [],
+      items: [],
+      agents: [sparkWithIntent, paff],
+    });
+    expect((await repo.getAgent(SPARK_ID)).shortTermIntent).toBe(
+      'deliver the fire map to Captain Serena',
+    );
+    const intent = await decideNpcIntent(SPARK_ID, repo, llm);
+    expect(intent).toBe('I wait.');
+    expect((await repo.getAgent(SPARK_ID)).shortTermIntent).toBeNull();
+  });
+
+  it('falls back to "wait" when INTENT_DONE arrives with no following action', async () => {
+    const llm = makeFakeLanguageModel({ textResponder: () => 'INTENT_DONE' });
+    const sparkWithIntent: Agent = {
+      ...spark,
+      shortTermIntent: 'deliver the fire map to Captain Serena',
+    };
+    const repo = new MemoryRepository(W, {
+      locations: [loc],
+      exits: [],
+      items: [],
+      agents: [sparkWithIntent, paff],
+    });
+    const intent = await decideNpcIntent(SPARK_ID, repo, llm);
+    expect(intent).toBe(NpcFallbackIntent);
+    expect((await repo.getAgent(SPARK_ID)).shortTermIntent).toBeNull();
+  });
+
   it('behavioural priorities mention the short-term intent', async () => {
     const llm = makeFakeLanguageModel({ textResponder: () => 'I wait.' });
     const repo = makeRepo();
