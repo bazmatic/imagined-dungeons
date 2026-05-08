@@ -1,4 +1,4 @@
-import { SkipReasonKind } from '@core/domain/builder-kinds';
+import { EntityKind, SkipReasonKind } from '@core/domain/builder-kinds';
 import type { EntityRef, MergePlan, SkipReport, WorldTree } from '@core/domain/builder-types';
 import type { Agent, Exit, Item, Location } from '@core/domain/entities';
 
@@ -21,25 +21,25 @@ export function computeMergePlan(
   const updates = blank();
   const deletes: EntityRef[] = [];
 
-  diffEntity('location', snapshot.locations, draft.locations, live.locations, locEq, {
+  diffEntity(EntityKind.Location, snapshot.locations, draft.locations, live.locations, locEq, {
     inserts,
     updates,
     deletes,
     skipped,
   });
-  diffEntity('exit', snapshot.exits, draft.exits, live.exits, exitEq, {
+  diffEntity(EntityKind.Exit, snapshot.exits, draft.exits, live.exits, exitEq, {
     inserts,
     updates,
     deletes,
     skipped,
   });
-  diffEntity('item', snapshot.items, draft.items, live.items, itemEq, {
+  diffEntity(EntityKind.Item, snapshot.items, draft.items, live.items, itemEq, {
     inserts,
     updates,
     deletes,
     skipped,
   });
-  diffEntity('agent', snapshot.agents, draft.agents, live.agents, agentStructEq, {
+  diffEntity(EntityKind.Agent, snapshot.agents, draft.agents, live.agents, agentStructEq, {
     inserts,
     updates,
     deletes,
@@ -66,7 +66,7 @@ function blank() {
 }
 
 function diffEntity<T extends { id: unknown }>(
-  kind: 'location' | 'exit' | 'item' | 'agent',
+  kind: EntityKind,
   snap: readonly T[],
   draft: readonly T[],
   live: readonly T[],
@@ -135,21 +135,17 @@ function diffEntity<T extends { id: unknown }>(
   }
 }
 
-function pushTo(
-  bucket: ReturnType<typeof blank>,
-  kind: 'location' | 'exit' | 'item' | 'agent',
-  row: unknown,
-): void {
-  if (kind === 'location') bucket.locations.push(row as Location);
-  else if (kind === 'exit') bucket.exits.push(row as Exit);
-  else if (kind === 'item') bucket.items.push(row as Item);
+function pushTo(bucket: ReturnType<typeof blank>, kind: EntityKind, row: unknown): void {
+  if (kind === EntityKind.Location) bucket.locations.push(row as Location);
+  else if (kind === EntityKind.Exit) bucket.exits.push(row as Exit);
+  else if (kind === EntityKind.Item) bucket.items.push(row as Item);
   else bucket.agents.push(row as Agent);
 }
 
-function refOf(kind: 'location' | 'exit' | 'item' | 'agent', id: string): EntityRef {
-  if (kind === 'location') return { kind, id: id as never };
-  if (kind === 'exit') return { kind, id: id as never };
-  if (kind === 'item') return { kind, id: id as never };
+function refOf(kind: EntityKind, id: string): EntityRef {
+  if (kind === EntityKind.Location) return { kind, id: id as never };
+  if (kind === EntityKind.Exit) return { kind, id: id as never };
+  if (kind === EntityKind.Item) return { kind, id: id as never };
   return { kind, id: id as never };
 }
 
