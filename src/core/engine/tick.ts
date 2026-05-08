@@ -9,11 +9,13 @@ import type { LanguageModel } from './language-model';
 import { decideNpcIntent } from './npc-mind';
 import { MAX_NPCS_PER_TICK, scheduleNpcs } from './npc-scheduler';
 import type { ParseFn } from './parser/composite';
+import { perceive } from './perception';
 import type { Repository } from './repository';
 import {
   renderAgentStateUpdatedObserved,
   renderDescriptionUpdatedObserved,
   renderDropObserved,
+  renderLook,
   renderLookObserved,
   renderMoveObserved,
   renderTakeObserved,
@@ -200,6 +202,14 @@ export async function runTick(
     const playerResult = await runTurn(playerId, text, repo, { parse, llm });
     playerRender = playerResult.render;
     events.push(...playerResult.events);
+
+    // After a successful move, follow up with a full room overview so the
+    // player gets the same orientation a `look` would print. Mirrors what
+    // most parser-IFs do; matches the data the sidebar refreshes with.
+    if (playerResult.events.some((e) => e.kind === EventKind.Move)) {
+      const view = await perceive(playerId, repo);
+      playerRender = `${playerRender}\n\n${renderLook(view)}`;
+    }
 
     // 2. Consequence pass over the player's events (depth 0).
     const postPlayerConsequences = await runConsequencePass(playerResult.events, repo, llm, 0);
