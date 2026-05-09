@@ -338,6 +338,11 @@ export async function publish(
       else if (ref.kind === EntityKind.Exit) await tx.deleteExit(liveId, ref.id);
       else if (ref.kind === EntityKind.Item) await tx.deleteItem(liveId, ref.id);
       else if (ref.kind === EntityKind.Agent) await tx.deleteAgent(liveId, ref.id);
+      else {
+        // MonsterTemplate / LocationSpawnTrigger never appear in structural merges —
+        // they're authored rules, not entities. Reaching this branch is a logic error.
+        throw new Error(`unexpected entity kind in publish deletes: ${ref.kind}`);
+      }
     }
     await tx.writeSnapshot(liveId, snapshotJson(draftTree.value), Date.now());
 
