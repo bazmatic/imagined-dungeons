@@ -51,39 +51,18 @@ In scope for v1:
 
 Out of scope (deferred):
 
-- **Tracking which template produced which agent.** Once spawned, an
-  instance is a regular agent. There is no `spawnedFromTemplateId`
-  column, no snapshot reconciliation, no refill-on-death.
-- **Refilling killed monsters.** A goblin killed by the player is gone
-  for the rest of that live world's life. Re-populating the room
-  requires a fresh `resetLiveToDraft`.
-- **Population-style rules** ("this room always has 1-3 goblins").
-  Replaced by a trigger that fires on first player entry. The author
-  chooses whether that trigger is one-shot or fires every entry.
-- **Re-publication never spawns monsters.** Re-publishing a draft
-  does not fire `fireOnInitialPublish` triggers, does not reconcile
-  populations, does not insert any agents. Triggers that have
-  already fired stay fired across re-publishes; their `firedAt`
-  timestamp on the live world is preserved when the live world's
-  trigger row is replaced from the draft. Newly-authored triggers
-  (added in the draft since last publish) inherit no firing
-  history — they will fire at *tick* time on the next qualifying
-  event, but not on this re-publish. The author's response to "I
-  added a goblin and want it to appear" is `resetLiveToDraft` — a
-  full publish-to-replace — not a re-publish.
-- A bespoke builder UI for templates. v1 uses the existing JSON-fallback
-  editor in the admin tree for "exotic" entity kinds; MCP is the primary
-  authoring surface for templates.
-- Loot tables, drop tables, monster inventories beyond a flat starting
-  item list.
+- A bespoke builder UI for templates. v1 uses the existing
+  JSON-fallback editor in the admin tree for "exotic" entity kinds;
+  MCP is the primary authoring surface for templates.
+- Loot tables and drop tables. Templates carry a flat starting-item
+  list (see §"Item starter packs"); anything beyond that is a later
+  slice.
 - Monster AI specialisation (custom behaviour trees, faction systems,
   pack behaviour). Spawned agents reuse the existing `npc-mind`
   pipeline.
-- Procedural generation (random rooms, random templates). Templates are
+- Procedural generation of rooms or templates. Templates are
   hand-authored; only *instances* are generated.
 - Levelling, scaling by player progression, encounter budget systems.
-- Despawn/cleanup of stale monsters. v1 leaves dead monsters where they
-  fall.
 
 ## Decisions (from brainstorming)
 
@@ -99,25 +78,23 @@ Out of scope (deferred):
    zero-or-more `LocationSpawnTrigger`s. Same template reusable across
    rooms with independent firing rules. Matches the engine's existing
    pattern of locations owning their exits and items.
-3. **No instance tracking, no refill.** Once a monster is spawned it
-   is a normal agent and is no longer associated with the template
-   that produced it. If the player kills it, it stays dead. The only
-   spawn-related state stored in the live world is "has this trigger
-   fired yet?" — a per-trigger `firedAt` timestamp in the
-   `world_snapshots` payload.
-4. **Initial publish spawns; re-publish does not.** A trigger with
-   `fireOnInitialPublish: true` fires deterministically when the
-   draft is published into a fresh live world (either no prior live
-   world existed, or `resetLiveToDraft` was invoked). On any
-   subsequent re-publish the same trigger is a no-op — re-publish
-   never inserts agents and never reconciles populations. This
-   matches the intuition that re-publish is for incremental edits
-   to an in-progress live world, while a full reset is what an
-   author does when they want their authoring intent (including new
-   monsters) to take effect across the board. Population semantics
-   (a room "always has" some monsters when the campaign starts) are
-   expressed as a `PlayerEnters` trigger with both
-   `fireOnInitialPublish: true` and `oneShot: true`.
+3. **A spawned monster is just an agent.** Once expanded into the
+   `agents` table, a spawned instance is a normal agent. If the
+   player kills it, it stays dead. The only spawn-related state on
+   the live world is a per-trigger `firedAt` timestamp in the
+   `world_snapshots` payload, used to gate one-shot triggers.
+4. **Initial publish spawns; re-publish leaves the live world's
+   monsters alone.** A trigger with `fireOnInitialPublish: true`
+   fires deterministically when the draft is published into a fresh
+   live world (either the first publish for a draft, or via
+   `resetLiveToDraft`). Re-publish — i.e. publish into an existing
+   live world — applies structural edits and refreshes templates
+   and triggers, but leaves agents untouched. The author's path to
+   "I added a goblin and want it placed" is `resetLiveToDraft`, a
+   full publish-to-replace. Population semantics (a room "always
+   has" some monsters when the campaign starts) are expressed as a
+   `PlayerEnters` trigger with both `fireOnInitialPublish: true`
+   and `oneShot: true`.
 5. **Two trigger kinds: mechanical events and LLM judgements.**
    Mechanical triggers pattern-match concrete domain events
    (`PlayerEnters`, `CombatStarts`, `ItemTaken`, `Speech`); these are
@@ -240,12 +217,11 @@ location_spawn_triggers(
 )
 ```
 
-There is no `min`/`max` and no `refillOnDeath`. A trigger fires when
-either:
+A trigger fires when either:
 
 - its `kind`-specific dispatcher matches at tick time, or
 - it has `fireOnInitialPublish: true` and the publish is an *initial*
-  publish (no prior live world, or via `resetLiveToDraft`).
+  publish (the first publish for a draft, or via `resetLiveToDraft`).
 
 In both cases, if `oneShot` is set the trigger only fires when its
 live `firedAt` is null. Each firing inserts `count` agent rows at
@@ -309,8 +285,8 @@ the map and fire on the next qualifying tick.
 
 `resetLiveToDraft` clears `triggerFireState` entirely.
 
-Note: the `agents` table is **not** modified. Spawned instances are
-just normal agents; nothing in the schema points back at the trigger
+Spawned instances are written to the existing `agents` table with
+no extra columns; nothing in the schema points back at the trigger
 or template that produced them.
 
 ## Components
@@ -328,13 +304,8 @@ expandSpawn(args: {
 Pure — takes the template, the destination, and a count, and returns
 `count` agent inserts. Each insert lands at `locationId` carrying the
 template's narrative fields. New agent ids are minted with a fresh
-short suffix per call. There is no per-instance state — once these
-rows are inserted into `agents`, the spawning subsystem forgets about
-them.
-
-(There is no `reconcile.ts` — the previous design tracked live
-instances per rule against a snapshot to support refill semantics.
-Refill was cut from scope, so reconciliation is gone with it.)
+short suffix per call. The spawning subsystem keeps no per-instance
+state: once the rows are inserted, they are ordinary agents.
 
 ### `src/core/spawning/triggers.ts` (mostly pure)
 
@@ -495,13 +466,11 @@ by whether a live world already exists for the draft (and not via
    This pass is bounded only by the count of `fireOnInitialPublish`
    triggers in the draft (no per-tick cap; the author has authored
    each spawn explicitly).
-4. **Re-publish** — skip step 3 entirely. Insert no agents.
-   Re-publish never spawns. The live world's already-spawned
-   monsters remain as ordinary agents, untouched.
+4. **Re-publish** — step 3 is skipped. The live world's existing
+   monsters remain as ordinary agents.
 5. Commit transaction. Publish returns
    `PublishResult { applied, skipped, initialSpawns }` where
-   `initialSpawns` is the count of agents inserted by step 3 (zero
-   on re-publish).
+   `initialSpawns` is the count of agents inserted by step 3.
 
 `resetLiveToDraft` is treated as initial publish for the purposes of
 step 3 — `triggerFireState` is cleared first, then every
@@ -617,15 +586,15 @@ Continuing the campaign-builder invariant set:
 7. **Spawned agents are normal agents.** Once expanded into the
    `agents` table, spawned instances are mechanically identical to
    hand-authored agents. The engine, `npc-mind`, and the perception
-   system do not branch on origin. There is no column on `agents`
-   pointing at the producing template or trigger.
-8. **Killed monsters stay killed.** The engine never refills. A
-   monster killed by the player is gone for the rest of that live
-   world's life. Re-populating requires `resetLiveToDraft`.
-9. **Re-publish never spawns.** Publish into an existing live world
-   (i.e. one that already has a `parentDraftId` linkage to the draft
-   being published) does not insert into `agents`. Triggers with
-   `fireOnInitialPublish: true` are no-ops on re-publish.
+   system treat them uniformly with hand-authored agents.
+8. **Killed monsters stay killed.** A monster killed by the player
+   is gone for the rest of that live world's life. Re-populating
+   requires `resetLiveToDraft`.
+9. **Only initial publish spawns.** Publishing into an existing
+   live world (one that already has a `parentDraftId` linkage to
+   the draft being published) leaves agents untouched. Spawning
+   from `fireOnInitialPublish: true` triggers happens on the first
+   publish for a draft and on `resetLiveToDraft`.
 10. **Initial publish fires `fireOnInitialPublish` triggers exactly
     once.** The first publish from a draft to a fresh live world, or
     a `resetLiveToDraft`, fires every trigger marked
@@ -638,14 +607,14 @@ Continuing the campaign-builder invariant set:
     trigger is ineligible until `resetLiveToDraft` clears it. This
     rule applies uniformly to triggers fired at initial publish and
     triggers fired at tick time.
-12. **Per-tick spawn cap is hard.** No backlog persists between ticks —
-    the next tick re-evaluates against live state. This makes the cap
-    a true bound, not a deferred queue that could grow without bound.
-    Initial-publish spawns are NOT subject to this cap (publish is
-    its own bounded operation).
-13. **Per-tick judgement-call cap is hard.** Same reasoning as #12
-    applied to LLM cost. Surplus eligible judgement triggers wait
-    until the next tick.
+12. **Per-tick spawn cap is a hard bound.** Each tick processes at
+    most `MAX_SPAWNS_PER_TICK` insertions; surplus is dropped and
+    re-evaluated from live state on the next tick. Initial-publish
+    spawns run outside this cap.
+13. **Per-tick judgement-call cap is a hard bound.** Each tick
+    processes at most `MAX_JUDGEMENT_CALLS_PER_TICK` LLM calls.
+    Surplus eligible judgement triggers are evaluated on a later
+    tick.
 
 ## Testing
 
