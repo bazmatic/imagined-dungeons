@@ -50,6 +50,13 @@
       "when": 1778243729361,
       "tag": "0006_composite_primary_keys",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1778313548378,
+      "tag": "0007_monster_templates",
+      "breakpoints": true
     }
   ]
 }

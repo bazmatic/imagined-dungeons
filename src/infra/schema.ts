@@ -114,3 +114,41 @@ export const worldSnapshots = sqliteTable('world_snapshots', {
   snapshotJson: text('snapshot_json').notNull(),
   takenAt: integer('taken_at', { mode: 'timestamp_ms' }).notNull(),
 });
+
+export const monsterTemplates = sqliteTable(
+  'monster_templates',
+  {
+    id: text('id').notNull(),
+    worldId: text('world_id')
+      .notNull()
+      .references(() => worlds.id),
+    templateKey: text('template_key').notNull(),
+    label: text('label').notNull(),
+    shortDescription: text('short_description').notNull(),
+    longDescription: text('long_description').notNull(),
+    hp: integer('hp').notNull(),
+    mood: text('mood'),
+    startingItemsJson: text('starting_items_json').notNull().default('[]'),
+  },
+  (t) => [primaryKey({ columns: [t.worldId, t.id] })],
+);
+
+export const locationSpawnTriggers = sqliteTable(
+  'location_spawn_triggers',
+  {
+    id: text('id').notNull(),
+    worldId: text('world_id')
+      .notNull()
+      .references(() => worlds.id),
+    locationId: text('location_id').notNull(),
+    templateId: text('template_id').notNull(),
+    kind: text('kind').notNull(),
+    paramsJson: text('params_json'),
+    count: integer('count').notNull().default(1),
+    oneShot: integer('one_shot', { mode: 'boolean' }).notNull().default(false),
+    fireOnInitialPublish: integer('fire_on_initial_publish', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+  },
+  (t) => [primaryKey({ columns: [t.worldId, t.id] })],
+);
