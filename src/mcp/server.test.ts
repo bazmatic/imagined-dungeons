@@ -35,4 +35,77 @@ describe('MCP tool surface', () => {
   it('does not expose reset_live_to_draft', () => {
     expect(TOOL_BY_NAME.reset_live_to_draft).toBeUndefined();
   });
+
+  it('template and trigger tools work end-to-end', async () => {
+    const repo = new MemoryBuilderRepository();
+    const createDraftTool = TOOL_BY_NAME.create_draft;
+    const upsertLocationTool = TOOL_BY_NAME.upsert_location;
+    const upsertTemplateTool = TOOL_BY_NAME.upsert_monster_template;
+    const upsertTriggerTool = TOOL_BY_NAME.upsert_location_spawn_trigger;
+    const listTemplatesTool = TOOL_BY_NAME.list_monster_templates;
+
+    if (
+      !createDraftTool ||
+      !upsertLocationTool ||
+      !upsertTemplateTool ||
+      !upsertTriggerTool ||
+      !listTemplatesTool
+    ) {
+      throw new Error('tool missing');
+    }
+
+    // Create a draft
+    const created = (await createDraftTool.run(repo, {
+      displayName: 'Test World',
+      label: 'test',
+    })) as { ok: boolean; value?: string };
+    expect(created.ok).toBe(true);
+    const worldId = created.value;
+
+    // Create a location for the trigger
+    const locResult = (await upsertLocationTool.run(repo, {
+      worldId,
+      id: 'loc_1',
+      label: 'Test Location',
+      shortDescription: 'A test location',
+      longDescription: 'A longer description',
+    })) as { ok: boolean };
+    expect(locResult.ok).toBe(true);
+
+    // Upsert a template
+    const templateResult = (await upsertTemplateTool.run(repo, {
+      worldId,
+      id: 'tpl_goblin',
+      templateKey: 'goblin',
+      label: 'Goblin',
+      shortDescription: 'A small green creature',
+      longDescription: 'A goblin warrior',
+      hp: 10,
+      mood: null,
+      startingItems: [],
+    })) as { ok: boolean };
+    expect(templateResult.ok).toBe(true);
+
+    // Upsert a trigger
+    const triggerResult = (await upsertTriggerTool.run(repo, {
+      worldId,
+      id: 'trg_1',
+      locationId: 'loc_1',
+      templateId: 'tpl_goblin',
+      params: { kind: 'clock', interval: 5000 },
+      count: 2,
+      oneShot: false,
+      fireOnInitialPublish: true,
+    })) as { ok: boolean };
+    expect(triggerResult.ok).toBe(true);
+
+    // List templates and verify the template is there
+    const templates = (await listTemplatesTool.run(repo, { worldId })) as Array<{
+      id: string;
+      label: string;
+    }>;
+    expect(templates).toContainEqual(
+      expect.objectContaining({ id: 'tpl_goblin', label: 'Goblin' }),
+    );
+  });
 });

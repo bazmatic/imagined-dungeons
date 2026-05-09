@@ -5,6 +5,8 @@ import {
   deleteExit,
   deleteItem,
   deleteLocation,
+  deleteLocationSpawnTrigger,
+  deleteMonsterTemplate,
   getWorldTree,
   listWorlds,
   publish,
@@ -12,10 +14,20 @@ import {
   upsertExit,
   upsertItem,
   upsertLocation,
+  upsertLocationSpawnTrigger,
+  upsertMonsterTemplate,
 } from '@core/builder/index';
 import type { BuilderRepository } from '@core/builder/repository';
 import { validateWorld } from '@core/builder/validate';
-import { asAgentId, asExitId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
+import {
+  asAgentId,
+  asExitId,
+  asItemId,
+  asLocationId,
+  asMonsterTemplateId,
+  asSpawnTriggerId,
+  asWorldId,
+} from '@core/domain/ids';
 import type { OwnerKind } from '@core/domain/kinds';
 
 /**
@@ -292,6 +304,139 @@ export const TOOLS: readonly ToolDef[] = [
       required: ['worldId', 'id'],
     },
     run: (repo, a) => deleteAgent(repo, asWorldId(a.worldId as string), asAgentId(a.id as string)),
+  },
+  {
+    name: 'list_monster_templates',
+    description: 'List monster templates for a world.',
+    inputSchema: {
+      type: 'object',
+      properties: { worldId: stringField('world id') },
+      required: ['worldId'],
+    },
+    run: async (repo, a) => repo.listMonsterTemplates(asWorldId(a.worldId as string)),
+  },
+  {
+    name: 'list_location_spawn_triggers',
+    description: 'List spawn triggers, optionally filtered by location.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        worldId: stringField('world id'),
+        locationId: stringField('optional location filter'),
+      },
+      required: ['worldId'],
+    },
+    run: async (repo, a) =>
+      repo.listLocationSpawnTriggers(
+        asWorldId(a.worldId as string),
+        a.locationId ? asLocationId(a.locationId as string) : undefined,
+      ),
+  },
+  {
+    name: 'upsert_monster_template',
+    description: 'Create or update a monster template on a draft.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        worldId: stringField('world id'),
+        id: stringField('template id'),
+        templateKey: stringField('author-stable key, e.g. "goblin"'),
+        label: stringField('label'),
+        shortDescription: stringField('short description'),
+        longDescription: stringField('long description'),
+        hp: { type: 'number' },
+        mood: { type: ['string', 'null'] },
+        startingItems: { type: 'array' },
+      },
+      required: [
+        'worldId',
+        'id',
+        'templateKey',
+        'label',
+        'shortDescription',
+        'longDescription',
+        'hp',
+        'startingItems',
+      ],
+    },
+    run: (repo, a) =>
+      upsertMonsterTemplate(repo, asWorldId(a.worldId as string), {
+        id: asMonsterTemplateId(a.id as string),
+        templateKey: a.templateKey as string,
+        label: a.label as string,
+        shortDescription: a.shortDescription as string,
+        longDescription: a.longDescription as string,
+        hp: Number(a.hp),
+        mood: (a.mood as string | null) ?? null,
+        startingItems: (a.startingItems as never) ?? [],
+      }),
+  },
+  {
+    name: 'delete_monster_template',
+    description: 'Delete a monster template from a draft.',
+    inputSchema: {
+      type: 'object',
+      properties: { worldId: stringField('world id'), id: stringField('template id') },
+      required: ['worldId', 'id'],
+    },
+    run: (repo, a) =>
+      deleteMonsterTemplate(
+        repo,
+        asWorldId(a.worldId as string),
+        asMonsterTemplateId(a.id as string),
+      ),
+  },
+  {
+    name: 'upsert_location_spawn_trigger',
+    description: 'Create or update a spawn trigger attached to a location on a draft.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        worldId: stringField('world id'),
+        id: stringField('trigger id'),
+        locationId: stringField('location id'),
+        templateId: stringField('template id'),
+        params: { type: 'object', description: 'TriggerParams discriminated union' },
+        count: { type: 'number' },
+        oneShot: { type: 'boolean' },
+        fireOnInitialPublish: { type: 'boolean' },
+      },
+      required: [
+        'worldId',
+        'id',
+        'locationId',
+        'templateId',
+        'params',
+        'count',
+        'oneShot',
+        'fireOnInitialPublish',
+      ],
+    },
+    run: (repo, a) =>
+      upsertLocationSpawnTrigger(repo, asWorldId(a.worldId as string), {
+        id: asSpawnTriggerId(a.id as string),
+        locationId: asLocationId(a.locationId as string),
+        templateId: asMonsterTemplateId(a.templateId as string),
+        params: a.params as never,
+        count: Number(a.count),
+        oneShot: Boolean(a.oneShot),
+        fireOnInitialPublish: Boolean(a.fireOnInitialPublish),
+      }),
+  },
+  {
+    name: 'delete_location_spawn_trigger',
+    description: 'Delete a spawn trigger from a draft.',
+    inputSchema: {
+      type: 'object',
+      properties: { worldId: stringField('world id'), id: stringField('trigger id') },
+      required: ['worldId', 'id'],
+    },
+    run: (repo, a) =>
+      deleteLocationSpawnTrigger(
+        repo,
+        asWorldId(a.worldId as string),
+        asSpawnTriggerId(a.id as string),
+      ),
   },
 ];
 
