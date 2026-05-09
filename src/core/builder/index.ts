@@ -7,11 +7,16 @@ import {
 import type {
   BuilderError,
   CreateDraftInput,
+  LocationSpawnTrigger,
+  MonsterTemplate,
   PublishResult,
+  TriggerFireState,
   UpsertAgentInput,
   UpsertExitInput,
   UpsertItemInput,
   UpsertLocationInput,
+  UpsertLocationSpawnTriggerInput,
+  UpsertMonsterTemplateInput,
   WorldTree,
 } from '@core/domain/builder-types';
 import type { Agent, Exit, Item, Location } from '@core/domain/entities';
@@ -20,6 +25,8 @@ import {
   type ExitId,
   type ItemId,
   type LocationId,
+  type MonsterTemplateId,
+  type SpawnTriggerId,
   type WorldId,
   asWorldId,
 } from '@core/domain/ids';
@@ -80,11 +87,13 @@ export async function getWorldTree(
 ): Promise<Result<WorldTree, BuilderError>> {
   const s = await requireWorld(repo, id);
   if (!s.ok) return s;
-  const [locations, exits, items, agents] = await Promise.all([
+  const [locations, exits, items, agents, templates, triggers] = await Promise.all([
     repo.listLocations(id),
     repo.listExits(id),
     repo.listItems(id),
     repo.listAgents(id),
+    repo.listMonsterTemplates(id),
+    repo.listLocationSpawnTriggers(id),
   ]);
   return Ok({
     summary: s.value,
@@ -92,8 +101,8 @@ export async function getWorldTree(
     exits,
     items,
     agents,
-    templates: [],
-    triggers: [],
+    templates,
+    triggers,
   });
 }
 
@@ -185,6 +194,50 @@ export async function deleteAgent(
   return Ok(undefined);
 }
 
+export async function upsertMonsterTemplate(
+  repo: BuilderRepository,
+  worldId: WorldId,
+  input: UpsertMonsterTemplateInput,
+): Promise<Result<MonsterTemplateId, BuilderError>> {
+  const s = await requireDraft(repo, worldId);
+  if (!s.ok) return s;
+  await repo.upsertMonsterTemplate(worldId, input);
+  return Ok(input.id);
+}
+
+export async function deleteMonsterTemplate(
+  repo: BuilderRepository,
+  worldId: WorldId,
+  id: MonsterTemplateId,
+): Promise<Result<void, BuilderError>> {
+  const s = await requireDraft(repo, worldId);
+  if (!s.ok) return s;
+  await repo.deleteMonsterTemplate(worldId, id);
+  return Ok(undefined);
+}
+
+export async function upsertLocationSpawnTrigger(
+  repo: BuilderRepository,
+  worldId: WorldId,
+  input: UpsertLocationSpawnTriggerInput,
+): Promise<Result<SpawnTriggerId, BuilderError>> {
+  const s = await requireDraft(repo, worldId);
+  if (!s.ok) return s;
+  await repo.upsertLocationSpawnTrigger(worldId, input);
+  return Ok(input.id);
+}
+
+export async function deleteLocationSpawnTrigger(
+  repo: BuilderRepository,
+  worldId: WorldId,
+  id: SpawnTriggerId,
+): Promise<Result<void, BuilderError>> {
+  const s = await requireDraft(repo, worldId);
+  if (!s.ok) return s;
+  await repo.deleteLocationSpawnTrigger(worldId, id);
+  return Ok(undefined);
+}
+
 export async function listWorlds(repo: BuilderRepository) {
   return repo.listWorlds();
 }
@@ -239,6 +292,25 @@ const asAgentInput = (a: Agent): UpsertAgentInput => ({
   goal: a.goal,
   autonomous: a.autonomous,
 });
+const asTemplateInput = (t: MonsterTemplate): UpsertMonsterTemplateInput => ({
+  id: t.id,
+  templateKey: t.templateKey,
+  label: t.label,
+  shortDescription: t.shortDescription,
+  longDescription: t.longDescription,
+  hp: t.hp,
+  mood: t.mood,
+  startingItems: t.startingItems,
+});
+const asTriggerInput = (t: LocationSpawnTrigger): UpsertLocationSpawnTriggerInput => ({
+  id: t.id,
+  locationId: t.locationId,
+  templateId: t.templateId,
+  params: t.params,
+  count: t.count,
+  oneShot: t.oneShot,
+  fireOnInitialPublish: t.fireOnInitialPublish,
+});
 
 async function copyTreeIntoWorld(
   repo: BuilderRepository,
@@ -249,14 +321,21 @@ async function copyTreeIntoWorld(
   for (const a of source.agents) await repo.upsertAgent(destWorldId, asAgentInput(a));
   for (const it of source.items) await repo.upsertItem(destWorldId, asItemInput(it));
   for (const e of source.exits) await repo.upsertExit(destWorldId, asExitInput(e));
+  for (const t of source.templates)
+    await repo.upsertMonsterTemplate(destWorldId, asTemplateInput(t));
+  for (const trg of source.triggers)
+    await repo.upsertLocationSpawnTrigger(destWorldId, asTriggerInput(trg));
 }
 
-function snapshotJson(tree: WorldTree): string {
+function snapshotJson(tree: WorldTree, fireState: TriggerFireState = { byTriggerId: {} }): string {
   return JSON.stringify({
     locations: tree.locations,
     exits: tree.exits,
     items: tree.items,
     agents: tree.agents,
+    templates: tree.templates,
+    triggers: tree.triggers,
+    triggerFireState: fireState,
   });
 }
 
@@ -318,9 +397,10 @@ export async function publish(
     const snapTree: WorldTree = snap
       ? {
           summary: liveTree.value.summary,
-          templates: [],
-          triggers: [],
-          ...(JSON.parse(snap.json) as Pick<WorldTree, 'locations' | 'exits' | 'items' | 'agents'>),
+          ...(JSON.parse(snap.json) as Pick<
+            WorldTree,
+            'locations' | 'exits' | 'items' | 'agents' | 'templates' | 'triggers'
+          >),
         }
       : { ...liveTree.value };
     const plan = computeMergePlan(snapTree, draftTree.value, liveTree.value);

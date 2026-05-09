@@ -1,5 +1,16 @@
-import { PublishOutcomeKind, WorldKind } from '@core/domain/builder-kinds';
-import { asAgentId, asLocationId, asWorldId } from '@core/domain/ids';
+import {
+  BuilderErrorKind,
+  PublishOutcomeKind,
+  TriggerEventKind,
+  WorldKind,
+} from '@core/domain/builder-kinds';
+import {
+  asAgentId,
+  asLocationId,
+  asMonsterTemplateId,
+  asSpawnTriggerId,
+  asWorldId,
+} from '@core/domain/ids';
 import { MemoryBuilderRepository } from '@infra/builder-memory-repository';
 import { describe, expect, it } from 'vitest';
 import {
@@ -11,7 +22,30 @@ import {
   resetLiveToDraft,
   upsertAgent,
   upsertLocation,
+  upsertLocationSpawnTrigger,
+  upsertMonsterTemplate,
 } from './index';
+
+const sampleTemplateInput = () => ({
+  id: asMonsterTemplateId('tpl_goblin'),
+  templateKey: 'goblin',
+  label: 'goblin',
+  shortDescription: 'a goblin',
+  longDescription: 'a small goblin',
+  hp: 5,
+  mood: null,
+  startingItems: [],
+});
+
+const sampleTriggerInput = () => ({
+  id: asSpawnTriggerId('trg_1'),
+  locationId: asLocationId('loc_a'),
+  templateId: asMonsterTemplateId('tpl_goblin'),
+  params: { kind: TriggerEventKind.PlayerEnters },
+  count: 1,
+  oneShot: false,
+  fireOnInitialPublish: false,
+});
 
 describe('builder facade — simple ops', () => {
   it('creates a draft world', async () => {
@@ -220,6 +254,43 @@ describe('cloneLiveAsDraft', () => {
       const updatedLive = await repo.getWorldSummary(liveId);
       expect(updatedLive?.parentDraftId).toBe(cloned.value);
     }
+  });
+});
+
+describe('upsert/delete monster template + trigger', () => {
+  it('upsertMonsterTemplate refuses against a live world', async () => {
+    const repo = new MemoryBuilderRepository();
+    const live = asWorldId('w_live_test');
+    await repo.createWorld({
+      id: live,
+      kind: WorldKind.Live,
+      label: 'L',
+      displayName: 'L',
+      parentDraftId: null,
+      playerAgentId: null,
+    });
+    const r = await upsertMonsterTemplate(repo, live, sampleTemplateInput());
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error.kind).toBe(BuilderErrorKind.WorldKindMismatch);
+  });
+
+  it('upsertLocationSpawnTrigger writes to a draft', async () => {
+    const repo = new MemoryBuilderRepository();
+    const draft = await createDraft(repo, { displayName: 'D', label: 'D' });
+    if (!draft.ok) throw new Error(draft.error.message);
+    await upsertLocation(repo, draft.value, {
+      id: asLocationId('loc_a'),
+      label: 'A',
+      shortDescription: 'a',
+      longDescription: 'a',
+    });
+    await upsertMonsterTemplate(repo, draft.value, sampleTemplateInput());
+    const r = await upsertLocationSpawnTrigger(repo, draft.value, sampleTriggerInput());
+    expect(r.ok).toBe(true);
+    const tree = await getWorldTree(repo, draft.value);
+    if (!tree.ok) throw new Error(tree.error.message);
+    expect(tree.value.triggers).toHaveLength(1);
+    expect(tree.value.templates).toHaveLength(1);
   });
 });
 
