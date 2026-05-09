@@ -3,6 +3,7 @@ import type { LocationSpawnTrigger, TriggerFireState } from '@core/domain/builde
 import type { DomainEvent } from '@core/domain/events';
 import type { AgentId, ItemId, LocationId } from '@core/domain/ids';
 import { EventKind } from '@core/domain/kinds';
+import type { JsonSchema, LanguageModel } from '@core/engine/language-model';
 
 export interface PerceptionView {
   /** Map of agentId → its current locationId, for resolving combat targets / speech. */
@@ -69,4 +70,85 @@ export function matchMechanicalTriggers(args: {
     }
   }
   return hits;
+}
+
+const JUDGEMENT_SCHEMA: JsonSchema = {
+  type: 'object',
+  properties: { matches: { type: 'boolean' } },
+  required: ['matches'],
+  additionalProperties: false,
+};
+
+export interface JudgementResult {
+  readonly hits: readonly TriggerHit[];
+  readonly callsUsed: number;
+}
+
+function locationOfEvent(e: DomainEvent, p: PerceptionView): LocationId | null {
+  switch (e.kind) {
+    case EventKind.Move:
+      return e.to;
+    case EventKind.Take:
+      return e.from;
+    case EventKind.Drop:
+      return e.to;
+    case EventKind.Look:
+      return e.locationId;
+    case EventKind.AgentSpawned:
+      return e.locationId;
+    case EventKind.Speak:
+    case EventKind.Emote:
+    case EventKind.Attack:
+    case EventKind.Give:
+      return p.agentLocations.get(e.actorId) ?? null;
+    default:
+      return null;
+  }
+}
+
+export async function matchJudgementTriggers(args: {
+  readonly events: readonly DomainEvent[];
+  readonly triggers: readonly LocationSpawnTrigger[];
+  readonly fireState: TriggerFireState;
+  readonly perception: PerceptionView;
+  readonly llm: LanguageModel | null;
+  readonly judgementBudget: number;
+}): Promise<JudgementResult> {
+  if (!args.llm || args.judgementBudget <= 0) return { hits: [], callsUsed: 0 };
+
+  const eventLocations = new Set<LocationId>();
+  for (const e of args.events) {
+    const loc = locationOfEvent(e, args.perception);
+    if (loc !== null) eventLocations.add(loc);
+  }
+
+  const hits: TriggerHit[] = [];
+  let calls = 0;
+  for (const trigger of args.triggers) {
+    if (trigger.params.kind !== TriggerEventKind.LlmJudgement) continue;
+    if (trigger.oneShot && isFired(args.fireState, trigger.id as string)) continue;
+    if (!eventLocations.has(trigger.locationId)) continue;
+    if (calls >= args.judgementBudget) break;
+    calls += 1;
+    try {
+      const eventsHere = args.events.filter(
+        (e) => locationOfEvent(e, args.perception) === trigger.locationId,
+      );
+      const resp = await args.llm.complete({
+        system:
+          'You are a deterministic predicate evaluator. Answer whether the predicate is true given the recent events. Reply with strict JSON.',
+        user: JSON.stringify({
+          predicate: trigger.params.predicate,
+          events: eventsHere.map((e) => ({ kind: e.kind, actorId: e.actorId })),
+        }),
+        schema: JUDGEMENT_SCHEMA,
+        schemaName: 'TriggerJudgement',
+      });
+      const parsed = resp.parsed as { matches?: boolean };
+      if (parsed?.matches === true) hits.push({ trigger });
+    } catch {
+      // Per spec — log + skip; trigger remains eligible for future ticks.
+    }
+  }
+  return { hits, callsUsed: calls };
 }

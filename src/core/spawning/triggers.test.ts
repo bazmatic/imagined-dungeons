@@ -10,10 +10,11 @@ import {
   asSpawnTriggerId,
   asWorldId,
 } from '@core/domain/ids';
-import type { AgentId } from '@core/domain/ids';
+import type { AgentId, LocationId } from '@core/domain/ids';
 import { Direction, EventKind } from '@core/domain/kinds';
 import { describe, expect, it } from 'vitest';
-import { type PerceptionView, matchMechanicalTriggers } from './triggers';
+import { makeFakeLanguageModel } from '../../../tests/helpers/fake-language-model';
+import { type PerceptionView, matchJudgementTriggers, matchMechanicalTriggers } from './triggers';
 
 const W = asWorldId('w_live');
 const PLAYER = asAgentId('char_p');
@@ -258,5 +259,130 @@ describe('matchMechanicalTriggers', () => {
       perception: basePerception(),
     });
     expect(hits).toHaveLength(0);
+  });
+});
+
+describe('matchJudgementTriggers', () => {
+  const judgementTrigger = (
+    overrides: Partial<LocationSpawnTrigger> = {},
+  ): LocationSpawnTrigger => ({
+    id: asSpawnTriggerId('trg_j'),
+    worldId: W,
+    locationId: LOC_A,
+    templateId: asMonsterTemplateId('tpl_goblin'),
+    params: { kind: TriggerEventKind.LlmJudgement, predicate: 'the room is noisy' },
+    count: 1,
+    oneShot: false,
+    fireOnInitialPublish: false,
+    ...overrides,
+  });
+
+  const noisyEvent = (loc: LocationId): DomainEvent => ({
+    ...baseEventFields,
+    kind: EventKind.Move,
+    from: LOC_B,
+    to: loc,
+    direction: Direction.North,
+  });
+
+  it('fires when LLM returns matches:true and events occurred in the location', async () => {
+    const llm = makeFakeLanguageModel({
+      responder: () => Promise.resolve({ raw: '{"matches":true}', parsed: { matches: true } }),
+    });
+    const result = await matchJudgementTriggers({
+      events: [noisyEvent(LOC_A)],
+      triggers: [judgementTrigger()],
+      fireState: emptyFireState,
+      perception: basePerception(),
+      llm,
+      judgementBudget: 4,
+    });
+    expect(result.hits).toHaveLength(1);
+    expect(result.callsUsed).toBe(1);
+  });
+
+  it('does not fire when LLM returns matches:false', async () => {
+    const llm = makeFakeLanguageModel({
+      responder: () => Promise.resolve({ raw: '{"matches":false}', parsed: { matches: false } }),
+    });
+    const result = await matchJudgementTriggers({
+      events: [noisyEvent(LOC_A)],
+      triggers: [judgementTrigger()],
+      fireState: emptyFireState,
+      perception: basePerception(),
+      llm,
+      judgementBudget: 4,
+    });
+    expect(result.hits).toHaveLength(0);
+    expect(result.callsUsed).toBe(1);
+  });
+
+  it('skips remaining triggers when budget is exhausted', async () => {
+    const llm = makeFakeLanguageModel({
+      responder: () => Promise.resolve({ raw: '{"matches":true}', parsed: { matches: true } }),
+    });
+    const result = await matchJudgementTriggers({
+      events: [noisyEvent(LOC_A)],
+      triggers: [
+        judgementTrigger({ id: asSpawnTriggerId('trg_a') }),
+        judgementTrigger({ id: asSpawnTriggerId('trg_b') }),
+        judgementTrigger({ id: asSpawnTriggerId('trg_c') }),
+      ],
+      fireState: emptyFireState,
+      perception: basePerception(),
+      llm,
+      judgementBudget: 1,
+    });
+    expect(result.hits).toHaveLength(1);
+    expect(result.callsUsed).toBe(1);
+  });
+
+  it('skips a oneShot trigger that has already fired', async () => {
+    const llm = makeFakeLanguageModel({
+      responder: () => Promise.resolve({ raw: '{"matches":true}', parsed: { matches: true } }),
+    });
+    const fireState: TriggerFireState = {
+      byTriggerId: { trg_j: { firedAt: 1 } },
+    };
+    const result = await matchJudgementTriggers({
+      events: [noisyEvent(LOC_A)],
+      triggers: [judgementTrigger({ oneShot: true })],
+      fireState,
+      perception: basePerception(),
+      llm,
+      judgementBudget: 4,
+    });
+    expect(result.hits).toHaveLength(0);
+    expect(result.callsUsed).toBe(0);
+  });
+
+  it('skips triggers whose location had no events this tick', async () => {
+    const llm = makeFakeLanguageModel({
+      responder: () => Promise.resolve({ raw: '{"matches":true}', parsed: { matches: true } }),
+    });
+    const result = await matchJudgementTriggers({
+      events: [noisyEvent(LOC_B)],
+      triggers: [judgementTrigger()],
+      fireState: emptyFireState,
+      perception: basePerception(),
+      llm,
+      judgementBudget: 4,
+    });
+    expect(result.hits).toHaveLength(0);
+    expect(result.callsUsed).toBe(0);
+    expect(llm.calls).toHaveLength(0);
+  });
+
+  it('returns no hits when llm is null', async () => {
+    const result = await matchJudgementTriggers({
+      events: [noisyEvent(LOC_A)],
+      triggers: [judgementTrigger()],
+      fireState: emptyFireState,
+      perception: basePerception(),
+      llm: null,
+      judgementBudget: 4,
+    });
+    expect(result.hits).toHaveLength(0);
+    expect(result.callsUsed).toBe(0);
   });
 });
