@@ -1,6 +1,14 @@
-import { ProblemKind, WorldKind } from '@core/domain/builder-kinds';
+import { ProblemKind, TriggerEventKind, WorldKind } from '@core/domain/builder-kinds';
 import type { WorldTree } from '@core/domain/builder-types';
-import { asAgentId, asExitId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
+import {
+  asAgentId,
+  asExitId,
+  asItemId,
+  asLocationId,
+  asMonsterTemplateId,
+  asSpawnTriggerId,
+  asWorldId,
+} from '@core/domain/ids';
 import { OwnerKind } from '@core/domain/kinds';
 import { describe, expect, it } from 'vitest';
 import { validateWorld } from './validate';
@@ -55,6 +63,18 @@ const baseTree = (): WorldTree => ({
   ],
   templates: [],
   triggers: [],
+});
+
+const baseTemplate = (id = 'tpl_goblin') => ({
+  id: asMonsterTemplateId(id),
+  worldId: W,
+  templateKey: 'goblin',
+  label: 'goblin',
+  shortDescription: 'a goblin',
+  longDescription: 'a small goblin',
+  hp: 5,
+  mood: null,
+  startingItems: [],
 });
 
 describe('validateWorld', () => {
@@ -185,5 +205,156 @@ describe('validateWorld', () => {
       locations: [...t.locations, { ...firstLoc }],
     };
     expect(validateWorld(dirty).map((p) => p.kind)).toContain(ProblemKind.DuplicateId);
+  });
+
+  it('reports TemplateLabelEmpty', () => {
+    const t = baseTree();
+    const dirty = { ...t, templates: [{ ...baseTemplate(), label: '' }] };
+    expect(validateWorld(dirty).map((p) => p.kind)).toContain(ProblemKind.TemplateLabelEmpty);
+  });
+
+  it('reports TemplateHpInvalid', () => {
+    const t = baseTree();
+    const dirty = { ...t, templates: [{ ...baseTemplate(), hp: 0 }] };
+    expect(validateWorld(dirty).map((p) => p.kind)).toContain(ProblemKind.TemplateHpInvalid);
+  });
+
+  it('reports TemplateStartingItemMissing for an empty starter-pack inline label', () => {
+    const t = baseTree();
+    const dirty = {
+      ...t,
+      templates: [
+        {
+          ...baseTemplate(),
+          startingItems: [
+            {
+              kind: 'inline' as const,
+              label: '',
+              shortDescription: '',
+              longDescription: '',
+              weight: 0,
+              hidden: false,
+            },
+          ],
+        },
+      ],
+    };
+    expect(validateWorld(dirty).map((p) => p.kind)).toContain(
+      ProblemKind.TemplateStartingItemMissing,
+    );
+  });
+
+  it('reports LocationSpawnTriggerTemplateMissing', () => {
+    const t = baseTree();
+    const dirty = {
+      ...t,
+      triggers: [
+        {
+          id: asSpawnTriggerId('trg_1'),
+          worldId: W,
+          locationId: asLocationId('loc_a'),
+          templateId: asMonsterTemplateId('tpl_missing'),
+          params: { kind: TriggerEventKind.PlayerEnters },
+          count: 1,
+          oneShot: false,
+          fireOnInitialPublish: false,
+        },
+      ],
+    };
+    expect(validateWorld(dirty).map((p) => p.kind)).toContain(
+      ProblemKind.LocationSpawnTriggerTemplateMissing,
+    );
+  });
+
+  it('reports LocationSpawnTriggerLocationMissing', () => {
+    const t = baseTree();
+    const dirty = {
+      ...t,
+      templates: [baseTemplate()],
+      triggers: [
+        {
+          id: asSpawnTriggerId('trg_1'),
+          worldId: W,
+          locationId: asLocationId('loc_missing'),
+          templateId: asMonsterTemplateId('tpl_goblin'),
+          params: { kind: TriggerEventKind.PlayerEnters },
+          count: 1,
+          oneShot: false,
+          fireOnInitialPublish: false,
+        },
+      ],
+    };
+    expect(validateWorld(dirty).map((p) => p.kind)).toContain(
+      ProblemKind.LocationSpawnTriggerLocationMissing,
+    );
+  });
+
+  it('reports LocationSpawnTriggerCountInvalid for count < 1', () => {
+    const t = baseTree();
+    const dirty = {
+      ...t,
+      templates: [baseTemplate()],
+      triggers: [
+        {
+          id: asSpawnTriggerId('trg_1'),
+          worldId: W,
+          locationId: asLocationId('loc_a'),
+          templateId: asMonsterTemplateId('tpl_goblin'),
+          params: { kind: TriggerEventKind.PlayerEnters },
+          count: 0,
+          oneShot: false,
+          fireOnInitialPublish: false,
+        },
+      ],
+    };
+    expect(validateWorld(dirty).map((p) => p.kind)).toContain(
+      ProblemKind.LocationSpawnTriggerCountInvalid,
+    );
+  });
+
+  it('reports LocationSpawnTriggerParamsInvalid when LlmJudgement lacks predicate', () => {
+    const t = baseTree();
+    const dirty = {
+      ...t,
+      templates: [baseTemplate()],
+      triggers: [
+        {
+          id: asSpawnTriggerId('trg_1'),
+          worldId: W,
+          locationId: asLocationId('loc_a'),
+          templateId: asMonsterTemplateId('tpl_goblin'),
+          params: { kind: TriggerEventKind.LlmJudgement } as never,
+          count: 1,
+          oneShot: false,
+          fireOnInitialPublish: false,
+        },
+      ],
+    };
+    expect(validateWorld(dirty).map((p) => p.kind)).toContain(
+      ProblemKind.LocationSpawnTriggerParamsInvalid,
+    );
+  });
+
+  it('reports LocationSpawnTriggerParamsInvalid when Speech lacks phrase', () => {
+    const t = baseTree();
+    const dirty = {
+      ...t,
+      templates: [baseTemplate()],
+      triggers: [
+        {
+          id: asSpawnTriggerId('trg_1'),
+          worldId: W,
+          locationId: asLocationId('loc_a'),
+          templateId: asMonsterTemplateId('tpl_goblin'),
+          params: { kind: TriggerEventKind.Speech } as never,
+          count: 1,
+          oneShot: false,
+          fireOnInitialPublish: false,
+        },
+      ],
+    };
+    expect(validateWorld(dirty).map((p) => p.kind)).toContain(
+      ProblemKind.LocationSpawnTriggerParamsInvalid,
+    );
   });
 });

@@ -1,6 +1,30 @@
-import { EntityKind, ProblemKind } from '@core/domain/builder-kinds';
-import type { Problem, WorldTree } from '@core/domain/builder-types';
+import {
+  EntityKind,
+  ProblemKind,
+  StarterPackEntryKind,
+  TriggerEventKind,
+} from '@core/domain/builder-kinds';
+import type { Problem, TriggerParams, WorldTree } from '@core/domain/builder-types';
 import { OwnerKind } from '@core/domain/kinds';
+
+const TRIGGER_PARAM_VALIDATORS: Record<TriggerEventKind, (p: TriggerParams) => boolean> = {
+  [TriggerEventKind.PlayerEnters]: () => true,
+  [TriggerEventKind.CombatStarts]: () => true,
+  [TriggerEventKind.ItemTaken]: (p) =>
+    p.kind === TriggerEventKind.ItemTaken &&
+    (p.itemTemplateKey === undefined || typeof p.itemTemplateKey === 'string'),
+  [TriggerEventKind.Speech]: (p) =>
+    p.kind === TriggerEventKind.Speech && typeof p.phrase === 'string' && p.phrase.length > 0,
+  [TriggerEventKind.LlmJudgement]: (p) =>
+    p.kind === TriggerEventKind.LlmJudgement &&
+    typeof p.predicate === 'string' &&
+    p.predicate.length > 0,
+};
+
+function isValidTriggerParams(p: TriggerParams): boolean {
+  const v = TRIGGER_PARAM_VALIDATORS[p.kind];
+  return v ? v(p) : false;
+}
 
 /**
  * Pure structural validator. Catches every constraint the engine assumes
@@ -125,6 +149,73 @@ export function validateWorld(tree: WorldTree): Problem[] {
       entityId: player as string,
       message: `player agent ${player} not found`,
     });
+  }
+
+  // Templates.
+  for (const tpl of tree.templates) {
+    if (tpl.label.trim().length === 0) {
+      problems.push({
+        kind: ProblemKind.TemplateLabelEmpty,
+        entity: EntityKind.MonsterTemplate,
+        entityId: tpl.id as string,
+        message: `template ${tpl.id} has empty label`,
+      });
+    }
+    if (tpl.hp <= 0) {
+      problems.push({
+        kind: ProblemKind.TemplateHpInvalid,
+        entity: EntityKind.MonsterTemplate,
+        entityId: tpl.id as string,
+        message: `template ${tpl.id} hp must be > 0`,
+      });
+    }
+    for (const entry of tpl.startingItems) {
+      if (entry.kind === StarterPackEntryKind.Inline && entry.label.trim().length === 0) {
+        problems.push({
+          kind: ProblemKind.TemplateStartingItemMissing,
+          entity: EntityKind.MonsterTemplate,
+          entityId: tpl.id as string,
+          message: `template ${tpl.id} has a starter-pack entry with empty label`,
+        });
+      }
+    }
+  }
+
+  // Triggers.
+  const templateIds = new Set(tree.templates.map((t) => t.id as string));
+  for (const trg of tree.triggers) {
+    if (!templateIds.has(trg.templateId as string)) {
+      problems.push({
+        kind: ProblemKind.LocationSpawnTriggerTemplateMissing,
+        entity: EntityKind.LocationSpawnTrigger,
+        entityId: trg.id as string,
+        message: `trigger ${trg.id} references missing template ${trg.templateId}`,
+      });
+    }
+    if (!locIds.has(trg.locationId as string)) {
+      problems.push({
+        kind: ProblemKind.LocationSpawnTriggerLocationMissing,
+        entity: EntityKind.LocationSpawnTrigger,
+        entityId: trg.id as string,
+        message: `trigger ${trg.id} at missing location ${trg.locationId}`,
+      });
+    }
+    if (trg.count < 1) {
+      problems.push({
+        kind: ProblemKind.LocationSpawnTriggerCountInvalid,
+        entity: EntityKind.LocationSpawnTrigger,
+        entityId: trg.id as string,
+        message: `trigger ${trg.id} count must be >= 1`,
+      });
+    }
+    if (!isValidTriggerParams(trg.params)) {
+      problems.push({
+        kind: ProblemKind.LocationSpawnTriggerParamsInvalid,
+        entity: EntityKind.LocationSpawnTrigger,
+        entityId: trg.id as string,
+        message: `trigger ${trg.id} params invalid for kind ${trg.params.kind}`,
+      });
+    }
   }
 
   return problems;
