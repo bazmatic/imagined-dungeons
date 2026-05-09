@@ -567,6 +567,8 @@ export async function resetLiveToDraft(
     for (const it of live.value.items) await tx.deleteItem(liveId, it.id);
     for (const a of live.value.agents) await tx.deleteAgent(liveId, a.id);
     for (const l of live.value.locations) await tx.deleteLocation(liveId, l.id);
+    for (const trg of live.value.triggers) await tx.deleteLocationSpawnTrigger(liveId, trg.id);
+    for (const tpl of live.value.templates) await tx.deleteMonsterTemplate(liveId, tpl.id);
     await copyTreeIntoWorld(tx, draftTree.value, liveId);
     const now = Date.now();
     const { fireRecords } = await runInitialSpawnPass(tx, liveId, draftTree.value, now);

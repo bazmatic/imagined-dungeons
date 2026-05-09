@@ -436,4 +436,20 @@ describe('resetLiveToDraft', () => {
     if (!first2) throw new Error('expected loc');
     expect(first2.label).toBe('A');
   });
+
+  it('resetLiveToDraft removes templates and triggers that the draft no longer has', async () => {
+    const repo = new MemoryBuilderRepository();
+    const draftId = await seedDraftWithInitialSpawn(repo);
+    const first = await publish(repo, draftId);
+    if (!first.ok) throw new Error(first.error.message);
+    const liveId = first.value.liveWorldId;
+
+    // Remove the trigger from the draft.
+    await deleteLocationSpawnTrigger(repo, draftId, asSpawnTriggerId('trg_init'));
+
+    await resetLiveToDraft(repo, draftId);
+
+    const liveTriggers = await repo.listLocationSpawnTriggers(liveId);
+    expect(liveTriggers).toHaveLength(0);
+  });
 });
