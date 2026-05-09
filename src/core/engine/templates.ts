@@ -220,6 +220,22 @@ export function renderAgentStateUpdatedObserved(actor: Agent): string {
   return `(${actor.label}'s expression shifts.)`;
 }
 
+/**
+ * "A goblin appears here." — third-person, observer-side narration for a
+ * spawn event. The actor of the event is the synthetic system agent, so
+ * the line is keyed off the spawned agent's label rather than the actor.
+ */
+export function renderAgentSpawnedObserved(label: string): string {
+  if (label.length === 0) return 'Something appears here.';
+  // Capitalise the first letter without mutating the rest (preserves
+  // already-capitalised proper nouns like "Spark").
+  const first = label[0];
+  if (first === undefined) return 'Something appears here.';
+  const rest = label.slice(1);
+  const upper = first.toUpperCase();
+  return `${upper}${rest} appears here.`;
+}
+
 export function renderAttackMechanical(
   event: Extract<DomainEvent, { kind: 'attack' }>,
   actor: Agent,
