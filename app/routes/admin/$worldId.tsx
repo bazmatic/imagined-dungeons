@@ -5,6 +5,12 @@ import { createFileRoute, useRouter } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
 import { deleteEntity, saveEntity } from '~/server/admin/entities';
 import { publish, resetLive } from '~/server/admin/publish';
+import {
+  deleteTemplate,
+  deleteTrigger,
+  upsertTemplate,
+  upsertTrigger,
+} from '~/server/admin/templates';
 import { validate } from '~/server/admin/validate';
 import { getWorld } from '~/server/admin/worlds';
 
@@ -104,6 +110,7 @@ function AdminWorld() {
             const itemsHere = t.items.filter(
               (i) => i.owner.kind === OwnerKind.Location && (i.owner.id as string) === locId,
             );
+            const triggersHere = t.triggers.filter((trg) => (trg.locationId as string) === locId);
             return (
               <li key={locId} style={{ marginBottom: 6 }}>
                 <button
@@ -113,7 +120,10 @@ function AdminWorld() {
                   {l.label}
                 </button>
                 {dot(EntityKind.Location, locId)}
-                {(exitsHere.length > 0 || agentsHere.length > 0 || itemsHere.length > 0) && (
+                {(exitsHere.length > 0 ||
+                  agentsHere.length > 0 ||
+                  itemsHere.length > 0 ||
+                  triggersHere.length > 0) && (
                   <ul style={{ marginLeft: 16, marginTop: 2 }}>
                     {exitsHere.map((e) => (
                       <li key={e.id as string}>
@@ -151,11 +161,44 @@ function AdminWorld() {
                         {dot(EntityKind.Item, i.id as string)}
                       </li>
                     ))}
+                    {triggersHere.map((trg) => (
+                      <li key={trg.id as string}>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSel({
+                              kind: EntityKind.LocationSpawnTrigger,
+                              id: trg.id as string,
+                            })
+                          }
+                          style={{ opacity: 0.85 }}
+                        >
+                          ⚡ {trg.params.kind} → {trg.templateId} (×{trg.count})
+                        </button>
+                        {dot(EntityKind.LocationSpawnTrigger, trg.id as string)}
+                      </li>
+                    ))}
                   </ul>
                 )}
               </li>
             );
           })}
+        </ul>
+
+        <h3 style={{ fontSize: 12, marginTop: 16 }}>Bestiary</h3>
+        <ul>
+          {t.templates.map((tpl) => (
+            <li key={tpl.id as string}>
+              <button
+                type="button"
+                onClick={() => setSel({ kind: EntityKind.MonsterTemplate, id: tpl.id as string })}
+                style={{ opacity: 0.85 }}
+              >
+                🐲 {tpl.label}
+              </button>
+              {dot(EntityKind.MonsterTemplate, tpl.id as string)}
+            </li>
+          ))}
         </ul>
 
         {(() => {
@@ -339,6 +382,10 @@ function RawJsonForm(props: {
   const find = () => {
     if (sel.kind === EntityKind.Agent) return tree.agents.find((a) => (a.id as string) === sel.id);
     if (sel.kind === EntityKind.Item) return tree.items.find((i) => (i.id as string) === sel.id);
+    if (sel.kind === EntityKind.MonsterTemplate)
+      return tree.templates.find((tpl) => (tpl.id as string) === sel.id);
+    if (sel.kind === EntityKind.LocationSpawnTrigger)
+      return tree.triggers.find((trg) => (trg.id as string) === sel.id);
     return tree.exits.find((e) => (e.id as string) === sel.id);
   };
   const initial = find();
@@ -380,9 +427,19 @@ function RawJsonForm(props: {
                     ownerId: parsed.owner?.id,
                   }
                 : parsed;
-            await saveEntity({
-              data: { worldId: tree.summary.id as string, entity: sel.kind, payload },
-            });
+            if (sel.kind === EntityKind.MonsterTemplate) {
+              await upsertTemplate({
+                data: { worldId: tree.summary.id as string, payload },
+              });
+            } else if (sel.kind === EntityKind.LocationSpawnTrigger) {
+              await upsertTrigger({
+                data: { worldId: tree.summary.id as string, payload },
+              });
+            } else {
+              await saveEntity({
+                data: { worldId: tree.summary.id as string, entity: sel.kind, payload },
+              });
+            }
             onSaved();
           }}
         >
@@ -391,9 +448,19 @@ function RawJsonForm(props: {
         <button
           type="button"
           onClick={async () => {
-            await deleteEntity({
-              data: { worldId: tree.summary.id as string, entity: sel.kind, id: sel.id },
-            });
+            if (sel.kind === EntityKind.MonsterTemplate) {
+              await deleteTemplate({
+                data: { worldId: tree.summary.id as string, id: sel.id },
+              });
+            } else if (sel.kind === EntityKind.LocationSpawnTrigger) {
+              await deleteTrigger({
+                data: { worldId: tree.summary.id as string, id: sel.id },
+              });
+            } else {
+              await deleteEntity({
+                data: { worldId: tree.summary.id as string, entity: sel.kind, id: sel.id },
+              });
+            }
             onDeleted();
           }}
         >
