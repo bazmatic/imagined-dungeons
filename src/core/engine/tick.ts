@@ -1,9 +1,12 @@
+import type { BuilderRepository } from '@core/builder/repository';
 import type { Action } from '@core/domain/actions';
 import type { Agent } from '@core/domain/entities';
 import type { DomainEvent } from '@core/domain/events';
-import { type AgentId, SYSTEM_AGENT_ID } from '@core/domain/ids';
+import { type AgentId, type LocationId, SYSTEM_AGENT_ID, type WorldId } from '@core/domain/ids';
 import { EventKind, NpcFallbackIntent, OwnerKind } from '@core/domain/kinds';
 import { log } from '@core/log';
+import { runSpawnTickPass } from '@core/spawning/tick-pass';
+import type { PerceptionView } from '@core/spawning/triggers';
 import { dispatch } from './actions/registry';
 import { MAX_CONSEQUENCE_DEPTH, consequencesFor } from './consequences';
 import type { LanguageModel } from './language-model';
@@ -13,6 +16,7 @@ import type { ParseFn } from './parser/composite';
 import { perceive } from './perception';
 import type { Repository } from './repository';
 import {
+  renderAgentSpawnedObserved,
   renderAgentStateUpdatedObserved,
   renderDescriptionUpdatedObserved,
   renderDropObserved,
@@ -82,6 +86,12 @@ export interface RunTickOptions {
   readonly llm: LanguageModel | null;
   /** Override the per-tick NPC cap. Defaults to MAX_NPCS_PER_TICK. */
   readonly npcCap?: number;
+  /**
+   * Optional builder repository — when present, the tick runs the
+   * monster-templates spawn pass after consequences. When absent (e.g.
+   * legacy callers, narrow tests) the spawn pass is skipped entirely.
+   */
+  readonly builderRepo?: BuilderRepository;
 }
 
 /**
@@ -98,6 +108,15 @@ async function renderWitnessForPlayer(
 ): Promise<string | null> {
   if (event.actorId === playerId) return null; // player's own action — already in `render`
   if (!event.witnesses.some((w) => w === playerId)) return null;
+
+  // AgentSpawned events are emitted by the synthetic system actor and
+  // don't need an actor lookup — render directly from the spawned agent.
+  // Resolving the system agent here would fail in any world that doesn't
+  // pre-seed a `system` row (e.g. published draft worlds).
+  if (event.kind === EventKind.AgentSpawned) {
+    const spawned = await repo.getAgent(event.spawnedAgentId);
+    return renderAgentSpawnedObserved(spawned.label);
+  }
 
   const actor = await repo.getAgent(event.actorId);
 
@@ -162,6 +181,32 @@ async function renderWitnessForPlayer(
       return null;
     }
   }
+}
+
+/**
+ * Build a `PerceptionView` for the spawn pass: every agent's current
+ * location and (for v1) an empty item-template-keys map. Items
+ * carrying a template-key concept are out of scope for v1; passing an
+ * empty map means `ItemTaken` triggers without a `itemTemplateKey`
+ * filter still match by location alone, which is the only behaviour
+ * the validator allows in v1.
+ */
+async function buildPerceptionView(
+  playerId: AgentId,
+  repo: Repository,
+): Promise<{ readonly view: PerceptionView; readonly worldId: WorldId }> {
+  const all = await repo.allAgents();
+  const agentLocations = new Map<AgentId, LocationId>();
+  for (const a of all) agentLocations.set(a.id, a.locationId);
+  const player = await repo.getAgent(playerId);
+  return {
+    view: {
+      agentLocations,
+      itemTemplateKeys: new Map(),
+      playerId,
+    },
+    worldId: player.worldId,
+  };
 }
 
 /**
@@ -379,6 +424,26 @@ export async function runTick(
     events.push(ev);
     const line = await renderWitnessForPlayer(ev, playerId, repo);
     if (line !== null && line.length > 0) witnessed.push(line);
+  }
+
+  // 6.5 Spawn pass (monster templates and triggers). Optional: skipped
+  // when the caller didn't supply a builderRepo (preserves legacy tests
+  // that don't author monsters).
+  if (opts.builderRepo) {
+    const spawnPerception = await buildPerceptionView(playerId, repo);
+    const spawnResult = await runSpawnTickPass({
+      worldId: spawnPerception.worldId,
+      events,
+      engineRepo: repo,
+      builderRepo: opts.builderRepo,
+      llm,
+      perception: spawnPerception.view,
+    });
+    for (const ev of spawnResult.events) {
+      events.push(ev);
+      const line = await renderWitnessForPlayer(ev, playerId, repo);
+      if (line !== null && line.length > 0) witnessed.push(line);
+    }
   }
 
   // 7. Sleep any woken NPCs (awake && !autonomous) whose shortTermIntent

@@ -256,6 +256,10 @@ async function summariseEvent(
     }
     case EventKind.DescriptionUpdated:
       return `the world changed (${event.target.kind} description updated)`;
+    case EventKind.AgentSpawned: {
+      const spawnedLabel = await labelOf(event.spawnedAgentId);
+      return `${spawnedLabel} appeared`;
+    }
   }
 }
 

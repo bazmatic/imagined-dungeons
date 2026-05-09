@@ -40,6 +40,21 @@ The action vocabulary is a closed set, dispatched through a registry. Adding a v
 
 Campaigns (the seed world plus its player, world id, and display name) live behind a `Campaign` abstraction in `src/core/domain/campaign.ts`. Adding a new campaign is a single-module change: drop a new file under `src/campaigns/` exporting a `Campaign`, then point the composition root (`app/server/world.ts`) at it. The seeder, route heading, and scripts all read from the campaign — no further refactor required.
 
+## Campaign Builder
+
+An admin-facing builder lives at `/admin`. Drafts and live worlds share the same tables; publish runs a three-way merge against a per-live-world snapshot so authored changes apply without clobbering gameplay drift.
+
+The same operations are available two ways:
+
+- **UI:** `/admin` (no auth in v1).
+- **MCP server:** `pnpm mcp` — stdio transport. Use this to drive the builder from an AI agent.
+
+To bootstrap an editable draft of an existing live world (e.g. the seeded burning-district), open `/admin` and click "Clone as draft."
+
+Migration: `pnpm migrate:worlds` backfills `displayName` and `playerAgentId` on rows that pre-date the builder.
+
+(An HTTP API was planned as a third adapter but is deferred until TanStack Start ships file-based API routes; the current version exposes server functions only. See `docs/superpowers/specs/2026-05-08-campaign-builder-design.md`.)
+
 ## Getting started
 
 ```bash

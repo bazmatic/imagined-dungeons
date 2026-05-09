@@ -13,8 +13,14 @@ export interface DbHandle {
 export function openDb(filename: string): DbHandle {
   const sqlite = new Database(filename);
   sqlite.pragma('journal_mode = WAL');
-  sqlite.pragma('foreign_keys = ON');
+  // Disable FKs across the migration window. SQLite's "create-new + copy + drop +
+  // rename" pattern (used for ALTER TABLE-equivalent migrations) trips FK checks
+  // mid-flight; the PRAGMA foreign_keys=OFF lines emitted inside the migration
+  // SQL itself are silently ignored because the migrator wraps statements in a
+  // transaction. Toggling here is the canonical workaround.
+  sqlite.pragma('foreign_keys = OFF');
   const db = drizzle(sqlite, { schema });
   migrate(db, { migrationsFolder: './drizzle' });
+  sqlite.pragma('foreign_keys = ON');
   return { db, close: () => sqlite.close() };
 }

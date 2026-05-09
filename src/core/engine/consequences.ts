@@ -244,6 +244,10 @@ async function summarise(event: DomainEvent, repo: Repository): Promise<string> 
       const actor = await labelOf(event.actorId);
       return `${actor} updated a description (${event.target.kind})`;
     }
+    case EventKind.AgentSpawned: {
+      const spawned = await labelOf(event.spawnedAgentId);
+      return `${spawned} appeared`;
+    }
   }
 }
 
