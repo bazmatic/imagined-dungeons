@@ -24,6 +24,8 @@ import {
   asExitId,
   asItemId,
   asLocationId,
+  asMonsterTemplateId,
+  asSpawnTriggerId,
 } from '@core/domain/ids';
 import type { Direction } from '@core/domain/kinds';
 import { OwnerKind } from '@core/domain/kinds';
@@ -44,6 +46,9 @@ export class MemoryBuilderRepository implements BuilderRepository {
   private items = new Map<WorldId, Map<ItemId, Item>>();
   private agents = new Map<WorldId, Map<AgentId, Agent>>();
   private snapshots = new Map<WorldId, Snapshot>();
+  private templates = new Map<WorldId, Map<MonsterTemplateId, MonsterTemplate>>();
+  private triggers = new Map<WorldId, Map<SpawnTriggerId, LocationSpawnTrigger>>();
+  private fireStates = new Map<WorldId, TriggerFireState>();
 
   private bucket<K, V>(map: Map<WorldId, Map<K, V>>, world: WorldId): Map<K, V> {
     let b = map.get(world);
@@ -156,46 +161,57 @@ export class MemoryBuilderRepository implements BuilderRepository {
     this.bucket(this.agents, w).delete(id);
   }
 
-  async listMonsterTemplates(_w: WorldId): Promise<readonly MonsterTemplate[]> {
-    throw new Error('listMonsterTemplates: not implemented yet (Task 4/5)');
+  async listMonsterTemplates(w: WorldId) {
+    return [...this.bucket(this.templates, w).values()];
   }
-  async getMonsterTemplate(_w: WorldId, _id: MonsterTemplateId): Promise<MonsterTemplate | null> {
-    throw new Error('getMonsterTemplate: not implemented yet (Task 4/5)');
+  async getMonsterTemplate(w: WorldId, id: MonsterTemplateId) {
+    return this.bucket(this.templates, w).get(id) ?? null;
   }
-  async upsertMonsterTemplate(_w: WorldId, _input: UpsertMonsterTemplateInput): Promise<void> {
-    throw new Error('upsertMonsterTemplate: not implemented yet (Task 4/5)');
+  async upsertMonsterTemplate(w: WorldId, i: UpsertMonsterTemplateInput) {
+    this.bucket(this.templates, w).set(i.id, {
+      id: asMonsterTemplateId(i.id),
+      worldId: w,
+      templateKey: i.templateKey,
+      label: i.label,
+      shortDescription: i.shortDescription,
+      longDescription: i.longDescription,
+      hp: i.hp,
+      mood: i.mood,
+      startingItems: i.startingItems,
+    });
   }
-  async deleteMonsterTemplate(_w: WorldId, _id: MonsterTemplateId): Promise<void> {
-    throw new Error('deleteMonsterTemplate: not implemented yet (Task 4/5)');
-  }
-
-  async listLocationSpawnTriggers(
-    _w: WorldId,
-    _locationId?: LocationId,
-  ): Promise<readonly LocationSpawnTrigger[]> {
-    throw new Error('listLocationSpawnTriggers: not implemented yet (Task 4/5)');
-  }
-  async getLocationSpawnTrigger(
-    _w: WorldId,
-    _id: SpawnTriggerId,
-  ): Promise<LocationSpawnTrigger | null> {
-    throw new Error('getLocationSpawnTrigger: not implemented yet (Task 4/5)');
-  }
-  async upsertLocationSpawnTrigger(
-    _w: WorldId,
-    _input: UpsertLocationSpawnTriggerInput,
-  ): Promise<void> {
-    throw new Error('upsertLocationSpawnTrigger: not implemented yet (Task 4/5)');
-  }
-  async deleteLocationSpawnTrigger(_w: WorldId, _id: SpawnTriggerId): Promise<void> {
-    throw new Error('deleteLocationSpawnTrigger: not implemented yet (Task 4/5)');
+  async deleteMonsterTemplate(w: WorldId, id: MonsterTemplateId) {
+    this.bucket(this.templates, w).delete(id);
   }
 
-  async readTriggerFireState(_w: WorldId): Promise<TriggerFireState> {
-    throw new Error('readTriggerFireState: not implemented yet (Task 4/5)');
+  async listLocationSpawnTriggers(w: WorldId, locationId?: LocationId) {
+    const all = [...this.bucket(this.triggers, w).values()];
+    return locationId ? all.filter((t) => t.locationId === locationId) : all;
   }
-  async writeTriggerFireState(_w: WorldId, _state: TriggerFireState): Promise<void> {
-    throw new Error('writeTriggerFireState: not implemented yet (Task 4/5)');
+  async getLocationSpawnTrigger(w: WorldId, id: SpawnTriggerId) {
+    return this.bucket(this.triggers, w).get(id) ?? null;
+  }
+  async upsertLocationSpawnTrigger(w: WorldId, i: UpsertLocationSpawnTriggerInput) {
+    this.bucket(this.triggers, w).set(i.id, {
+      id: asSpawnTriggerId(i.id),
+      worldId: w,
+      locationId: i.locationId,
+      templateId: i.templateId,
+      params: i.params,
+      count: i.count,
+      oneShot: i.oneShot,
+      fireOnInitialPublish: i.fireOnInitialPublish,
+    });
+  }
+  async deleteLocationSpawnTrigger(w: WorldId, id: SpawnTriggerId) {
+    this.bucket(this.triggers, w).delete(id);
+  }
+
+  async readTriggerFireState(w: WorldId): Promise<TriggerFireState> {
+    return this.fireStates.get(w) ?? { byTriggerId: {} };
+  }
+  async writeTriggerFireState(w: WorldId, state: TriggerFireState): Promise<void> {
+    this.fireStates.set(w, state);
   }
 
   async readSnapshot(w: WorldId) {
@@ -228,6 +244,9 @@ export class MemoryBuilderRepository implements BuilderRepository {
       items: dup(this.items),
       agents: dup(this.agents),
       snapshots: new Map(this.snapshots),
+      templates: dup(this.templates),
+      triggers: dup(this.triggers),
+      fireStates: new Map(this.fireStates),
     };
   }
   private restore(b: ReturnType<MemoryBuilderRepository['clone']>) {
@@ -237,5 +256,8 @@ export class MemoryBuilderRepository implements BuilderRepository {
     this.items = b.items;
     this.agents = b.agents;
     this.snapshots = b.snapshots;
+    this.templates = b.templates;
+    this.triggers = b.triggers;
+    this.fireStates = b.fireStates;
   }
 }
