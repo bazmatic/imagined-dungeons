@@ -1,9 +1,14 @@
 import type { BuilderRepository } from '@core/builder/repository';
 import type {
+  LocationSpawnTrigger,
+  MonsterTemplate,
+  TriggerFireState,
   UpsertAgentInput,
   UpsertExitInput,
   UpsertItemInput,
   UpsertLocationInput,
+  UpsertLocationSpawnTriggerInput,
+  UpsertMonsterTemplateInput,
   WorldSummary,
 } from '@core/domain/builder-types';
 import type { Agent, Exit, Item, Location } from '@core/domain/entities';
@@ -12,6 +17,8 @@ import {
   type ExitId,
   type ItemId,
   type LocationId,
+  type MonsterTemplateId,
+  type SpawnTriggerId,
   type WorldId,
   asAgentId,
   asExitId,
@@ -147,6 +154,48 @@ export class MemoryBuilderRepository implements BuilderRepository {
   }
   async deleteAgent(w: WorldId, id: AgentId) {
     this.bucket(this.agents, w).delete(id);
+  }
+
+  async listMonsterTemplates(_w: WorldId): Promise<readonly MonsterTemplate[]> {
+    throw new Error('listMonsterTemplates: not implemented yet (Task 4/5)');
+  }
+  async getMonsterTemplate(_w: WorldId, _id: MonsterTemplateId): Promise<MonsterTemplate | null> {
+    throw new Error('getMonsterTemplate: not implemented yet (Task 4/5)');
+  }
+  async upsertMonsterTemplate(_w: WorldId, _input: UpsertMonsterTemplateInput): Promise<void> {
+    throw new Error('upsertMonsterTemplate: not implemented yet (Task 4/5)');
+  }
+  async deleteMonsterTemplate(_w: WorldId, _id: MonsterTemplateId): Promise<void> {
+    throw new Error('deleteMonsterTemplate: not implemented yet (Task 4/5)');
+  }
+
+  async listLocationSpawnTriggers(
+    _w: WorldId,
+    _locationId?: LocationId,
+  ): Promise<readonly LocationSpawnTrigger[]> {
+    throw new Error('listLocationSpawnTriggers: not implemented yet (Task 4/5)');
+  }
+  async getLocationSpawnTrigger(
+    _w: WorldId,
+    _id: SpawnTriggerId,
+  ): Promise<LocationSpawnTrigger | null> {
+    throw new Error('getLocationSpawnTrigger: not implemented yet (Task 4/5)');
+  }
+  async upsertLocationSpawnTrigger(
+    _w: WorldId,
+    _input: UpsertLocationSpawnTriggerInput,
+  ): Promise<void> {
+    throw new Error('upsertLocationSpawnTrigger: not implemented yet (Task 4/5)');
+  }
+  async deleteLocationSpawnTrigger(_w: WorldId, _id: SpawnTriggerId): Promise<void> {
+    throw new Error('deleteLocationSpawnTrigger: not implemented yet (Task 4/5)');
+  }
+
+  async readTriggerFireState(_w: WorldId): Promise<TriggerFireState> {
+    throw new Error('readTriggerFireState: not implemented yet (Task 4/5)');
+  }
+  async writeTriggerFireState(_w: WorldId, _state: TriggerFireState): Promise<void> {
+    throw new Error('writeTriggerFireState: not implemented yet (Task 4/5)');
   }
 
   async readSnapshot(w: WorldId) {
