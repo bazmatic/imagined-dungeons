@@ -3,7 +3,9 @@ import type { WorldKind } from '@core/domain/builder-kinds';
 import type {
   LocationSpawnTrigger,
   MonsterTemplate,
+  StarterPackEntry,
   TriggerFireState,
+  TriggerParams,
   UpsertAgentInput,
   UpsertExitInput,
   UpsertItemInput,
@@ -25,6 +27,8 @@ import {
   asExitId,
   asItemId,
   asLocationId,
+  asMonsterTemplateId,
+  asSpawnTriggerId,
 } from '@core/domain/ids';
 import { type Direction, OwnerKind } from '@core/domain/kinds';
 import { and, eq, sql } from 'drizzle-orm';
@@ -218,46 +222,132 @@ export class SqliteBuilderRepository implements BuilderRepository {
       .where(and(eq(schema.agents.worldId, w), eq(schema.agents.id, id)));
   }
 
-  async listMonsterTemplates(_w: WorldId): Promise<readonly MonsterTemplate[]> {
-    throw new Error('listMonsterTemplates: not implemented yet (Task 4/5)');
+  async listMonsterTemplates(w: WorldId): Promise<readonly MonsterTemplate[]> {
+    const rows = await this.db
+      .select()
+      .from(schema.monsterTemplates)
+      .where(eq(schema.monsterTemplates.worldId, w));
+    return rows.map((r) => toMonsterTemplate(r, w));
   }
-  async getMonsterTemplate(_w: WorldId, _id: MonsterTemplateId): Promise<MonsterTemplate | null> {
-    throw new Error('getMonsterTemplate: not implemented yet (Task 4/5)');
+  async getMonsterTemplate(w: WorldId, id: MonsterTemplateId): Promise<MonsterTemplate | null> {
+    const rows = await this.db
+      .select()
+      .from(schema.monsterTemplates)
+      .where(and(eq(schema.monsterTemplates.worldId, w), eq(schema.monsterTemplates.id, id)));
+    const row = rows[0];
+    return row ? toMonsterTemplate(row, w) : null;
   }
-  async upsertMonsterTemplate(_w: WorldId, _input: UpsertMonsterTemplateInput): Promise<void> {
-    throw new Error('upsertMonsterTemplate: not implemented yet (Task 4/5)');
+  async upsertMonsterTemplate(w: WorldId, i: UpsertMonsterTemplateInput): Promise<void> {
+    await this.db
+      .insert(schema.monsterTemplates)
+      .values({
+        id: i.id,
+        worldId: w,
+        templateKey: i.templateKey,
+        label: i.label,
+        shortDescription: i.shortDescription,
+        longDescription: i.longDescription,
+        hp: i.hp,
+        mood: i.mood,
+        startingItemsJson: JSON.stringify(i.startingItems),
+      })
+      .onConflictDoUpdate({
+        target: [schema.monsterTemplates.worldId, schema.monsterTemplates.id],
+        set: {
+          templateKey: i.templateKey,
+          label: i.label,
+          shortDescription: i.shortDescription,
+          longDescription: i.longDescription,
+          hp: i.hp,
+          mood: i.mood,
+          startingItemsJson: JSON.stringify(i.startingItems),
+        },
+      });
   }
-  async deleteMonsterTemplate(_w: WorldId, _id: MonsterTemplateId): Promise<void> {
-    throw new Error('deleteMonsterTemplate: not implemented yet (Task 4/5)');
+  async deleteMonsterTemplate(w: WorldId, id: MonsterTemplateId): Promise<void> {
+    await this.db
+      .delete(schema.monsterTemplates)
+      .where(and(eq(schema.monsterTemplates.worldId, w), eq(schema.monsterTemplates.id, id)));
   }
 
   async listLocationSpawnTriggers(
-    _w: WorldId,
-    _locationId?: LocationId,
+    w: WorldId,
+    locationId?: LocationId,
   ): Promise<readonly LocationSpawnTrigger[]> {
-    throw new Error('listLocationSpawnTriggers: not implemented yet (Task 4/5)');
+    const where = locationId
+      ? and(
+          eq(schema.locationSpawnTriggers.worldId, w),
+          eq(schema.locationSpawnTriggers.locationId, locationId),
+        )
+      : eq(schema.locationSpawnTriggers.worldId, w);
+    const rows = await this.db.select().from(schema.locationSpawnTriggers).where(where);
+    return rows.map((r) => toTrigger(r, w));
   }
   async getLocationSpawnTrigger(
-    _w: WorldId,
-    _id: SpawnTriggerId,
+    w: WorldId,
+    id: SpawnTriggerId,
   ): Promise<LocationSpawnTrigger | null> {
-    throw new Error('getLocationSpawnTrigger: not implemented yet (Task 4/5)');
+    const rows = await this.db
+      .select()
+      .from(schema.locationSpawnTriggers)
+      .where(
+        and(eq(schema.locationSpawnTriggers.worldId, w), eq(schema.locationSpawnTriggers.id, id)),
+      );
+    const row = rows[0];
+    return row ? toTrigger(row, w) : null;
   }
-  async upsertLocationSpawnTrigger(
-    _w: WorldId,
-    _input: UpsertLocationSpawnTriggerInput,
-  ): Promise<void> {
-    throw new Error('upsertLocationSpawnTrigger: not implemented yet (Task 4/5)');
+  async upsertLocationSpawnTrigger(w: WorldId, i: UpsertLocationSpawnTriggerInput): Promise<void> {
+    const values = {
+      id: i.id,
+      worldId: w,
+      locationId: i.locationId,
+      templateId: i.templateId,
+      kind: i.params.kind,
+      paramsJson: JSON.stringify(i.params),
+      count: i.count,
+      oneShot: i.oneShot,
+      fireOnInitialPublish: i.fireOnInitialPublish,
+    };
+    await this.db
+      .insert(schema.locationSpawnTriggers)
+      .values(values)
+      .onConflictDoUpdate({
+        target: [schema.locationSpawnTriggers.worldId, schema.locationSpawnTriggers.id],
+        set: {
+          locationId: values.locationId,
+          templateId: values.templateId,
+          kind: values.kind,
+          paramsJson: values.paramsJson,
+          count: values.count,
+          oneShot: values.oneShot,
+          fireOnInitialPublish: values.fireOnInitialPublish,
+        },
+      });
   }
-  async deleteLocationSpawnTrigger(_w: WorldId, _id: SpawnTriggerId): Promise<void> {
-    throw new Error('deleteLocationSpawnTrigger: not implemented yet (Task 4/5)');
+  async deleteLocationSpawnTrigger(w: WorldId, id: SpawnTriggerId): Promise<void> {
+    await this.db
+      .delete(schema.locationSpawnTriggers)
+      .where(
+        and(eq(schema.locationSpawnTriggers.worldId, w), eq(schema.locationSpawnTriggers.id, id)),
+      );
   }
 
-  async readTriggerFireState(_w: WorldId): Promise<TriggerFireState> {
-    throw new Error('readTriggerFireState: not implemented yet (Task 4/5)');
+  /**
+   * Trigger-fire-state lives on the snapshot JSON's `triggerFireState` field
+   * (per spec §"world_snapshots.snapshotJson"). Read defaults to empty when
+   * the field is absent (existing snapshots predate this slice).
+   */
+  async readTriggerFireState(w: WorldId): Promise<TriggerFireState> {
+    const snap = await this.readSnapshot(w);
+    if (!snap) return { byTriggerId: {} };
+    const payload = JSON.parse(snap.json) as { triggerFireState?: TriggerFireState };
+    return payload.triggerFireState ?? { byTriggerId: {} };
   }
-  async writeTriggerFireState(_w: WorldId, _state: TriggerFireState): Promise<void> {
-    throw new Error('writeTriggerFireState: not implemented yet (Task 4/5)');
+  async writeTriggerFireState(w: WorldId, state: TriggerFireState): Promise<void> {
+    const snap = await this.readSnapshot(w);
+    const base = snap ? (JSON.parse(snap.json) as Record<string, unknown>) : {};
+    const merged = JSON.stringify({ ...base, triggerFireState: state });
+    await this.writeSnapshot(w, merged, Date.now());
   }
 
   async readSnapshot(w: WorldId) {
@@ -356,3 +446,37 @@ const toAgent = (r: typeof schema.agents.$inferSelect, w: WorldId): Agent => ({
   autonomous: r.autonomous,
   awake: r.awake,
 });
+
+function toMonsterTemplate(
+  r: typeof schema.monsterTemplates.$inferSelect,
+  w: WorldId,
+): MonsterTemplate {
+  return {
+    id: asMonsterTemplateId(r.id),
+    worldId: w,
+    templateKey: r.templateKey,
+    label: r.label,
+    shortDescription: r.shortDescription,
+    longDescription: r.longDescription,
+    hp: r.hp,
+    mood: r.mood,
+    startingItems: JSON.parse(r.startingItemsJson) as StarterPackEntry[],
+  };
+}
+
+function toTrigger(
+  r: typeof schema.locationSpawnTriggers.$inferSelect,
+  w: WorldId,
+): LocationSpawnTrigger {
+  const params = (r.paramsJson ? JSON.parse(r.paramsJson) : { kind: r.kind }) as TriggerParams;
+  return {
+    id: asSpawnTriggerId(r.id),
+    worldId: w,
+    locationId: asLocationId(r.locationId),
+    templateId: asMonsterTemplateId(r.templateId),
+    params,
+    count: r.count,
+    oneShot: r.oneShot,
+    fireOnInitialPublish: r.fireOnInitialPublish,
+  };
+}
