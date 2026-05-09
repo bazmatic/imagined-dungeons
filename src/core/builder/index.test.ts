@@ -17,6 +17,7 @@ import {
   cloneLiveAsDraft,
   createDraft,
   deleteLocation,
+  deleteLocationSpawnTrigger,
   getWorldTree,
   publish,
   resetLiveToDraft,
@@ -291,6 +292,126 @@ describe('upsert/delete monster template + trigger', () => {
     if (!tree.ok) throw new Error(tree.error.message);
     expect(tree.value.triggers).toHaveLength(1);
     expect(tree.value.templates).toHaveLength(1);
+  });
+});
+
+const initialPublishTriggerInput = (
+  id = 'trg_init',
+  overrides: Partial<ReturnType<typeof sampleTriggerInput>> = {},
+) => ({
+  id: asSpawnTriggerId(id),
+  locationId: asLocationId('loc_a'),
+  templateId: asMonsterTemplateId('tpl_goblin'),
+  params: { kind: TriggerEventKind.PlayerEnters },
+  count: 2,
+  oneShot: true,
+  fireOnInitialPublish: true,
+  ...overrides,
+});
+
+const seedDraftWithInitialSpawn = async (repo: MemoryBuilderRepository) => {
+  const created = await createDraft(repo, { displayName: 'D', label: 'D' });
+  if (!created.ok) throw new Error(created.error.message);
+  const W = created.value;
+  await upsertLocation(repo, W, {
+    id: asLocationId('loc_a'),
+    label: 'A',
+    shortDescription: 'a',
+    longDescription: 'a',
+  });
+  await upsertAgent(repo, W, {
+    id: asAgentId('char_p'),
+    label: 'P',
+    shortDescription: '',
+    longDescription: '',
+    locationId: asLocationId('loc_a'),
+    hp: 10,
+    damage: 0,
+    defense: 0,
+    capacity: 5,
+    mood: null,
+    goal: null,
+    autonomous: false,
+  });
+  await repo.updateWorldSummary(W, { playerAgentId: asAgentId('char_p') });
+  await upsertMonsterTemplate(repo, W, sampleTemplateInput());
+  await upsertLocationSpawnTrigger(repo, W, initialPublishTriggerInput());
+  return W;
+};
+
+describe('publish: initial vs re-publish', () => {
+  it('initial publish fires fireOnInitialPublish triggers', async () => {
+    const repo = new MemoryBuilderRepository();
+    const draftId = await seedDraftWithInitialSpawn(repo);
+    const r = await publish(repo, draftId);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.value.outcome).toBe(PublishOutcomeKind.Created);
+    expect(r.value.initialSpawns).toBe(2);
+    const liveAgents = await repo.listAgents(r.value.liveWorldId);
+    expect(liveAgents.filter((a) => a.label === 'goblin')).toHaveLength(2);
+    const fs = await repo.readTriggerFireState(r.value.liveWorldId);
+    expect(fs.byTriggerId.trg_init).toBeDefined();
+  });
+
+  it('re-publish does not re-fire triggers; initialSpawns is 0', async () => {
+    const repo = new MemoryBuilderRepository();
+    const draftId = await seedDraftWithInitialSpawn(repo);
+    const first = await publish(repo, draftId);
+    if (!first.ok) throw new Error(first.error.message);
+    const second = await publish(repo, draftId);
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+    expect(second.value.outcome).toBe(PublishOutcomeKind.Merged);
+    expect(second.value.initialSpawns).toBe(0);
+    const liveAgents = await repo.listAgents(first.value.liveWorldId);
+    expect(liveAgents.filter((a) => a.label === 'goblin')).toHaveLength(2);
+  });
+
+  it('adding a new fireOnInitialPublish trigger then re-publishing does NOT spawn it', async () => {
+    const repo = new MemoryBuilderRepository();
+    const draftId = await seedDraftWithInitialSpawn(repo);
+    const first = await publish(repo, draftId);
+    if (!first.ok) throw new Error(first.error.message);
+    await upsertLocationSpawnTrigger(repo, draftId, {
+      ...initialPublishTriggerInput('trg_init2'),
+      count: 3,
+    });
+    const second = await publish(repo, draftId);
+    if (!second.ok) throw new Error(second.error.message);
+    expect(second.value.initialSpawns).toBe(0);
+    const liveAgents = await repo.listAgents(first.value.liveWorldId);
+    expect(liveAgents.filter((a) => a.label === 'goblin')).toHaveLength(2);
+  });
+
+  it('resetLiveToDraft clears fire state and re-fires triggers', async () => {
+    const repo = new MemoryBuilderRepository();
+    const draftId = await seedDraftWithInitialSpawn(repo);
+    const first = await publish(repo, draftId);
+    if (!first.ok) throw new Error(first.error.message);
+    for (const g of (await repo.listAgents(first.value.liveWorldId)).filter(
+      (a) => a.label === 'goblin',
+    )) {
+      await repo.deleteAgent(first.value.liveWorldId, g.id);
+    }
+    const r = await resetLiveToDraft(repo, draftId);
+    expect(r.ok).toBe(true);
+    const liveAgents = await repo.listAgents(first.value.liveWorldId);
+    expect(liveAgents.filter((a) => a.label === 'goblin')).toHaveLength(2);
+  });
+
+  it('removing a trigger drops its fire state but leaves spawned agents alone', async () => {
+    const repo = new MemoryBuilderRepository();
+    const draftId = await seedDraftWithInitialSpawn(repo);
+    const first = await publish(repo, draftId);
+    if (!first.ok) throw new Error(first.error.message);
+    await deleteLocationSpawnTrigger(repo, draftId, asSpawnTriggerId('trg_init'));
+    const second = await publish(repo, draftId);
+    if (!second.ok) throw new Error(second.error.message);
+    const liveAgents = await repo.listAgents(first.value.liveWorldId);
+    expect(liveAgents.filter((a) => a.label === 'goblin')).toHaveLength(2);
+    const fs = await repo.readTriggerFireState(first.value.liveWorldId);
+    expect(fs.byTriggerId.trg_init).toBeUndefined();
   });
 });
 

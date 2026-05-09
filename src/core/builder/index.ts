@@ -31,6 +31,7 @@ import {
   asWorldId,
 } from '@core/domain/ids';
 import { Err, Ok, type Result } from '@core/domain/result';
+import { expandSpawn } from '@core/spawning/expand';
 import { computeMergePlan } from './diff';
 import type { BuilderRepository } from './repository';
 import { validateWorld } from './validate';
@@ -327,6 +328,42 @@ async function copyTreeIntoWorld(
     await repo.upsertLocationSpawnTrigger(destWorldId, asTriggerInput(trg));
 }
 
+interface InitialSpawnResult {
+  readonly initialSpawns: number;
+  readonly fireRecords: Record<string, { firedAt: number }>;
+}
+
+/**
+ * Run the `fireOnInitialPublish` pass against a draft tree, inserting
+ * agents into the destination world. Returns the count of inserts and
+ * the per-trigger fire records to record in `triggerFireState`.
+ */
+async function runInitialSpawnPass(
+  tx: BuilderRepository,
+  destWorldId: WorldId,
+  draftTree: WorldTree,
+  now: number,
+): Promise<InitialSpawnResult> {
+  const fireRecords: Record<string, { firedAt: number }> = {};
+  let initialSpawns = 0;
+  for (const trg of draftTree.triggers) {
+    if (!trg.fireOnInitialPublish) continue;
+    const tpl = draftTree.templates.find((t) => t.id === trg.templateId);
+    if (!tpl) continue;
+    const inserts = expandSpawn({
+      template: tpl,
+      locationId: trg.locationId,
+      count: trg.count,
+    });
+    for (const insert of inserts) {
+      await tx.upsertAgent(destWorldId, insert);
+      initialSpawns += 1;
+    }
+    fireRecords[trg.id as string] = { firedAt: now };
+  }
+  return { initialSpawns, fireRecords };
+}
+
 function snapshotJson(tree: WorldTree, fireState: TriggerFireState = { byTriggerId: {} }): string {
   return JSON.stringify({
     locations: tree.locations,
@@ -373,7 +410,19 @@ export async function publish(
         playerAgentId: draftSummary.value.playerAgentId,
       });
       await copyTreeIntoWorld(tx, draftTree.value, newId);
-      await tx.writeSnapshot(newId, snapshotJson(draftTree.value), Date.now());
+      const now = Date.now();
+      const { initialSpawns, fireRecords } = await runInitialSpawnPass(
+        tx,
+        newId,
+        draftTree.value,
+        now,
+      );
+      await tx.writeTriggerFireState(newId, { byTriggerId: fireRecords });
+      await tx.writeSnapshot(
+        newId,
+        snapshotJson(draftTree.value, { byTriggerId: fireRecords }),
+        now,
+      );
       return Ok({
         outcome: PublishOutcomeKind.Created,
         liveWorldId: newId,
@@ -387,7 +436,7 @@ export async function publish(
           deletes: 0,
         },
         skipped: [],
-        initialSpawns: 0,
+        initialSpawns,
       });
     }
 
@@ -424,7 +473,18 @@ export async function publish(
         throw new Error(`unexpected entity kind in publish deletes: ${ref.kind}`);
       }
     }
-    await tx.writeSnapshot(liveId, snapshotJson(draftTree.value), Date.now());
+    const previousFireState = await tx.readTriggerFireState(liveId);
+    const draftTriggerIds = new Set(draftTree.value.triggers.map((t) => t.id as string));
+    const filtered: Record<string, { firedAt: number }> = {};
+    for (const [id, rec] of Object.entries(previousFireState.byTriggerId)) {
+      if (draftTriggerIds.has(id)) filtered[id] = rec;
+    }
+    await tx.writeTriggerFireState(liveId, { byTriggerId: filtered });
+    await tx.writeSnapshot(
+      liveId,
+      snapshotJson(draftTree.value, { byTriggerId: filtered }),
+      Date.now(),
+    );
 
     return Ok({
       outcome: PublishOutcomeKind.Merged,
@@ -508,7 +568,14 @@ export async function resetLiveToDraft(
     for (const a of live.value.agents) await tx.deleteAgent(liveId, a.id);
     for (const l of live.value.locations) await tx.deleteLocation(liveId, l.id);
     await copyTreeIntoWorld(tx, draftTree.value, liveId);
-    await tx.writeSnapshot(liveId, snapshotJson(draftTree.value), Date.now());
+    const now = Date.now();
+    const { fireRecords } = await runInitialSpawnPass(tx, liveId, draftTree.value, now);
+    await tx.writeTriggerFireState(liveId, { byTriggerId: fireRecords });
+    await tx.writeSnapshot(
+      liveId,
+      snapshotJson(draftTree.value, { byTriggerId: fireRecords }),
+      now,
+    );
     return Ok(undefined);
   });
 }
