@@ -1,7 +1,7 @@
 import type { DescriptionTarget } from './actions';
 import type { Direction } from './entities';
 import type { ExaminableTarget } from './examinable';
-import type { AgentId, EventId, ItemId, LocationId, WorldId } from './ids';
+import type { AgentId, EventId, ItemId, LocationId, MonsterTemplateId, WorldId } from './ids';
 import { EventKind } from './kinds';
 
 export { EventKind } from './kinds';
@@ -53,6 +53,12 @@ export type DomainEvent =
       moodAfter: string | null;
       shortTermIntentBefore: string | null;
       shortTermIntentAfter: string | null;
+    })
+  | (BaseEvent & {
+      kind: 'agent_spawned';
+      spawnedAgentId: AgentId;
+      locationId: LocationId;
+      templateId: MonsterTemplateId;
     });
 
 export const NARRATED_EVENT_KINDS: ReadonlySet<EventKind> = new Set<EventKind>([

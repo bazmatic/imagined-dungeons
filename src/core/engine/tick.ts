@@ -161,6 +161,8 @@ async function renderWitnessForPlayer(
       if (intentChanged) return null;
       return null;
     }
+    case EventKind.AgentSpawned:
+      return null;
   }
 }
 

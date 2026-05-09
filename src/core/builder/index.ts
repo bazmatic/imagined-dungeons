@@ -86,7 +86,15 @@ export async function getWorldTree(
     repo.listItems(id),
     repo.listAgents(id),
   ]);
-  return Ok({ summary: s.value, locations, exits, items, agents });
+  return Ok({
+    summary: s.value,
+    locations,
+    exits,
+    items,
+    agents,
+    templates: [],
+    triggers: [],
+  });
 }
 
 export async function upsertLocation(
@@ -300,6 +308,7 @@ export async function publish(
           deletes: 0,
         },
         skipped: [],
+        initialSpawns: 0,
       });
     }
 
@@ -309,6 +318,8 @@ export async function publish(
     const snapTree: WorldTree = snap
       ? {
           summary: liveTree.value.summary,
+          templates: [],
+          triggers: [],
           ...(JSON.parse(snap.json) as Pick<WorldTree, 'locations' | 'exits' | 'items' | 'agents'>),
         }
       : { ...liveTree.value };
@@ -326,7 +337,7 @@ export async function publish(
       if (ref.kind === EntityKind.Location) await tx.deleteLocation(liveId, ref.id);
       else if (ref.kind === EntityKind.Exit) await tx.deleteExit(liveId, ref.id);
       else if (ref.kind === EntityKind.Item) await tx.deleteItem(liveId, ref.id);
-      else await tx.deleteAgent(liveId, ref.id);
+      else if (ref.kind === EntityKind.Agent) await tx.deleteAgent(liveId, ref.id);
     }
     await tx.writeSnapshot(liveId, snapshotJson(draftTree.value), Date.now());
 
@@ -347,6 +358,7 @@ export async function publish(
         deletes: plan.deletes.length,
       },
       skipped: plan.skipped,
+      initialSpawns: 0,
     });
   });
 }

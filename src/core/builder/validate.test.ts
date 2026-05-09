@@ -53,6 +53,8 @@ const baseTree = (): WorldTree => ({
       awake: false,
     },
   ],
+  templates: [],
+  triggers: [],
 });
 
 describe('validateWorld', () => {

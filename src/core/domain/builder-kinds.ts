@@ -15,6 +15,8 @@ export const EntityKind = {
   Exit: 'exit',
   Item: 'item',
   Agent: 'agent',
+  MonsterTemplate: 'monster_template',
+  LocationSpawnTrigger: 'location_spawn_trigger',
 } as const;
 export type EntityKind = (typeof EntityKind)[keyof typeof EntityKind];
 
@@ -27,6 +29,13 @@ export const ProblemKind = {
   PlayerAgentNotSet: 'player_agent_not_set',
   PlayerAgentMissing: 'player_agent_missing',
   DuplicateId: 'duplicate_id',
+  TemplateLabelEmpty: 'template_label_empty',
+  TemplateHpInvalid: 'template_hp_invalid',
+  TemplateStartingItemMissing: 'template_starting_item_missing',
+  LocationSpawnTriggerTemplateMissing: 'location_spawn_trigger_template_missing',
+  LocationSpawnTriggerLocationMissing: 'location_spawn_trigger_location_missing',
+  LocationSpawnTriggerCountInvalid: 'location_spawn_trigger_count_invalid',
+  LocationSpawnTriggerParamsInvalid: 'location_spawn_trigger_params_invalid',
 } as const;
 export type ProblemKind = (typeof ProblemKind)[keyof typeof ProblemKind];
 
@@ -52,3 +61,17 @@ export const SkipReasonKind = {
   LiveDeletedRow: 'live_deleted_row',
 } as const;
 export type SkipReasonKind = (typeof SkipReasonKind)[keyof typeof SkipReasonKind];
+
+export const TriggerEventKind = {
+  PlayerEnters: 'player_enters',
+  CombatStarts: 'combat_starts',
+  ItemTaken: 'item_taken',
+  Speech: 'speech',
+  LlmJudgement: 'llm_judgement',
+} as const;
+export type TriggerEventKind = (typeof TriggerEventKind)[keyof typeof TriggerEventKind];
+
+export const StarterPackEntryKind = {
+  Inline: 'inline',
+} as const;
+export type StarterPackEntryKind = (typeof StarterPackEntryKind)[keyof typeof StarterPackEntryKind];

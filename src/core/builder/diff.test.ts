@@ -22,6 +22,8 @@ const emptyTree = (id = W, kind: WorldKind = WorldKind.Live): WorldTree => ({
   exits: [],
   items: [],
   agents: [],
+  templates: [],
+  triggers: [],
 });
 
 const loc = (id: string, label: string) => ({

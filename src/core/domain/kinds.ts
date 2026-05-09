@@ -47,6 +47,7 @@ export const EventKind = {
   Emote: 'emote',
   Attack: 'attack',
   DescriptionUpdated: 'description_updated',
+  AgentSpawned: 'agent_spawned',
 } as const;
 export type EventKind = (typeof EventKind)[keyof typeof EventKind];
 

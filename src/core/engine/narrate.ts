@@ -139,6 +139,8 @@ function summariseEvent(event: DomainEvent): string {
       return `${event.actorId} attacked ${event.targetAgentId} (${event.outcome}${event.outcome === AttackOutcome.Hit ? `, ${event.damageDealt} dmg` : ''})`;
     case EventKind.DescriptionUpdated:
       return `${event.actorId} updated description (${event.target.kind})`;
+    case EventKind.AgentSpawned:
+      return `${event.spawnedAgentId} spawned at ${event.locationId}`;
   }
 }
 
