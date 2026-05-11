@@ -3,8 +3,6 @@ import { useLayoutEffect, useRef } from 'react';
 export interface ManuscriptCardProps {
   readonly value: string;
   readonly onChange: (v: string) => void;
-  // Kept for backwards compat until Task 12 lands; unused.
-  readonly entityId?: string;
 }
 
 export function ManuscriptCard({ value, onChange }: ManuscriptCardProps) {
