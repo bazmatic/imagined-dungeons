@@ -31,6 +31,7 @@ import {
   asLocationId,
   asMonsterTemplateId,
   asSpawnTriggerId,
+  asTagLoreId,
 } from '@core/domain/ids';
 import type { Direction } from '@core/domain/kinds';
 import { OwnerKind } from '@core/domain/kinds';
@@ -54,6 +55,8 @@ export class MemoryBuilderRepository implements BuilderRepository {
   private templates = new Map<WorldId, Map<MonsterTemplateId, MonsterTemplate>>();
   private triggers = new Map<WorldId, Map<SpawnTriggerId, LocationSpawnTrigger>>();
   private fireStates = new Map<WorldId, TriggerFireState>();
+  private worldLore = new Map<WorldId, Omit<WorldLore, 'worldId'>>();
+  private tagLore = new Map<WorldId, Map<TagLoreId, TagLore>>();
 
   private bucket<K, V>(map: Map<WorldId, Map<K, V>>, world: WorldId): Map<K, V> {
     let b = map.get(world);
@@ -227,26 +230,46 @@ export class MemoryBuilderRepository implements BuilderRepository {
     this.bucket(this.triggers, w).delete(id);
   }
 
-  async readWorldLore(_w: WorldId): Promise<WorldLore> {
-    throw new Error('readWorldLore: not implemented yet (Task 5)');
+  async readWorldLore(w: WorldId): Promise<WorldLore> {
+    const row = this.worldLore.get(w);
+    return {
+      worldId: w,
+      worldOverview: row?.worldOverview ?? '',
+      storySoFar: row?.storySoFar ?? '',
+    };
   }
-  async writeWorldLore(_w: WorldId, _lore: Omit<WorldLore, 'worldId'>): Promise<void> {
-    throw new Error('writeWorldLore: not implemented yet (Task 5)');
+
+  async writeWorldLore(w: WorldId, lore: Omit<WorldLore, 'worldId'>): Promise<void> {
+    this.worldLore.set(w, { ...lore });
   }
-  async listTagLore(_w: WorldId): Promise<readonly TagLore[]> {
-    throw new Error('listTagLore: not implemented yet (Task 5)');
+
+  async listTagLore(w: WorldId): Promise<readonly TagLore[]> {
+    return [...this.bucket(this.tagLore, w).values()];
   }
-  async getTagLore(_w: WorldId, _id: TagLoreId): Promise<TagLore | null> {
-    throw new Error('getTagLore: not implemented yet (Task 5)');
+
+  async getTagLore(w: WorldId, id: TagLoreId): Promise<TagLore | null> {
+    return this.bucket(this.tagLore, w).get(id) ?? null;
   }
-  async getTagLoreByTag(_w: WorldId, _tag: string): Promise<TagLore | null> {
-    throw new Error('getTagLoreByTag: not implemented yet (Task 5)');
+
+  async getTagLoreByTag(w: WorldId, tag: string): Promise<TagLore | null> {
+    for (const row of this.bucket(this.tagLore, w).values()) {
+      if (row.tag === tag) return row;
+    }
+    return null;
   }
-  async upsertTagLore(_w: WorldId, _input: UpsertTagLoreInput): Promise<void> {
-    throw new Error('upsertTagLore: not implemented yet (Task 5)');
+
+  async upsertTagLore(w: WorldId, i: UpsertTagLoreInput): Promise<void> {
+    this.bucket(this.tagLore, w).set(i.id, {
+      id: asTagLoreId(i.id),
+      worldId: w,
+      tag: i.tag,
+      title: i.title,
+      description: i.description,
+    });
   }
-  async deleteTagLore(_w: WorldId, _id: TagLoreId): Promise<void> {
-    throw new Error('deleteTagLore: not implemented yet (Task 5)');
+
+  async deleteTagLore(w: WorldId, id: TagLoreId): Promise<void> {
+    this.bucket(this.tagLore, w).delete(id);
   }
 
   async readTriggerFireState(w: WorldId): Promise<TriggerFireState> {
@@ -289,6 +312,8 @@ export class MemoryBuilderRepository implements BuilderRepository {
       templates: dup(this.templates),
       triggers: dup(this.triggers),
       fireStates: new Map(this.fireStates),
+      worldLore: new Map(this.worldLore),
+      tagLore: dup(this.tagLore),
     };
   }
   private restore(b: ReturnType<MemoryBuilderRepository['clone']>) {
@@ -301,5 +326,7 @@ export class MemoryBuilderRepository implements BuilderRepository {
     this.templates = b.templates;
     this.triggers = b.triggers;
     this.fireStates = b.fireStates;
+    this.worldLore = b.worldLore;
+    this.tagLore = b.tagLore;
   }
 }
