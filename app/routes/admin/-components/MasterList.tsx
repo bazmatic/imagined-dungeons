@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { type ReactNode, useMemo, useState } from 'react';
 
 export interface MasterListItem {
   readonly id: string;
@@ -12,6 +12,7 @@ export interface MasterListProps {
   readonly onSelect: (id: string) => void;
   readonly filterPlaceholder?: string;
   readonly emptyHint?: string;
+  readonly header?: ReactNode;
 }
 
 export function MasterList({
@@ -20,6 +21,7 @@ export function MasterList({
   onSelect,
   filterPlaceholder,
   emptyHint,
+  header,
 }: MasterListProps) {
   const [filter, setFilter] = useState('');
   const q = filter.trim().toLowerCase();
@@ -35,9 +37,10 @@ export function MasterList({
   return (
     <>
       <div className="master-pane__body">
+        {header ? <div className="master-pane__header-slot">{header}</div> : null}
         {visible.length === 0 ? (
           <p className="t-metadata" style={{ fontStyle: 'italic', padding: 'var(--s-3)' }}>
-            {q === '' ? (emptyHint ?? 'No entries.') : 'No matches.'}
+            {q === '' ? (emptyHint ?? 'No entries yet — use + New above.') : 'No matches.'}
           </p>
         ) : (
           visible.map((item) => (

@@ -1,6 +1,7 @@
 import type { Problem, WorldTree } from '@core/domain/builder-types';
 import { type ReactNode, useState } from 'react';
 import { AgentForm } from './AgentForm';
+import { CreateAffordance } from './CreateAffordance';
 import { ItemForm } from './ItemForm';
 import { LocationForm } from './LocationForm';
 import { MasterList, type MasterListItem } from './MasterList';
@@ -38,6 +39,17 @@ export function useCategoryRouter({
         onSelect(id);
       }}
       filterPlaceholder={`Filter ${category}…`}
+      header={
+        <CreateAffordance
+          tree={tree}
+          category={category}
+          onCreated={(id) => {
+            setJsonFallback(null);
+            onSelect(id);
+            onSaved();
+          }}
+        />
+      }
     />
   );
 

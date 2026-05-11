@@ -1403,3 +1403,15 @@
   font-style: italic;
   margin-bottom: var(--s-4);
 }
+
+/* === v3.1: master-pane create affordance === */
+.admin-root .master-pane__header-slot {
+  padding: var(--s-2) var(--s-2) var(--s-4);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--s-3);
+}
+.admin-root .create-affordance {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
