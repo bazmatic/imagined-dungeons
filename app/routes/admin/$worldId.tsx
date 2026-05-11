@@ -2,7 +2,7 @@ import { EntityKind, WorldKind } from '@core/domain/builder-kinds';
 import type { WorldTree } from '@core/domain/builder-types';
 import { OwnerKind } from '@core/domain/kinds';
 import { createFileRoute, useRouter } from '@tanstack/react-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { deleteEntity, saveEntity } from '~/server/admin/entities';
 import { publish, resetLive } from '~/server/admin/publish';
 import {
@@ -13,6 +13,14 @@ import {
 } from '~/server/admin/templates';
 import { validate } from '~/server/admin/validate';
 import { getWorld } from '~/server/admin/worlds';
+import { Breadcrumbs } from './_components/Breadcrumbs';
+import { CommandPalette } from './_components/CommandPalette';
+import { Fonts } from './_components/Fonts';
+import { ManuscriptCard } from './_components/ManuscriptCard';
+import { ProblemsRail } from './_components/ProblemsRail';
+import { StatusBadge } from './_components/StatusBadge';
+
+type EntityKindValue = (typeof EntityKind)[keyof typeof EntityKind];
 
 export const Route = createFileRoute('/admin/$worldId')({
   component: AdminWorld,
@@ -23,14 +31,13 @@ export const Route = createFileRoute('/admin/$worldId')({
   },
 });
 
-type Selected =
-  | { kind: 'world' }
-  | { kind: (typeof EntityKind)[keyof typeof EntityKind]; id: string };
+type Selected = { kind: 'world' } | { kind: EntityKindValue; id: string };
 
 function AdminWorld() {
   const { tree, problems } = Route.useLoaderData();
   const router = useRouter();
   const [sel, setSel] = useState<Selected>({ kind: 'world' });
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   const problemsByEntity = useMemo(() => {
     const m = new Map<string, number>();
@@ -41,25 +48,38 @@ function AdminWorld() {
     return m;
   }, [problems]);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   if (!tree.ok) {
-    return <div style={{ padding: 24 }}>World not found.</div>;
+    return (
+      <div className="admin-root" style={{ padding: 24 }}>
+        World not found.
+      </div>
+    );
   }
   const t = tree.value;
 
   const dot = (entity: string, id: string) =>
-    problemsByEntity.has(`${entity}:${id}`) ? (
-      <span style={{ color: '#e57373', marginLeft: 6 }}>●</span>
-    ) : null;
+    problemsByEntity.has(`${entity}:${id}`) ? <span className="tree-item__dot">●</span> : null;
 
   const refresh = () => router.invalidate();
 
-  const onPublish = async () => {
+  const onPublish = async (): Promise<void> => {
     const r = await publish({ data: { id: t.summary.id as string } });
     refresh();
     if (!r.ok) alert(`Publish failed: ${r.error.message}`);
     else alert(`Published. Skipped: ${r.value.skipped.length}`);
   };
-  const onReset = async () => {
+  const onReset = async (): Promise<void> => {
     if (
       !confirm(
         'Reset live world to this draft? This will replace structural rows on the live world.',
@@ -71,300 +91,347 @@ function AdminWorld() {
     if (!r.ok) alert(`Reset failed: ${r.error.message}`);
   };
 
+  const isSelected = (kind: EntityKindValue, id: string): boolean =>
+    sel.kind === kind && 'id' in sel && sel.id === id;
+
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '480px 1fr', minHeight: '100vh' }}>
-      <aside
-        style={{
-          borderRight: '1px solid #222',
-          padding: 16,
-          overflowY: 'auto',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        <h2 style={{ fontSize: 14, marginBottom: 8 }}>
-          {t.summary.displayName || t.summary.label}{' '}
-          <small style={{ opacity: 0.6 }}>({t.summary.kind})</small>
-        </h2>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-          {t.summary.kind === WorldKind.Draft && (
-            <>
-              <button type="button" onClick={onPublish}>
-                Publish
-              </button>
-              <button type="button" onClick={onReset}>
-                Reset live
-              </button>
-            </>
-          )}
-        </div>
-        <button type="button" onClick={() => setSel({ kind: 'world' })}>
-          World settings
-        </button>
-
-        <h3 style={{ fontSize: 12, marginTop: 16 }}>Locations</h3>
-        <ul>
-          {t.locations.map((l) => {
-            const locId = l.id as string;
-            const exitsHere = t.exits.filter((e) => (e.from as string) === locId);
-            const agentsHere = t.agents.filter((a) => (a.locationId as string) === locId);
-            const itemsHere = t.items.filter(
-              (i) => i.owner.kind === OwnerKind.Location && (i.owner.id as string) === locId,
-            );
-            const triggersHere = t.triggers.filter((trg) => (trg.locationId as string) === locId);
-            return (
-              <li key={locId} style={{ marginBottom: 6 }}>
-                <button
-                  type="button"
-                  onClick={() => setSel({ kind: EntityKind.Location, id: locId })}
-                >
-                  {l.label}
+    <div className="admin-root">
+      <Fonts />
+      <div className="detail-shell">
+        <header className="detail-header">
+          <h1 className="t-headline-md">{t.summary.displayName || t.summary.label}</h1>
+          <StatusBadge kind={t.summary.kind} id={t.summary.id as string} />
+          <div className="detail-header__actions">
+            {t.summary.kind === WorldKind.Draft && (
+              <>
+                <button type="button" className="btn btn--primary" onClick={onPublish}>
+                  Publish
                 </button>
-                {dot(EntityKind.Location, locId)}
-                {(exitsHere.length > 0 ||
-                  agentsHere.length > 0 ||
-                  itemsHere.length > 0 ||
-                  triggersHere.length > 0) && (
-                  <ul style={{ marginLeft: 16, marginTop: 2 }}>
-                    {exitsHere.map((e) => (
-                      <li key={e.id as string}>
-                        <button
-                          type="button"
-                          onClick={() => setSel({ kind: EntityKind.Exit, id: e.id as string })}
-                          style={{ opacity: 0.85 }}
-                        >
-                          ↪ {e.direction} → {e.to}
-                        </button>
-                        {dot(EntityKind.Exit, e.id as string)}
-                      </li>
-                    ))}
-                    {agentsHere.map((a) => (
-                      <li key={a.id as string}>
-                        <button
-                          type="button"
-                          onClick={() => setSel({ kind: EntityKind.Agent, id: a.id as string })}
-                          style={{ opacity: 0.85 }}
-                        >
-                          ☻ {a.label}
-                        </button>
-                        {dot(EntityKind.Agent, a.id as string)}
-                      </li>
-                    ))}
-                    {itemsHere.map((i) => (
-                      <li key={i.id as string}>
-                        <button
-                          type="button"
-                          onClick={() => setSel({ kind: EntityKind.Item, id: i.id as string })}
-                          style={{ opacity: 0.85 }}
-                        >
-                          ◆ {i.label}
-                        </button>
-                        {dot(EntityKind.Item, i.id as string)}
-                      </li>
-                    ))}
-                    {triggersHere.map((trg) => (
-                      <li key={trg.id as string}>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setSel({
-                              kind: EntityKind.LocationSpawnTrigger,
-                              id: trg.id as string,
-                            })
-                          }
-                          style={{ opacity: 0.85 }}
-                        >
-                          ⚡ {trg.params.kind} → {trg.templateId} (×{trg.count})
-                        </button>
-                        {dot(EntityKind.LocationSpawnTrigger, trg.id as string)}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+                <button type="button" className="btn" onClick={onReset}>
+                  Reset live
+                </button>
+              </>
+            )}
+          </div>
+        </header>
 
-        <h3 style={{ fontSize: 12, marginTop: 16 }}>Bestiary</h3>
-        <ul>
-          {t.templates.map((tpl) => (
-            <li key={tpl.id as string}>
-              <button
-                type="button"
-                onClick={() => setSel({ kind: EntityKind.MonsterTemplate, id: tpl.id as string })}
-                style={{ opacity: 0.85 }}
-              >
-                🐲 {tpl.label}
-              </button>
-              {dot(EntityKind.MonsterTemplate, tpl.id as string)}
-            </li>
-          ))}
-        </ul>
+        <aside className="tree-pane">
+          <button
+            type="button"
+            className={`tree-item__button ${
+              sel.kind === 'world' ? 'tree-item__button--selected' : ''
+            }`}
+            onClick={() => setSel({ kind: 'world' })}
+          >
+            World settings
+          </button>
 
-        {(() => {
-          const orphanItems = t.items.filter((i) => i.owner.kind !== OwnerKind.Location);
-          if (orphanItems.length === 0) return null;
-          return (
-            <>
-              <h3 style={{ fontSize: 12, marginTop: 16 }}>Items (carried / nested)</h3>
-              <ul>
-                {orphanItems.map((i) => (
-                  <li key={i.id as string}>
+          <div className="tree-section">
+            <h3 className="t-label-caps tree-section__heading">Locations</h3>
+            <ul className="tree-list">
+              {t.locations.map((l) => {
+                const locId = l.id as string;
+                const exitsHere = t.exits.filter((e) => (e.from as string) === locId);
+                const agentsHere = t.agents.filter((a) => (a.locationId as string) === locId);
+                const itemsHere = t.items.filter(
+                  (i) => i.owner.kind === OwnerKind.Location && (i.owner.id as string) === locId,
+                );
+                const triggersHere = t.triggers.filter(
+                  (trg) => (trg.locationId as string) === locId,
+                );
+                return (
+                  <li key={locId} className="tree-item">
                     <button
                       type="button"
-                      onClick={() => setSel({ kind: EntityKind.Item, id: i.id as string })}
+                      className={`tree-item__button ${
+                        isSelected(EntityKind.Location, locId) ? 'tree-item__button--selected' : ''
+                      }`}
+                      onClick={() => setSel({ kind: EntityKind.Location, id: locId })}
                     >
-                      ◆ {i.label}
+                      {l.label}
+                      {dot(EntityKind.Location, locId)}
                     </button>
-                    {dot(EntityKind.Item, i.id as string)}
+                    {(exitsHere.length > 0 ||
+                      agentsHere.length > 0 ||
+                      itemsHere.length > 0 ||
+                      triggersHere.length > 0) && (
+                      <ul className="tree-list">
+                        {exitsHere.map((e) => {
+                          const id = e.id as string;
+                          return (
+                            <li key={id} className="tree-item">
+                              <button
+                                type="button"
+                                className={`tree-item__button tree-item__button--dim ${
+                                  isSelected(EntityKind.Exit, id)
+                                    ? 'tree-item__button--selected'
+                                    : ''
+                                }`}
+                                onClick={() => setSel({ kind: EntityKind.Exit, id })}
+                              >
+                                ↪ {e.direction} → {e.to}
+                                {dot(EntityKind.Exit, id)}
+                              </button>
+                            </li>
+                          );
+                        })}
+                        {agentsHere.map((a) => {
+                          const id = a.id as string;
+                          return (
+                            <li key={id} className="tree-item">
+                              <button
+                                type="button"
+                                className={`tree-item__button tree-item__button--dim ${
+                                  isSelected(EntityKind.Agent, id)
+                                    ? 'tree-item__button--selected'
+                                    : ''
+                                }`}
+                                onClick={() => setSel({ kind: EntityKind.Agent, id })}
+                              >
+                                ☻ {a.label}
+                                {dot(EntityKind.Agent, id)}
+                              </button>
+                            </li>
+                          );
+                        })}
+                        {itemsHere.map((i) => {
+                          const id = i.id as string;
+                          return (
+                            <li key={id} className="tree-item">
+                              <button
+                                type="button"
+                                className={`tree-item__button tree-item__button--dim ${
+                                  isSelected(EntityKind.Item, id)
+                                    ? 'tree-item__button--selected'
+                                    : ''
+                                }`}
+                                onClick={() => setSel({ kind: EntityKind.Item, id })}
+                              >
+                                ◆ {i.label}
+                                {dot(EntityKind.Item, id)}
+                              </button>
+                            </li>
+                          );
+                        })}
+                        {triggersHere.map((trg) => {
+                          const id = trg.id as string;
+                          return (
+                            <li key={id} className="tree-item">
+                              <button
+                                type="button"
+                                className={`tree-item__button tree-item__button--dim ${
+                                  isSelected(EntityKind.LocationSpawnTrigger, id)
+                                    ? 'tree-item__button--selected'
+                                    : ''
+                                }`}
+                                onClick={() =>
+                                  setSel({ kind: EntityKind.LocationSpawnTrigger, id })
+                                }
+                              >
+                                ⚡ {trg.params.kind} → {trg.templateId} (×{trg.count})
+                                {dot(EntityKind.LocationSpawnTrigger, id)}
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
                   </li>
-                ))}
-              </ul>
-            </>
-          );
-        })()}
-      </aside>
+                );
+              })}
+            </ul>
+          </div>
 
-      <main style={{ padding: 24, overflowY: 'auto' }}>
-        <FormPanel
-          tree={t}
-          sel={sel}
-          onSaved={refresh}
-          onDeleted={() => {
-            setSel({ kind: 'world' });
-            refresh();
-          }}
-        />
-        <h3 style={{ marginTop: 32, fontSize: 12 }}>Problems ({problems.length})</h3>
-        <ul>
-          {problems.map((p) => (
-            <li key={`${p.entity}:${p.entityId}:${p.kind}`}>{p.message}</li>
-          ))}
-        </ul>
-      </main>
+          <div className="tree-section">
+            <h3 className="t-label-caps tree-section__heading">Bestiary</h3>
+            <ul className="tree-list">
+              {t.templates.map((tpl) => {
+                const id = tpl.id as string;
+                return (
+                  <li key={id} className="tree-item">
+                    <button
+                      type="button"
+                      className={`tree-item__button ${
+                        isSelected(EntityKind.MonsterTemplate, id)
+                          ? 'tree-item__button--selected'
+                          : ''
+                      }`}
+                      onClick={() => setSel({ kind: EntityKind.MonsterTemplate, id })}
+                    >
+                      🐲 {tpl.label}
+                      {dot(EntityKind.MonsterTemplate, id)}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+
+          {(() => {
+            const orphanItems = t.items.filter((i) => i.owner.kind !== OwnerKind.Location);
+            if (orphanItems.length === 0) return null;
+            return (
+              <div className="tree-section">
+                <h3 className="t-label-caps tree-section__heading">Items (carried / nested)</h3>
+                <ul className="tree-list">
+                  {orphanItems.map((i) => {
+                    const id = i.id as string;
+                    return (
+                      <li key={id} className="tree-item">
+                        <button
+                          type="button"
+                          className={`tree-item__button ${
+                            isSelected(EntityKind.Item, id) ? 'tree-item__button--selected' : ''
+                          }`}
+                          onClick={() => setSel({ kind: EntityKind.Item, id })}
+                        >
+                          ◆ {i.label}
+                          {dot(EntityKind.Item, id)}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            );
+          })()}
+        </aside>
+
+        <main className="detail-pane">
+          <Breadcrumbs tree={t} sel={sel} />
+          <div style={{ marginTop: 16 }}>
+            <FormPanel
+              tree={t}
+              sel={sel}
+              onSaved={refresh}
+              onDeleted={() => {
+                setSel({ kind: 'world' });
+                refresh();
+              }}
+            />
+          </div>
+        </main>
+
+        <ProblemsRail problems={problems} onSelect={(s) => setSel({ kind: s.kind, id: s.id })} />
+      </div>
+
+      <CommandPalette
+        tree={t}
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        onSelect={(s) => setSel({ kind: s.kind, id: s.id })}
+      />
     </div>
   );
 }
 
-type TreeValue = WorldTree;
-
 function FormPanel(props: {
-  tree: TreeValue;
+  tree: WorldTree;
   sel: Selected;
   onSaved: () => void;
   onDeleted: () => void;
 }) {
   const { tree, sel, onSaved, onDeleted } = props;
   if (sel.kind === 'world') {
-    return <p>Select an entity from the tree.</p>;
+    return <p className="t-metadata">Select an entity from the tree, or press ⌘K.</p>;
   }
   if (sel.kind === EntityKind.Location) {
     const loc = tree.locations.find((l) => (l.id as string) === sel.id);
-    if (!loc) return <p>Not found.</p>;
+    if (!loc) return <p className="t-metadata">Not found.</p>;
     return (
-      <SimpleForm
-        title={`Location: ${loc.label}`}
+      <LocationForm
+        tree={tree}
         initial={{
           id: loc.id as string,
           label: loc.label,
           shortDescription: loc.shortDescription,
           longDescription: loc.longDescription,
         }}
-        fields={[
-          { key: 'id', label: 'ID', readOnly: true },
-          { key: 'label', label: 'Label' },
-          { key: 'shortDescription', label: 'Short description' },
-          { key: 'longDescription', label: 'Long description', long: true },
-        ]}
-        onSave={async (v) => {
-          await saveEntity({
-            data: {
-              worldId: tree.summary.id as string,
-              entity: EntityKind.Location,
-              payload: v,
-            },
-          });
-          onSaved();
-        }}
-        onDelete={async () => {
-          await deleteEntity({
-            data: {
-              worldId: tree.summary.id as string,
-              entity: EntityKind.Location,
-              id: loc.id as string,
-            },
-          });
-          onDeleted();
-        }}
+        onSaved={onSaved}
+        onDeleted={onDeleted}
       />
     );
   }
-  // Agent / Item / Exit follow the same shape; abbreviated to JSON edit for v1.
   return <RawJsonForm tree={tree} sel={sel} onSaved={onSaved} onDeleted={onDeleted} />;
 }
 
-interface FieldDef {
-  key: string;
-  label: string;
-  readOnly?: boolean;
-  long?: boolean;
-}
-function SimpleForm(props: {
-  title: string;
-  initial: Record<string, string>;
-  fields: readonly FieldDef[];
-  onSave: (v: Record<string, string>) => Promise<void>;
-  onDelete: () => Promise<void>;
+function LocationForm(props: {
+  tree: WorldTree;
+  initial: { id: string; label: string; shortDescription: string; longDescription: string };
+  onSaved: () => void;
+  onDeleted: () => void;
 }) {
-  const { title, initial, fields, onSave, onDelete } = props;
+  const { tree, initial, onSaved, onDeleted } = props;
   const [v, setV] = useState(initial);
+
   return (
     <div>
-      <h2 style={{ fontSize: 14, marginBottom: 12 }}>{title}</h2>
-      {fields.map((f) =>
-        f.long ? (
-          <div key={f.key} style={{ marginBottom: 8 }}>
-            <label style={{ display: 'block', fontSize: 11 }}>
-              {f.label}
-              <textarea
-                value={v[f.key] ?? ''}
-                readOnly={f.readOnly}
-                rows={4}
-                onChange={(e) => setV({ ...v, [f.key]: e.target.value })}
-                style={{
-                  width: '100%',
-                  background: '#111',
-                  color: '#cfcfcf',
-                  border: '1px solid #333',
-                }}
-              />
-            </label>
-          </div>
-        ) : (
-          <div key={f.key} style={{ marginBottom: 8 }}>
-            <label style={{ display: 'block', fontSize: 11 }}>
-              {f.label}
-              <input
-                value={v[f.key] ?? ''}
-                readOnly={f.readOnly}
-                onChange={(e) => setV({ ...v, [f.key]: e.target.value })}
-                style={{
-                  width: '100%',
-                  background: '#111',
-                  color: '#cfcfcf',
-                  border: '1px solid #333',
-                  padding: 4,
-                }}
-              />
-            </label>
-          </div>
-        ),
-      )}
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button type="button" onClick={() => onSave(v)}>
+      <h2 className="t-headline-md" style={{ marginBottom: 16 }}>
+        Location: {v.label}
+      </h2>
+      <div className="field">
+        <label htmlFor="loc-id">ID</label>
+        <input id="loc-id" className="input input--readonly" value={v.id} readOnly />
+      </div>
+      <div className="field">
+        <label htmlFor="loc-label">Label</label>
+        <input
+          id="loc-label"
+          className="input"
+          value={v.label}
+          onChange={(e) => setV({ ...v, label: e.target.value })}
+        />
+      </div>
+      <div className="field">
+        <label htmlFor="loc-short">Short description</label>
+        <input
+          id="loc-short"
+          className="input"
+          value={v.shortDescription}
+          onChange={(e) => setV({ ...v, shortDescription: e.target.value })}
+        />
+      </div>
+      <div className="field">
+        <span className="t-label-caps" style={{ fontSize: 12 }}>
+          Long description
+        </span>
+        <ManuscriptCard
+          entityId={v.id}
+          value={v.longDescription}
+          onChange={(next) => setV({ ...v, longDescription: next })}
+        />
+      </div>
+      <div className="form-actions">
+        <button
+          type="button"
+          className="btn btn--primary"
+          onClick={async () => {
+            await saveEntity({
+              data: {
+                worldId: tree.summary.id as string,
+                entity: EntityKind.Location,
+                payload: v,
+              },
+            });
+            onSaved();
+          }}
+        >
           Save
         </button>
-        <button type="button" onClick={onDelete}>
+        <button
+          type="button"
+          className="btn"
+          onClick={async () => {
+            await deleteEntity({
+              data: {
+                worldId: tree.summary.id as string,
+                entity: EntityKind.Location,
+                id: v.id,
+              },
+            });
+            onDeleted();
+          }}
+        >
           Delete
         </button>
       </div>
@@ -373,7 +440,7 @@ function SimpleForm(props: {
 }
 
 function RawJsonForm(props: {
-  tree: TreeValue;
+  tree: WorldTree;
   sel: Exclude<Selected, { kind: 'world' }>;
   onSaved: () => void;
   onDeleted: () => void;
@@ -390,24 +457,26 @@ function RawJsonForm(props: {
   };
   const initial = find();
   const [json, setJson] = useState(JSON.stringify(initial ?? {}, null, 2));
-  if (!initial) return <p>Not found.</p>;
+  if (!initial) return <p className="t-metadata">Not found.</p>;
+
   return (
     <div>
-      <h2 style={{ fontSize: 14, marginBottom: 12 }}>
+      <h2 className="t-headline-md" style={{ marginBottom: 8 }}>
         {sel.kind}: {sel.id}
       </h2>
-      <p style={{ opacity: 0.6, fontSize: 11 }}>
+      <p className="t-metadata" style={{ fontStyle: 'italic', marginBottom: 16 }}>
         v1 fallback editor — edit fields as JSON, then Save.
       </p>
       <textarea
+        className="json-editor"
         value={json}
         onChange={(e) => setJson(e.target.value)}
         rows={20}
-        style={{ width: '100%', background: '#111', color: '#cfcfcf', border: '1px solid #333' }}
       />
-      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+      <div className="form-actions">
         <button
           type="button"
+          className="btn btn--primary"
           onClick={async () => {
             // biome-ignore lint/suspicious/noExplicitAny: JSON.parse returns any; we validate in try/catch
             let parsed: any;
@@ -417,8 +486,6 @@ function RawJsonForm(props: {
               alert(`Invalid JSON: ${e instanceof Error ? e.message : String(e)}`);
               return;
             }
-            // Items use `owner: { kind, id }` in the entity; the upsert input takes
-            // `ownerKind` + `ownerId`. Translate here.
             const payload =
               sel.kind === EntityKind.Item
                 ? {
@@ -447,6 +514,7 @@ function RawJsonForm(props: {
         </button>
         <button
           type="button"
+          className="btn"
           onClick={async () => {
             if (sel.kind === EntityKind.MonsterTemplate) {
               await deleteTemplate({
