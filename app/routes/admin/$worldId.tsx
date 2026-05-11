@@ -1,4 +1,5 @@
-import { EntityKind, WorldKind } from '@core/domain/builder-kinds';
+import { BuilderErrorKind, EntityKind, WorldKind } from '@core/domain/builder-kinds';
+import type { BuilderError } from '@core/domain/builder-types';
 import { createFileRoute, useRouter } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { publish, resetLive } from '~/server/admin/publish';
@@ -56,10 +57,26 @@ function AdminWorld() {
     void router.invalidate();
   };
 
+  const handleBuilderError = (verb: string, error: BuilderError): void => {
+    if (
+      error.kind === BuilderErrorKind.ValidationFailed &&
+      error.problems &&
+      error.problems.length > 0
+    ) {
+      setProblemsOpen(true);
+      const lines = error.problems.map((p) => `• [${p.entity} ${p.entityId}] ${p.message}`);
+      alert(
+        `${verb} failed: draft has ${error.problems.length} validation ${error.problems.length === 1 ? 'problem' : 'problems'}.\n\n${lines.join('\n')}\n\nProblems drawer opened — click an entry to jump to the entity.`,
+      );
+      return;
+    }
+    alert(`${verb} failed: ${error.message}`);
+  };
+
   const onPublish = async (): Promise<void> => {
     const r = await publish({ data: { id: t.summary.id as string } });
     refresh();
-    if (!r.ok) alert(`Publish failed: ${r.error.message}`);
+    if (!r.ok) handleBuilderError('Publish', r.error);
     else alert(`Published. Skipped: ${r.value.skipped.length}`);
   };
 
@@ -67,7 +84,7 @@ function AdminWorld() {
     if (!confirm('Reset live world to this draft? This replaces live structural rows.')) return;
     const r = await resetLive({ data: { id: t.summary.id as string } });
     refresh();
-    if (!r.ok) alert(`Reset failed: ${r.error.message}`);
+    if (!r.ok) handleBuilderError('Reset', r.error);
   };
 
   const setCategory = (cat: AdminSearch['cat']): void => {
