@@ -260,11 +260,22 @@ A new `ActionKind.Search` verb (`search`). The parser maps `search <area>` (or b
 The generative-discovery pass.
 
 ```ts
+interface DiscoverySubject {
+  // The resolved entity the player is examining/searching, if the parser
+  // matched one. Carries its descriptions so the LLM grounds its
+  // invention in what the author already wrote.
+  readonly kind: 'location' | 'item' | 'agent';
+  readonly label: string;
+  readonly shortDescription: string;
+  readonly longDescription: string;
+}
+
 interface DiscoveryRequest {
   readonly trigger: 'failed_look' | 'search';
   readonly actorId: AgentId;
   readonly locationId: LocationId;
-  readonly query: string;            // what the player asked about
+  readonly query: string;            // what the player typed
+  readonly subject: DiscoverySubject | null;  // resolved entity, if any
   readonly loreContext: LoreContext;
   readonly visibleItems: readonly Item[];
   readonly visibleAgents: readonly Agent[];
@@ -379,14 +390,16 @@ Tag context:
 ### Discovery flow (search verb / failed look)
 
 1. Player types `search the dusty corner` or `look pendant` where pendant doesn't exist.
-2. Parser produces either `ActionKind.Search { query: "the dusty corner" }` or the `look` action with a no-match outcome.
+2. Parser produces either `ActionKind.Search { query, target? }` or the `look` action with a no-match outcome. For `search`, the parser may resolve a `<target>` to a concrete entity (e.g. a visible item or agent the player is searching/examining); for bare `search` or `look <unknown>` the target is null. When non-null, the action handler reads the resolved entity's `label`, `shortDescription`, and `longDescription` into a `DiscoverySubject` so the LLM can ground its invention in the author's existing text. When null, `subject` is null — the LLM has only the room context and lore to work from.
 3. Action handler (or the look-failure path) builds a `DiscoveryRequest` and calls `runDiscovery`.
-4. `runDiscovery` builds a prompt with `loreContext`, the room's static description, the visible items/agents, and the player's query. LLM returns `DiscoveryResponse`.
+4. `runDiscovery` builds a prompt with `loreContext`, the room's static description, the visible items/agents, the player's query, and — when present — the resolved subject's descriptions. LLM returns `DiscoveryResponse`.
 5. Dispatch:
    - Emit a look-style domain event with `narration` as the rendered text.
    - If `spawnedItem`: insert via the builder repo's `upsertItem` (bypassing `requireDraft`, same way `runSpawnTickPass` does for trigger spawns).
    - If `spawnedAgent`: same.
 6. The new item or agent is now visible to subsequent ticks. The player can `take` it, examine it again, interact with it.
+
+Note on `subject` resolution: when the player searches a concrete authored thing (`search the chest`), the LLM augments rather than invents — its response is likely flavour-only narration ("The chest's iron bands are cold to the touch; you find nothing hidden in the lining."). The presence of the subject's existing description should bias the LLM away from spawning a redundant entity. The prompt instructs the LLM accordingly.
 
 The discovery budget (`MAX_DISCOVERY_CALLS_PER_TICK = 1`) is enforced in `tick.ts` so a turn that involves search + failed look only calls the LLM once.
 
@@ -428,6 +441,7 @@ Continuing the existing invariant set:
   - Returns narration + spawnedItem.
   - Returns narration + spawnedAgent.
   - LLM error path returns the generic fallback.
+  - When `subject` is non-null, the prompt sent to the LLM contains the subject's `label`/`shortDescription`/`longDescription`. (Assert via the `FakeLanguageModel.calls` history.)
 - `core/engine/actions/search.test.ts` — the search action handler calls discovery, emits the event, dispatches spawns. Use the `MemoryRepository` + `MemoryBuilderRepository` setup pattern.
 - `core/engine/consequences.test.ts` — extended cases: `updatedStorySoFar` flows back into `world_lore`; null leaves it unchanged.
 - `core/builder/index.test.ts` — `upsertTagLore` + `getWorldLore` round-trip; live-world rejection.
