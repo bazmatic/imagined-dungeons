@@ -220,6 +220,12 @@ export interface DiscoveryRequest {
 
 export interface DiscoveryResponse {
   readonly narration: string;
+  // When non-null and the id is in the request's visible list, the
+  // engine routes through the normal `look <entity>` path and shows
+  // the entity's authored description. `narration` and spawn fields
+  // are ignored in this case.
+  readonly matchedItemId: ItemId | null;
+  readonly matchedAgentId: AgentId | null;
   readonly spawnedItem: UpsertItemInput | null;
   readonly spawnedAgent: UpsertAgentInput | null;
 }
@@ -1218,11 +1224,13 @@ const baseReq = () => ({
   visibleAgents: [],
 });
 
-it('returns flavour-only narration when LLM emits both spawn fields null', async () => {
+it('returns flavour-only narration when LLM emits all optional fields null', async () => {
   const fake = new FakeLanguageModel([
     {
       content: JSON.stringify({
         narration: 'You search the dusty corner — only cobwebs.',
+        matchedItemId: null,
+        matchedAgentId: null,
         spawnedItem: null,
         spawnedAgent: null,
       }),
@@ -1230,6 +1238,8 @@ it('returns flavour-only narration when LLM emits both spawn fields null', async
   ]);
   const out = await runDiscovery(baseReq(), fake);
   expect(out.narration).toContain('cobwebs');
+  expect(out.matchedItemId).toBeNull();
+  expect(out.matchedAgentId).toBeNull();
   expect(out.spawnedItem).toBeNull();
   expect(out.spawnedAgent).toBeNull();
 });
@@ -1239,6 +1249,8 @@ it('returns a spawnedItem when the LLM produces one', async () => {
     {
       content: JSON.stringify({
         narration: 'Hidden in the dust: a tarnished locket.',
+        matchedItemId: null,
+        matchedAgentId: null,
         spawnedItem: {
           id: 'itm_locket',
           label: 'tarnished locket',
@@ -1262,6 +1274,8 @@ it('returns a spawnedAgent when the LLM produces one', async () => {
     {
       content: JSON.stringify({
         narration: 'A rat scurries out.',
+        matchedItemId: null,
+        matchedAgentId: null,
         spawnedItem: null,
         spawnedAgent: {
           id: 'agt_rat',
@@ -1287,12 +1301,52 @@ it('returns a spawnedAgent when the LLM produces one', async () => {
   expect(out.spawnedAgent?.label).toBe('rat');
 });
 
+it('returns a matchedItemId when the LLM resolves the query to a visible item', async () => {
+  const fake = new FakeLanguageModel([
+    {
+      content: JSON.stringify({
+        narration: 'A silver pendant on a chain.',
+        matchedItemId: 'itm_pendant',
+        matchedAgentId: null,
+        spawnedItem: null,
+        spawnedAgent: null,
+      }),
+    },
+  ]);
+  const out = await runDiscovery(baseReq(), fake);
+  expect(out.matchedItemId).toBe('itm_pendant');
+  // Note: runDiscovery does NOT validate that the id is in the visible
+  // list — that's the dispatcher's job (tested in search.test.ts). The
+  // unit test for the pass itself only confirms the field round-trips.
+});
+
 it('falls back to a generic narration when the LLM throws', async () => {
   const fake = new FakeLanguageModel([{ error: new Error('network') }]);
   const out = await runDiscovery(baseReq(), fake);
   expect(out.narration).toMatch(/nothing of note/i);
+  expect(out.matchedItemId).toBeNull();
+  expect(out.matchedAgentId).toBeNull();
   expect(out.spawnedItem).toBeNull();
   expect(out.spawnedAgent).toBeNull();
+});
+
+it('mentions the four valid outcomes in the system prompt', async () => {
+  const fake = new FakeLanguageModel([
+    {
+      content: JSON.stringify({
+        narration: '.',
+        matchedItemId: null,
+        matchedAgentId: null,
+        spawnedItem: null,
+        spawnedAgent: null,
+      }),
+    },
+  ]);
+  await runDiscovery(baseReq(), fake);
+  const sys = fake.calls.at(-1)?.systemPrompt ?? '';
+  expect(sys.toLowerCase()).toMatch(/match/);
+  expect(sys.toLowerCase()).toMatch(/spawn/);
+  expect(sys.toLowerCase()).toMatch(/narration/);
 });
 
 it("includes the subject's descriptions in the prompt when subject is non-null", async () => {
@@ -1300,6 +1354,8 @@ it("includes the subject's descriptions in the prompt when subject is non-null",
     {
       content: JSON.stringify({
         narration: 'cold iron bands',
+        matchedItemId: null,
+        matchedAgentId: null,
         spawnedItem: null,
         spawnedAgent: null,
       }),
@@ -1340,9 +1396,17 @@ const FALLBACK_NARRATION = 'You find nothing of note.';
 const RESPONSE_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['narration', 'spawnedItem', 'spawnedAgent'],
+  required: [
+    'narration',
+    'matchedItemId',
+    'matchedAgentId',
+    'spawnedItem',
+    'spawnedAgent',
+  ],
   properties: {
     narration: { type: 'string' },
+    matchedItemId: { type: ['string', 'null'] },
+    matchedAgentId: { type: ['string', 'null'] },
     spawnedItem: {
       type: ['object', 'null'],
       // structural — follows UpsertItemInput shape; nullable per OpenAI strict mode
@@ -1355,6 +1419,14 @@ const RESPONSE_SCHEMA = {
   },
 } as const;
 
+const FALLBACK_RESPONSE: DiscoveryResponse = {
+  narration: FALLBACK_NARRATION,
+  matchedItemId: null,
+  matchedAgentId: null,
+  spawnedItem: null,
+  spawnedAgent: null,
+};
+
 export async function runDiscovery(
   req: DiscoveryRequest,
   llm: LanguageModel,
@@ -1366,18 +1438,20 @@ export async function runDiscovery(
       prompt,
       responseSchema: RESPONSE_SCHEMA,
     });
-    const parsed = JSON.parse(raw.content) as DiscoveryResponse;
+    const parsed = JSON.parse(raw.content) as Partial<DiscoveryResponse>;
     if (typeof parsed.narration !== 'string') {
-      return { narration: FALLBACK_NARRATION, spawnedItem: null, spawnedAgent: null };
+      return FALLBACK_RESPONSE;
     }
     return {
       narration: parsed.narration,
+      matchedItemId: (parsed.matchedItemId ?? null) as ItemId | null,
+      matchedAgentId: (parsed.matchedAgentId ?? null) as AgentId | null,
       spawnedItem: parsed.spawnedItem ?? null,
       spawnedAgent: parsed.spawnedAgent ?? null,
     };
   } catch (err) {
     log.warn(`[discovery] LLM error: ${String(err)}`);
-    return { narration: FALLBACK_NARRATION, spawnedItem: null, spawnedAgent: null };
+    return FALLBACK_RESPONSE;
   }
 }
 
@@ -1408,8 +1482,18 @@ function buildPrompt(req: DiscoveryRequest): string {
 }
 
 const SYSTEM_PROMPT = `You are the generative-discovery pass for a text adventure.
-Return a JSON object with: narration (required short prose), spawnedItem (null or an item to insert), spawnedAgent (null or an agent to insert).
-Prefer narration-only responses. Spawn a new entity only when the lore context invites it and no authored entity already fills the role.
+
+You have four valid outcomes, in priority order:
+1. MATCH an existing visible entity — when the player's query plausibly refers to an item or agent already in the visible list (typo, synonym, descriptive phrase), set matchedItemId or matchedAgentId to that entity's id. The engine will route the response through the normal look path and ignore narration/spawn fields.
+2. NARRATE flavour only — say what the player sees with no new entity. Leave spawn fields null.
+3. SPAWN A NEW ITEM — when the lore context invites a concrete object and no authored entity fills the role.
+4. SPAWN A NEW AGENT — same, for a creature or person.
+
+Always return a JSON object with all five fields: narration, matchedItemId, matchedAgentId, spawnedItem, spawnedAgent. Set unused fields to null.
+
+When matchedItemId or matchedAgentId is set, leave spawn fields null (the engine ignores them anyway).
+Prefer matching over spawning when the query plausibly refers to something already visible.
+Prefer flavour over spawning when the situation doesn't clearly invite a new entity.
 If a subject is provided, your narration should augment its existing description rather than invent a replacement.`;
 ```
 
@@ -1506,6 +1590,8 @@ it('returns an outcome carrying a discovery hint when called', async () => {
     {
       content: JSON.stringify({
         narration: 'cobwebs only',
+        matchedItemId: null,
+        matchedAgentId: null,
         spawnedItem: null,
         spawnedAgent: null,
       }),
@@ -1524,6 +1610,64 @@ it('spawns an item via builderRepo.upsertItem when LLM returns one', async () =>
   await handleSearch({ kind: ActionKind.Search, actorId: player.id, query: '' }, deps);
   const items = await builderRepo.listItems(W);
   expect(items.some((i) => i.label === 'tarnished locket')).toBe(true);
+});
+
+it('routes through the normal look path when LLM matches a visible item', async () => {
+  // Seed the room with an authored item 'silver pendant'.
+  await builderRepo.upsertItem(W, {
+    id: 'itm_pendant',
+    label: 'silver pendant',
+    shortDescription: 'a tarnished silver pendant',
+    longDescription: 'a tarnished silver pendant on a chain',
+    owner: { kind: 'location', id: 'loc_a' },
+    weight: 0,
+    hidden: false,
+    tags: [],
+  });
+  const fake = new FakeLanguageModel([
+    {
+      content: JSON.stringify({
+        // The LLM tries to invent narration AND match — the dispatcher
+        // honours the match and discards the narration + spawn fields.
+        narration: 'You find a brass amulet.',
+        matchedItemId: 'itm_pendant',
+        matchedAgentId: null,
+        spawnedItem: null,
+        spawnedAgent: null,
+      }),
+    },
+  ]);
+  const result = await handleSearch(
+    { kind: ActionKind.Search, actorId: player.id, query: 'pendant' },
+    { repo, builderRepo, llm: fake, worldId: W },
+  );
+  const lookEvent = result.events.find((e) => e.kind === EventKind.Look);
+  expect(lookEvent?.narration ?? '').toContain('silver pendant');
+  // No brass amulet appears.
+  const items = await builderRepo.listItems(W);
+  expect(items.some((i) => i.label === 'brass amulet')).toBe(false);
+});
+
+it('ignores a hallucinated matchedItemId and falls through to the spawn/flavour path', async () => {
+  // The room has NO matching item.
+  const fake = new FakeLanguageModel([
+    {
+      content: JSON.stringify({
+        narration: 'You find only dust.',
+        matchedItemId: 'itm_nonexistent',
+        matchedAgentId: null,
+        spawnedItem: null,
+        spawnedAgent: null,
+      }),
+    },
+  ]);
+  const result = await handleSearch(
+    { kind: ActionKind.Search, actorId: player.id, query: 'pendant' },
+    { repo, builderRepo, llm: fake, worldId: W },
+  );
+  // Fell through to narration; nothing crashed.
+  const lookEvent = result.events.find((e) => e.kind === EventKind.Look);
+  expect(lookEvent?.narration ?? '').toContain('dust');
 });
 ```
 
@@ -1583,6 +1727,30 @@ export async function handleSearch(
     deps.llm,
   );
 
+  // --- Match path (highest priority) ---
+  // If the LLM resolved the query to a visible entity, route through
+  // the normal look path. Hallucinated ids (not in the visible list)
+  // are silently discarded; we fall through to the spawn/flavour path.
+  if (response.matchedItemId !== null) {
+    const matched = visibleItems.find((i) => i.id === response.matchedItemId);
+    if (matched) {
+      return {
+        events: [renderLookEventForItem(actor, matched)],
+        discoveryCalled: true,
+      };
+    }
+  }
+  if (response.matchedAgentId !== null) {
+    const matched = visibleAgents.find((a) => a.id === response.matchedAgentId);
+    if (matched) {
+      return {
+        events: [renderLookEventForAgent(actor, matched)],
+        discoveryCalled: true,
+      };
+    }
+  }
+
+  // --- Spawn / flavour path ---
   const events: DomainEvent[] = [
     {
       kind: EventKind.Look,
@@ -1602,6 +1770,12 @@ export async function handleSearch(
 
   return { events, discoveryCalled: true };
 }
+
+// `renderLookEventForItem` and `renderLookEventForAgent` produce a
+// look-event whose `narration` is the entity's authored long
+// description, mirroring what the normal look action would emit. If
+// the existing look-action code path is factored to expose this
+// helper, reuse it; otherwise duplicate the small composition here.
 ```
 
 Register the handler in `actions/registry.ts`.
@@ -1902,6 +2076,8 @@ it('search verb fires discovery using lore context and spawns an item', async ()
     {
       content: JSON.stringify({
         narration: 'You find a tarnished locket among the cobwebs.',
+        matchedItemId: null,
+        matchedAgentId: null,
         spawnedItem: {
           id: 'itm_locket',
           label: 'tarnished locket',
