@@ -10,6 +10,7 @@ export const worlds = sqliteTable('worlds', {
   parentDraftId: text('parent_draft_id'),
   displayName: text('display_name').notNull().default(''),
   playerAgentId: text('player_agent_id'),
+  coverImageUrl: text('cover_image_url'),
 });
 
 // locations / exits / items / agents share entity ids across worlds (a draft and
@@ -26,6 +27,7 @@ export const locations = sqliteTable(
     label: text('label').notNull(),
     shortDescription: text('short_description').notNull(),
     longDescription: text('long_description').notNull(),
+    tags: text('tags').notNull().default('[]'),
   },
   (t) => [primaryKey({ columns: [t.worldId, t.id] })],
 );

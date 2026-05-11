@@ -14,6 +14,7 @@ export interface Location {
   readonly label: string;
   readonly shortDescription: string;
   readonly longDescription: string;
+  readonly tags: readonly string[];
 }
 
 export interface Exit {

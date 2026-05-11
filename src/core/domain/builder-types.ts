@@ -27,6 +27,13 @@ export interface WorldSummary {
   readonly displayName: string;
   readonly parentDraftId: WorldId | null;
   readonly playerAgentId: AgentId | null;
+  readonly coverImageUrl: string | null;
+}
+
+export interface WorldSummaryWithStats extends WorldSummary {
+  readonly locationCount: number;
+  readonly agentCount: number;
+  readonly itemCount: number;
 }
 
 export interface InlineStarterPackEntry {
@@ -144,6 +151,7 @@ export interface UpsertLocationInput {
   readonly label: string;
   readonly shortDescription: string;
   readonly longDescription: string;
+  readonly tags: readonly string[];
 }
 
 export interface UpsertExitInput {
