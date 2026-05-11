@@ -1,6 +1,7 @@
 import type {
   LocationSpawnTrigger,
   MonsterTemplate,
+  TagLore,
   TriggerFireState,
   UpsertAgentInput,
   UpsertExitInput,
@@ -8,6 +9,8 @@ import type {
   UpsertLocationInput,
   UpsertLocationSpawnTriggerInput,
   UpsertMonsterTemplateInput,
+  UpsertTagLoreInput,
+  WorldLore,
   WorldSummary,
   WorldSummaryWithStats,
 } from '@core/domain/builder-types';
@@ -19,6 +22,7 @@ import type {
   LocationId,
   MonsterTemplateId,
   SpawnTriggerId,
+  TagLoreId,
   WorldId,
 } from '@core/domain/ids';
 
@@ -71,6 +75,19 @@ export interface BuilderRepository {
     input: UpsertLocationSpawnTriggerInput,
   ): Promise<void>;
   deleteLocationSpawnTrigger(worldId: WorldId, id: SpawnTriggerId): Promise<void>;
+
+  /**
+   * Returns defaults `{ worldId, worldOverview: '', storySoFar: '' }` when no row exists.
+   * Lazy create on first write.
+   */
+  readWorldLore(worldId: WorldId): Promise<WorldLore>;
+  writeWorldLore(worldId: WorldId, lore: Omit<WorldLore, 'worldId'>): Promise<void>;
+
+  listTagLore(worldId: WorldId): Promise<readonly TagLore[]>;
+  getTagLore(worldId: WorldId, id: TagLoreId): Promise<TagLore | null>;
+  getTagLoreByTag(worldId: WorldId, tag: string): Promise<TagLore | null>;
+  upsertTagLore(worldId: WorldId, input: UpsertTagLoreInput): Promise<void>;
+  deleteTagLore(worldId: WorldId, id: TagLoreId): Promise<void>;
 
   /**
    * Per-live-world spawn-firing record. Separate column-shape on

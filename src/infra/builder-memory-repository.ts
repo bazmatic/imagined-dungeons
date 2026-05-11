@@ -2,6 +2,7 @@ import type { BuilderRepository } from '@core/builder/repository';
 import type {
   LocationSpawnTrigger,
   MonsterTemplate,
+  TagLore,
   TriggerFireState,
   UpsertAgentInput,
   UpsertExitInput,
@@ -9,6 +10,8 @@ import type {
   UpsertLocationInput,
   UpsertLocationSpawnTriggerInput,
   UpsertMonsterTemplateInput,
+  UpsertTagLoreInput,
+  WorldLore,
   WorldSummary,
   WorldSummaryWithStats,
 } from '@core/domain/builder-types';
@@ -20,6 +23,7 @@ import {
   type LocationId,
   type MonsterTemplateId,
   type SpawnTriggerId,
+  type TagLoreId,
   type WorldId,
   asAgentId,
   asExitId,
@@ -221,6 +225,28 @@ export class MemoryBuilderRepository implements BuilderRepository {
   }
   async deleteLocationSpawnTrigger(w: WorldId, id: SpawnTriggerId) {
     this.bucket(this.triggers, w).delete(id);
+  }
+
+  async readWorldLore(_w: WorldId): Promise<WorldLore> {
+    throw new Error('readWorldLore: not implemented yet (Task 5)');
+  }
+  async writeWorldLore(_w: WorldId, _lore: Omit<WorldLore, 'worldId'>): Promise<void> {
+    throw new Error('writeWorldLore: not implemented yet (Task 5)');
+  }
+  async listTagLore(_w: WorldId): Promise<readonly TagLore[]> {
+    throw new Error('listTagLore: not implemented yet (Task 5)');
+  }
+  async getTagLore(_w: WorldId, _id: TagLoreId): Promise<TagLore | null> {
+    throw new Error('getTagLore: not implemented yet (Task 5)');
+  }
+  async getTagLoreByTag(_w: WorldId, _tag: string): Promise<TagLore | null> {
+    throw new Error('getTagLoreByTag: not implemented yet (Task 5)');
+  }
+  async upsertTagLore(_w: WorldId, _input: UpsertTagLoreInput): Promise<void> {
+    throw new Error('upsertTagLore: not implemented yet (Task 5)');
+  }
+  async deleteTagLore(_w: WorldId, _id: TagLoreId): Promise<void> {
+    throw new Error('deleteTagLore: not implemented yet (Task 5)');
   }
 
   async readTriggerFireState(w: WorldId): Promise<TriggerFireState> {
