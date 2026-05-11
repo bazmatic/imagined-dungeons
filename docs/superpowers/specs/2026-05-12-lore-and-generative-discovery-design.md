@@ -19,7 +19,7 @@ In scope for v1:
 - Spawned monsters copy `template.tags` at spawn time (frozen).
 - A relevance resolver: given any "subject" (room, item, agent), compute the union of its own tags and (if it has a location) the location's tags, and pull the matching `TagLore` entries.
 - A new `search` action verb.
-- A generative-discovery pass invoked on (a) failed `look` and (c) explicit `search`. Returns a uniform structured response: `{ narration, spawnedItem?, spawnedAgent? }`. Bounded per-turn.
+- A generative-discovery pass invoked on (a) failed `look` and (c) explicit `search`. Returns a uniform structured response: `{ narration, matchedItemId?, matchedAgentId?, spawnedItem?, spawnedAgent? }`. The LLM can resolve the player's query to an existing visible entity (match), narrate flavour-only, spawn a new item, or spawn a new agent. Bounded per-turn.
 - Consequence engine gains an optional `updatedStorySoFar` output field, written only on significant events.
 - Admin UI lore page: edit the two world slots and the per-tag descriptions.
 - MCP tools mirroring the lore CRUD.
@@ -39,7 +39,7 @@ Out of scope (deferred):
 2. **Lore is keyed by tag, not "topic" or "kind."** One `TagLore` row per `(worldId, tag)`. If the author wants sub-categories ("sewers-east" vs "sewers-west"), they create more tags. The tag vocabulary IS the lore taxonomy.
 3. **Relevance = tag union over subject + its location.** When examining a room, the union is just the room's tags. When examining an agent or item, the union is the subject's own tags plus its location's tags. For spawned-from-template monsters, the agent's frozen `tags` field carries the template's tags forward (and is no longer linked back to the template).
 4. **Generative discovery fires on (a) `look <target>` parser failures and (c) the new `search <area>` verb.** Bare `look` and `take` are unaffected. The LLM decides per-call what to do via a uniform response shape — no schema discriminator on outcome.
-5. **Uniform LLM response.** `{ narration: string; spawnedItem: UpsertItemInput | null; spawnedAgent: UpsertAgentInput | null }`. The engine reads optional fields and dispatches accordingly. Reuses existing input types — no new entity shape for "things invented by the LLM."
+5. **Uniform LLM response.** `{ narration, matchedItemId, matchedAgentId, spawnedItem, spawnedAgent }` — all fields nullable for OpenAI strict mode. The engine dispatches in priority order: match (existing visible entity) > spawn > flavour. Reuses existing `UpsertItemInput`/`UpsertAgentInput` for spawns; matches reference ids the LLM already saw in the request's visible list. No new entity shape for "things invented by the LLM."
 6. **`storySoFar` updates only when the consequence engine flags a significant event.** The existing consequence-engine schema gains an optional `updatedStorySoFar: string | null` field. The prompt instructs the LLM to leave it null for routine events. Matches the engine's existing discipline around durable-only mutations.
 7. **Tags on every taggable entity.** `Agent.tags`, `Item.tags`, `MonsterTemplate.tags` join `Location.tags`. Spawned agents inherit `template.tags` at spawn time as a frozen copy.
 8. **Builder UI deferred for richer authoring.** v1 ships a simple "Lore" page in the admin UI showing the two slots and a list of tags drawn from the world's entities, each with an "edit description" affordance. MCP exposes the same CRUD.
@@ -300,6 +300,16 @@ interface DiscoveryRequest {
 
 interface DiscoveryResponse {
   readonly narration: string;
+  // When non-null, the LLM has decided the player's query actually
+  // matched an existing visible entity (one of `visibleItems` or
+  // `visibleAgents` from the request). The engine treats this as a
+  // normal `look <that entity>`: show the authored description, no
+  // invention. `narration` is ignored in this case.
+  readonly matchedItemId: ItemId | null;
+  readonly matchedAgentId: AgentId | null;
+  // When neither match field is set, these may invent new entities.
+  // If a match is set, these should be null (the LLM should not both
+  // match and spawn).
   readonly spawnedItem: UpsertItemInput | null;
   readonly spawnedAgent: UpsertAgentInput | null;
 }
@@ -310,11 +320,14 @@ export async function runDiscovery(
 ): Promise<DiscoveryResponse>;
 ```
 
-OpenAI strict-mode schema flattens to a single object with `narration` (required), and `spawnedItem`/`spawnedAgent` as `null | T`. The dispatch code in the action handler:
+OpenAI strict-mode schema flattens to a single object with `narration` (required), and `matchedItemId` / `matchedAgentId` / `spawnedItem` / `spawnedAgent` as `null | T`. The dispatch code in the action handler:
 
-1. Always: emit a `look`-style domain event carrying the narration to the player.
-2. If `spawnedItem !== null`: `repo.upsertItem(...)` with the location as owner; tags from the LLM-chosen set; emit an event so witnesses see it.
-3. If `spawnedAgent !== null`: `repo.upsertAgent(...)` with `awake: false`, `shortTermIntent: null`; tags from the LLM; emit an event.
+1. **Match takes precedence over spawn or flavour.** If `matchedItemId` or `matchedAgentId` is non-null AND the id is in the visible-entities list from the request, route through the normal `look <entity>` path: show the entity's authored description. Discard `narration` and any spawn fields (the LLM may set them, but the engine ignores them in the match case).
+2. Else: emit a `look`-style domain event carrying `narration` as the rendered text.
+3. If `spawnedItem !== null`: `repo.upsertItem(...)` with the location as owner; tags from the LLM-chosen set; emit an event so witnesses see it.
+4. If `spawnedAgent !== null`: `repo.upsertAgent(...)` with `awake: false`, `shortTermIntent: null`; tags from the LLM; emit an event.
+
+A returned `matchedItemId` / `matchedAgentId` not in the request's visible list is treated as a hallucination and ignored — the engine never trusts the LLM to invent a target id.
 
 The dispatch is gated by a per-tick discovery budget:
 
@@ -410,11 +423,17 @@ Tag context:
 2. Parser produces either `ActionKind.Search { query, target? }` or the `look` action with a no-match outcome. For `search`, the parser may resolve a `<target>` to a concrete entity (e.g. a visible item or agent the player is searching/examining); for bare `search` or `look <unknown>` the target is null. When non-null, the action handler reads the resolved entity's `label`, `shortDescription`, and `longDescription` into a `DiscoverySubject` so the LLM can ground its invention in the author's existing text. When null, `subject` is null — the LLM has only the room context and lore to work from.
 3. Action handler (or the look-failure path) builds a `DiscoveryRequest` and calls `runDiscovery`.
 4. `runDiscovery` builds a prompt with `loreContext`, the room's static description, the visible items/agents, the player's query, and — when present — the resolved subject's descriptions. LLM returns `DiscoveryResponse`.
-5. Dispatch:
-   - Emit a look-style domain event with `narration` as the rendered text.
-   - If `spawnedItem`: insert via the builder repo's `upsertItem` (bypassing `requireDraft`, same way `runSpawnTickPass` does for trigger spawns).
-   - If `spawnedAgent`: same.
-6. The new item or agent is now visible to subsequent ticks. The player can `take` it, examine it again, interact with it.
+5. Dispatch (in this priority order):
+   - **Match path:** if `matchedItemId` or `matchedAgentId` is non-null AND the id appears in the request's visible list, the LLM has decided the player's query actually matched an existing visible entity. Discard the narration, discard any spawn fields, and route through the normal `look <entity>` path so the player sees the entity's authored description. This handles fuzzy/typo/descriptive references like `look pendant` matching an authored "silver pendant" in the room.
+   - **Otherwise, spawn or flavour path:**
+     - Emit a look-style domain event with `narration` as the rendered text.
+     - If `spawnedItem`: insert via the builder repo's `upsertItem` (bypassing `requireDraft`, same way `runSpawnTickPass` does for trigger spawns).
+     - If `spawnedAgent`: same.
+6. The new item or agent (if any) is now visible to subsequent ticks. The player can `take` it, examine it again, interact with it.
+
+The LLM's prompt explains the four valid outcomes ("match an existing entity in the visible list," "narrate flavour with no new entity," "spawn a new item," "spawn a new agent") and instructs it to prefer matching when the player's query plausibly refers to something already in the visible list.
+
+A returned match id that isn't in the request's visible list is treated as a hallucination — the engine ignores the match and falls through to the spawn/flavour path. This is a hard rule: the engine never trusts the LLM to invent target ids.
 
 Note on `subject` resolution: when the player searches a concrete authored thing (`search the chest`), the LLM augments rather than invents — its response is likely flavour-only narration ("The chest's iron bands are cold to the touch; you find nothing hidden in the lining."). The presence of the subject's existing description should bias the LLM away from spawning a redundant entity. The prompt instructs the LLM accordingly.
 
@@ -448,18 +467,25 @@ Continuing the existing invariant set:
 5. **Discovery-spawned items/agents are real and persistent.** Once dispatched they appear in the entity tables; they are mechanically indistinguishable from authored or template-spawned entities.
 6. **`updatedStorySoFar` overwrites `storySoFar` wholesale when non-null.** No partial merging; the LLM produces the full new value.
 7. **Per-tick discovery cap is hard.** A tick can produce at most `MAX_DISCOVERY_CALLS_PER_TICK = 1` discovery LLM call.
+8. **Discovery match ids must come from the visible list.** When `matchedItemId` or `matchedAgentId` is non-null in the LLM's response, the dispatcher verifies the id appears in the request's `visibleItems`/`visibleAgents` list before honouring it. An unknown id is silently discarded and the dispatcher falls through to the spawn/flavour path. The engine never trusts the LLM to invent target ids.
 
 ## Testing
 
 - `core/lore/context.test.ts` — table-driven. Cases: subject with no tags + no location (returns world slots only); subject with own tags only; subject with location tags only; subject with both; tags without lore contribute nothing.
 - `core/builder/validate.test.ts` — `TagLoreTagEmpty` and `TagLoreDuplicate` problem cases.
 - `core/engine/discovery.test.ts` — `runDiscovery` with a `FakeLanguageModel`:
-  - Returns flavour-only narration (no spawn).
+  - Returns flavour-only narration (no spawn, no match).
   - Returns narration + spawnedItem.
   - Returns narration + spawnedAgent.
+  - Returns a valid `matchedItemId` (the dispatcher will route through the normal look path; this test just confirms the response shape and that the id is in the request's visible list).
+  - Returns a `matchedItemId` that isn't in the visible list — confirms the dispatcher's hallucination guard (test the dispatcher in `search.test.ts` or a small integration test; the unit test for `runDiscovery` itself only confirms the field is returned, not the engine response).
   - LLM error path returns the generic fallback.
   - When `subject` is non-null, the prompt sent to the LLM contains the subject's `label`/`shortDescription`/`longDescription`. (Assert via the `FakeLanguageModel.calls` history.)
-- `core/engine/actions/search.test.ts` — the search action handler calls discovery, emits the event, dispatches spawns. Use the `MemoryRepository` + `MemoryBuilderRepository` setup pattern.
+  - The prompt sent to the LLM lists the four valid outcomes (match / flavour / spawn item / spawn agent). (Assert via the `FakeLanguageModel.calls` system-prompt text.)
+- `core/engine/actions/search.test.ts` — the search action handler calls discovery, emits the event, dispatches spawns. Use the `MemoryRepository` + `MemoryBuilderRepository` setup pattern. Cases:
+  - LLM returns spawn → the new item/agent appears in the live world.
+  - LLM returns a valid `matchedItemId` → handler routes through the normal look path, narrates the matched entity's authored description, and skips the spawn dispatch.
+  - LLM returns a hallucinated `matchedItemId` not in the visible list → handler ignores the match and falls through to spawn/flavour.
 - `core/engine/consequences.test.ts` — extended cases: `updatedStorySoFar` flows back into `world_lore`; null leaves it unchanged.
 - `core/builder/index.test.ts` — `upsertTagLore` + `getWorldLore` round-trip; live-world rejection.
 - One MCP smoke test for the lore tools (matching the existing `src/mcp/server.test.ts` pattern).
