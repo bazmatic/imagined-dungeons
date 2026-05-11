@@ -1,4 +1,4 @@
-import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { integer, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 export const worlds = sqliteTable('worlds', {
   id: text('id').primaryKey(),
@@ -66,6 +66,7 @@ export const items = sqliteTable(
     ownerId: text('owner_id').notNull(),
     weight: integer('weight').notNull(),
     hidden: integer('hidden', { mode: 'boolean' }).notNull(),
+    tags: text('tags').notNull().default('[]'),
   },
   (t) => [primaryKey({ columns: [t.worldId, t.id] })],
 );
@@ -90,6 +91,7 @@ export const agents = sqliteTable(
     goal: text('goal'),
     autonomous: integer('autonomous', { mode: 'boolean' }).notNull(),
     awake: integer('awake', { mode: 'boolean' }).notNull(),
+    tags: text('tags').notNull().default('[]'),
   },
   (t) => [primaryKey({ columns: [t.worldId, t.id] })],
 );
@@ -131,6 +133,7 @@ export const monsterTemplates = sqliteTable(
     hp: integer('hp').notNull(),
     mood: text('mood'),
     startingItemsJson: text('starting_items_json').notNull().default('[]'),
+    tags: text('tags').notNull().default('[]'),
   },
   (t) => [primaryKey({ columns: [t.worldId, t.id] })],
 );
@@ -153,4 +156,29 @@ export const locationSpawnTriggers = sqliteTable(
       .default(false),
   },
   (t) => [primaryKey({ columns: [t.worldId, t.id] })],
+);
+
+export const worldLore = sqliteTable('world_lore', {
+  worldId: text('world_id')
+    .primaryKey()
+    .references(() => worlds.id),
+  worldOverview: text('world_overview').notNull().default(''),
+  storySoFar: text('story_so_far').notNull().default(''),
+});
+
+export const tagLore = sqliteTable(
+  'tag_lore',
+  {
+    id: text('id').notNull(),
+    worldId: text('world_id')
+      .notNull()
+      .references(() => worlds.id),
+    tag: text('tag').notNull(),
+    title: text('title').notNull(),
+    description: text('description').notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.worldId, t.id] }),
+    uniqueIndex('tag_lore_world_tag_unique').on(t.worldId, t.tag),
+  ],
 );
