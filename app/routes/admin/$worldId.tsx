@@ -13,12 +13,12 @@ import {
 } from '~/server/admin/templates';
 import { validate } from '~/server/admin/validate';
 import { getWorld } from '~/server/admin/worlds';
-import { Breadcrumbs } from './_components/Breadcrumbs';
-import { CommandPalette } from './_components/CommandPalette';
-import { Fonts } from './_components/Fonts';
-import { ManuscriptCard } from './_components/ManuscriptCard';
-import { ProblemsRail } from './_components/ProblemsRail';
-import { StatusBadge } from './_components/StatusBadge';
+import { Breadcrumbs } from './-components/Breadcrumbs';
+import { CommandPalette } from './-components/CommandPalette';
+import { Fonts } from './-components/Fonts';
+import { ManuscriptCard } from './-components/ManuscriptCard';
+import { ProblemsRail } from './-components/ProblemsRail';
+import { StatusBadge } from './-components/StatusBadge';
 
 type EntityKindValue = (typeof EntityKind)[keyof typeof EntityKind];
 

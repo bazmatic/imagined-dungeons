@@ -2,7 +2,7 @@ import { WorldKind } from '@core/domain/builder-kinds';
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router';
 import { useState } from 'react';
 import { cloneLive, createDraft, listWorlds } from '~/server/admin/worlds';
-import { Fonts } from './_components/Fonts';
+import { Fonts } from './-components/Fonts';
 
 export const Route = createFileRoute('/admin/')({
   component: AdminIndex,
