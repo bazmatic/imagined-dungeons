@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { toggleNode, isExpanded, makeKey } from './tree-state';
+import { isExpanded, makeKey, toggleNode } from './tree-state';
 
 describe('makeKey', () => {
   it('joins kind and id with a colon', () => {

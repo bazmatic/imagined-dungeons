@@ -1,12 +1,13 @@
 import { useLayoutEffect, useRef } from 'react';
 
 export interface ManuscriptCardProps {
-  readonly entityId: string;
   readonly value: string;
   readonly onChange: (v: string) => void;
+  // Kept for backwards compat until Task 12 lands; unused.
+  readonly entityId?: string;
 }
 
-export function ManuscriptCard({ entityId, value, onChange }: ManuscriptCardProps) {
+export function ManuscriptCard({ value, onChange }: ManuscriptCardProps) {
   const ref = useRef<HTMLTextAreaElement>(null);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Adjust height whenever value changes
@@ -14,26 +15,15 @@ export function ManuscriptCard({ entityId, value, onChange }: ManuscriptCardProp
     const el = ref.current;
     if (!el) return;
     el.style.height = 'auto';
-    el.style.height = `${el.scrollHeight}px`;
+    el.style.height = `${Math.max(el.scrollHeight, 240)}px`;
   }, [value]);
 
-  const wordCount = value.trim() === '' ? 0 : value.trim().split(/\s+/).length;
-
   return (
-    <div className="manuscript">
-      <aside className="manuscript__gutter">
-        <div>ID</div>
-        <div>{entityId}</div>
-        <div style={{ marginTop: 16 }}>WORDS</div>
-        <div>{wordCount}</div>
-      </aside>
-      <textarea
-        ref={ref}
-        className="manuscript__body"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        rows={8}
-      />
-    </div>
+    <textarea
+      ref={ref}
+      className="manuscript-body-v2"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    />
   );
 }
