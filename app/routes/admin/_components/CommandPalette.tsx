@@ -1,4 +1,4 @@
-import { EntityKind } from '@core/domain/builder-kinds';
+import type { EntityKind } from '@core/domain/builder-kinds';
 import type { WorldTree } from '@core/domain/builder-types';
 import { useEffect, useMemo, useState } from 'react';
 import { type PaletteResult, filterTree } from './filter-tree';
@@ -21,6 +21,7 @@ export function CommandPalette({ tree, open, onClose, onSelect }: CommandPalette
     [tree, query, open],
   );
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset highlight when query changes
   useEffect(() => {
     setHighlight(0);
   }, [query]);
@@ -63,9 +64,12 @@ export function CommandPalette({ tree, open, onClose, onSelect }: CommandPalette
       }}
       role="presentation"
     >
-      <div className="palette" onClick={(e) => e.stopPropagation()} role="presentation">
+      <div
+        className="palette"
+        onKeyDown={(e) => e.key === 'Escape' && e.stopPropagation()}
+        role="presentation"
+      >
         <input
-          autoFocus
           className="palette__input"
           placeholder="Jump to entity..."
           value={query}
@@ -74,25 +78,25 @@ export function CommandPalette({ tree, open, onClose, onSelect }: CommandPalette
         />
         <ul className="palette__results">
           {results.map((r, idx) => (
-            <li
-              key={`${r.kind}:${r.id}`}
-              className={`palette__result ${idx === highlight ? 'palette__result--active' : ''}`}
-              onClick={() => {
-                onSelect({ kind: r.kind, id: r.id });
-                onClose();
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
+            <li key={`${r.kind}:${r.id}`}>
+              <button
+                className={`palette__result ${idx === highlight ? 'palette__result--active' : ''}`}
+                onClick={() => {
                   onSelect({ kind: r.kind, id: r.id });
                   onClose();
-                }
-              }}
-              role="button"
-              tabIndex={0}
-            >
-              <span className="chip">{r.kind}</span>
-              <span className="t-data">{r.label}</span>
-              <span className="palette__result-id">{r.id}</span>
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    onSelect({ kind: r.kind, id: r.id });
+                    onClose();
+                  }
+                }}
+                type="button"
+              >
+                <span className="chip">{r.kind}</span>
+                <span className="t-data">{r.label}</span>
+                <span className="palette__result-id">{r.id}</span>
+              </button>
             </li>
           ))}
         </ul>

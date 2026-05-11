@@ -1,4 +1,4 @@
-import { EntityKind } from '@core/domain/builder-kinds';
+import type { EntityKind } from '@core/domain/builder-kinds';
 import type { Problem } from '@core/domain/builder-types';
 
 type EntityKindValue = (typeof EntityKind)[keyof typeof EntityKind];
@@ -21,18 +21,18 @@ export function ProblemsRail({ problems, onSelect }: ProblemsRailProps) {
       ) : (
         <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
           {problems.map((p) => (
-            <li
-              key={`${p.entity}:${p.entityId}:${p.kind}`}
-              className="problem-row"
-              onClick={() => onSelect({ kind: p.entity, id: p.entityId })}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') onSelect({ kind: p.entity, id: p.entityId });
-              }}
-              role="button"
-              tabIndex={0}
-            >
-              <span className="chip">{p.entity}</span>
-              <span className="t-data-sm">{p.message}</span>
+            <li key={`${p.entity}:${p.entityId}:${p.kind}`}>
+              <button
+                className="problem-row"
+                onClick={() => onSelect({ kind: p.entity, id: p.entityId })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') onSelect({ kind: p.entity, id: p.entityId });
+                }}
+                type="button"
+              >
+                <span className="chip">{p.entity}</span>
+                <span className="t-data-sm">{p.message}</span>
+              </button>
             </li>
           ))}
         </ul>

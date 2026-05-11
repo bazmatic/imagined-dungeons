@@ -1,5 +1,4 @@
 import { EntityKind, TriggerEventKind, WorldKind } from '@core/domain/builder-kinds';
-import { OwnerKind } from '@core/domain/kinds';
 import type { WorldTree } from '@core/domain/builder-types';
 import type {
   AgentId,
@@ -10,6 +9,7 @@ import type {
   SpawnTriggerId,
   WorldId,
 } from '@core/domain/ids';
+import { OwnerKind } from '@core/domain/kinds';
 import { describe, expect, it } from 'vitest';
 import { filterTree } from './filter-tree';
 
@@ -76,8 +76,10 @@ function makeTree(): WorldTree {
         defense: 0,
         capacity: 10,
         mood: null,
+        shortTermIntent: null,
         goal: null,
         autonomous: false,
+        awake: false,
       },
     ],
     templates: [

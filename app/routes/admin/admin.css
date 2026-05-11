@@ -14,9 +14,9 @@
   --border: #262626;
   --tertiary: #8bd2db;
 
-  --font-display: 'Playfair Display', Georgia, serif;
-  --font-label: 'EB Garamond', Georgia, serif;
-  --font-data: 'JetBrains Mono', ui-monospace, monospace;
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-label: "EB Garamond", Georgia, serif;
+  --font-data: "JetBrains Mono", ui-monospace, monospace;
 
   --s-1: 4px;
   --s-2: 8px;
@@ -396,7 +396,9 @@
 .admin-root a {
   color: var(--parchment);
 }
-.admin-root h1, .admin-root h2, .admin-root h3 {
+.admin-root h1,
+.admin-root h2,
+.admin-root h3 {
   margin: 0;
 }
 .admin-root .index-page {

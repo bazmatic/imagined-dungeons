@@ -17,11 +17,7 @@ export interface BreadcrumbsProps {
 export function Breadcrumbs({ tree, sel }: BreadcrumbsProps) {
   const worldName = tree.summary.displayName || tree.summary.label;
   const segments = buildSegments(tree, sel, worldName);
-  return (
-    <nav className="t-breadcrumb">
-      {segments.join(' / ')}
-    </nav>
-  );
+  return <nav className="t-breadcrumb">{segments.join(' / ')}</nav>;
 }
 
 function buildSegments(
@@ -47,7 +43,9 @@ function buildSegments(
   }
   if (sel.kind === EntityKind.Agent) {
     const ag = tree.agents.find((a) => (a.id as string) === sel.id);
-    const parent = ag ? tree.locations.find((l) => (l.id as string) === (ag.locationId as string)) : null;
+    const parent = ag
+      ? tree.locations.find((l) => (l.id as string) === (ag.locationId as string))
+      : null;
     return [worldName, 'Locations', parent?.label ?? '?', 'Agent', ag?.label ?? sel.id];
   }
   if (sel.kind === EntityKind.LocationSpawnTrigger) {

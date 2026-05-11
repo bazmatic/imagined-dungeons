@@ -9,6 +9,7 @@ export interface ManuscriptCardProps {
 export function ManuscriptCard({ entityId, value, onChange }: ManuscriptCardProps) {
   const ref = useRef<HTMLTextAreaElement>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Adjust height whenever value changes
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
