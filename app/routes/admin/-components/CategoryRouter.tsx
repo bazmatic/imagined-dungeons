@@ -113,6 +113,7 @@ function renderDetail(args: {
   if (category === 'locations') {
     return (
       <LocationForm
+        key={selectedId}
         tree={tree}
         locationId={selectedId}
         problemCount={problemCount}
@@ -124,6 +125,7 @@ function renderDetail(args: {
   if (category === 'bestiary') {
     return (
       <TemplateForm
+        key={selectedId}
         tree={tree}
         templateId={selectedId}
         problemCount={problemCount}
@@ -135,6 +137,7 @@ function renderDetail(args: {
   if (category === 'agents') {
     return (
       <AgentForm
+        key={selectedId}
         tree={tree}
         agentId={selectedId}
         problemCount={problemCount}
@@ -146,6 +149,7 @@ function renderDetail(args: {
   // items
   return (
     <ItemForm
+      key={selectedId}
       tree={tree}
       itemId={selectedId}
       problemCount={problemCount}
