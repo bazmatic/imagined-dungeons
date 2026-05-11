@@ -260,18 +260,35 @@ A new `ActionKind.Search` verb (`search`). The parser maps `search <area>` (or b
 The generative-discovery pass.
 
 ```ts
+// In src/core/domain/builder-kinds.ts (the existing const-object home):
+// export const DiscoverySubjectKind = {
+//   Location: 'location',
+//   Item: 'item',
+//   Agent: 'agent',
+// } as const;
+// export type DiscoverySubjectKind =
+//   (typeof DiscoverySubjectKind)[keyof typeof DiscoverySubjectKind];
+
 interface DiscoverySubject {
   // The resolved entity the player is examining/searching, if the parser
   // matched one. Carries its descriptions so the LLM grounds its
   // invention in what the author already wrote.
-  readonly kind: 'location' | 'item' | 'agent';
+  readonly kind: DiscoverySubjectKind;
   readonly label: string;
   readonly shortDescription: string;
   readonly longDescription: string;
 }
 
+// Also in builder-kinds.ts:
+// export const DiscoveryTriggerKind = {
+//   FailedLook: 'failed_look',
+//   Search: 'search',
+// } as const;
+// export type DiscoveryTriggerKind =
+//   (typeof DiscoveryTriggerKind)[keyof typeof DiscoveryTriggerKind];
+
 interface DiscoveryRequest {
-  readonly trigger: 'failed_look' | 'search';
+  readonly trigger: DiscoveryTriggerKind;
   readonly actorId: AgentId;
   readonly locationId: LocationId;
   readonly query: string;            // what the player typed
