@@ -92,6 +92,7 @@ function AdminIndex() {
                         <Link
                           to="/admin/$worldId"
                           params={{ worldId: w.id as string }}
+                          search={{ cat: 'locations' as const }}
                           className="drafts-table__name"
                           style={{ textDecoration: 'none' }}
                         >
@@ -109,6 +110,7 @@ function AdminIndex() {
                         <Link
                           to="/admin/$worldId"
                           params={{ worldId: w.id as string }}
+                          search={{ cat: 'locations' as const }}
                           className="btn"
                           style={{ textDecoration: 'none' }}
                         >

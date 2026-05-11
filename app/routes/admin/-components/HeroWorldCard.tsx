@@ -39,6 +39,7 @@ export function HeroWorldCard({ world }: HeroWorldCardProps) {
           <Link
             to="/admin/$worldId"
             params={{ worldId: world.id as string }}
+            search={{ cat: 'locations' as const }}
             className="btn"
             style={{ textDecoration: 'none' }}
           >
