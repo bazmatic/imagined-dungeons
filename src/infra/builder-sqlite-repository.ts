@@ -171,6 +171,7 @@ export class SqliteBuilderRepository implements BuilderRepository {
       });
   }
   async upsertItem(w: WorldId, i: UpsertItemInput): Promise<void> {
+    const tagsJson = JSON.stringify(i.tags);
     await this.db
       .insert(schema.items)
       .values({
@@ -183,6 +184,7 @@ export class SqliteBuilderRepository implements BuilderRepository {
         ownerId: i.ownerId,
         weight: i.weight,
         hidden: i.hidden,
+        tags: tagsJson,
       })
       .onConflictDoUpdate({
         target: [schema.items.worldId, schema.items.id],
@@ -194,6 +196,7 @@ export class SqliteBuilderRepository implements BuilderRepository {
           ownerId: i.ownerId,
           weight: i.weight,
           hidden: i.hidden,
+          tags: tagsJson,
         },
       });
   }
@@ -219,6 +222,7 @@ export class SqliteBuilderRepository implements BuilderRepository {
         goal: i.goal,
         autonomous: i.autonomous,
         awake: false,
+        tags: JSON.stringify(i.tags),
       })
       .onConflictDoUpdate({
         target: [schema.agents.worldId, schema.agents.id],
@@ -285,6 +289,7 @@ export class SqliteBuilderRepository implements BuilderRepository {
         hp: i.hp,
         mood: i.mood,
         startingItemsJson: JSON.stringify(i.startingItems),
+        tags: JSON.stringify(i.tags),
       })
       .onConflictDoUpdate({
         target: [schema.monsterTemplates.worldId, schema.monsterTemplates.id],
@@ -296,6 +301,7 @@ export class SqliteBuilderRepository implements BuilderRepository {
           hp: i.hp,
           mood: i.mood,
           startingItemsJson: JSON.stringify(i.startingItems),
+          tags: JSON.stringify(i.tags),
         },
       });
   }
@@ -367,26 +373,74 @@ export class SqliteBuilderRepository implements BuilderRepository {
       );
   }
 
-  async readWorldLore(_w: WorldId): Promise<WorldLore> {
-    throw new Error('readWorldLore: not implemented yet (Task 6)');
+  async readWorldLore(w: WorldId): Promise<WorldLore> {
+    const rows = await this.db
+      .select()
+      .from(schema.worldLore)
+      .where(eq(schema.worldLore.worldId, w));
+    const [row] = rows;
+    if (!row) return { worldId: w, worldOverview: '', storySoFar: '' };
+    return {
+      worldId: w,
+      worldOverview: row.worldOverview,
+      storySoFar: row.storySoFar,
+    };
   }
-  async writeWorldLore(_w: WorldId, _lore: Omit<WorldLore, 'worldId'>): Promise<void> {
-    throw new Error('writeWorldLore: not implemented yet (Task 6)');
+  async writeWorldLore(w: WorldId, lore: Omit<WorldLore, 'worldId'>): Promise<void> {
+    await this.db
+      .insert(schema.worldLore)
+      .values({
+        worldId: w,
+        worldOverview: lore.worldOverview,
+        storySoFar: lore.storySoFar,
+      })
+      .onConflictDoUpdate({
+        target: [schema.worldLore.worldId],
+        set: {
+          worldOverview: lore.worldOverview,
+          storySoFar: lore.storySoFar,
+        },
+      });
   }
-  async listTagLore(_w: WorldId): Promise<readonly TagLore[]> {
-    throw new Error('listTagLore: not implemented yet (Task 6)');
+  async listTagLore(w: WorldId): Promise<readonly TagLore[]> {
+    const rows = await this.db.select().from(schema.tagLore).where(eq(schema.tagLore.worldId, w));
+    return rows.map((r) => toTagLore(r, w));
   }
-  async getTagLore(_w: WorldId, _id: TagLoreId): Promise<TagLore | null> {
-    throw new Error('getTagLore: not implemented yet (Task 6)');
+  async getTagLore(w: WorldId, id: TagLoreId): Promise<TagLore | null> {
+    const rows = await this.db
+      .select()
+      .from(schema.tagLore)
+      .where(and(eq(schema.tagLore.worldId, w), eq(schema.tagLore.id, id)));
+    const [row] = rows;
+    return row ? toTagLore(row, w) : null;
   }
-  async getTagLoreByTag(_w: WorldId, _tag: string): Promise<TagLore | null> {
-    throw new Error('getTagLoreByTag: not implemented yet (Task 6)');
+  async getTagLoreByTag(w: WorldId, tag: string): Promise<TagLore | null> {
+    const rows = await this.db
+      .select()
+      .from(schema.tagLore)
+      .where(and(eq(schema.tagLore.worldId, w), eq(schema.tagLore.tag, tag)));
+    const [row] = rows;
+    return row ? toTagLore(row, w) : null;
   }
-  async upsertTagLore(_w: WorldId, _input: UpsertTagLoreInput): Promise<void> {
-    throw new Error('upsertTagLore: not implemented yet (Task 6)');
+  async upsertTagLore(w: WorldId, i: UpsertTagLoreInput): Promise<void> {
+    await this.db
+      .insert(schema.tagLore)
+      .values({
+        id: i.id,
+        worldId: w,
+        tag: i.tag,
+        title: i.title,
+        description: i.description,
+      })
+      .onConflictDoUpdate({
+        target: [schema.tagLore.worldId, schema.tagLore.id],
+        set: { tag: i.tag, title: i.title, description: i.description },
+      });
   }
-  async deleteTagLore(_w: WorldId, _id: TagLoreId): Promise<void> {
-    throw new Error('deleteTagLore: not implemented yet (Task 6)');
+  async deleteTagLore(w: WorldId, id: TagLoreId): Promise<void> {
+    await this.db
+      .delete(schema.tagLore)
+      .where(and(eq(schema.tagLore.worldId, w), eq(schema.tagLore.id, id)));
   }
 
   /**
@@ -496,7 +550,7 @@ const toItem = (r: typeof schema.items.$inferSelect, w: WorldId): Item => ({
         : { kind: OwnerKind.Item, id: asItemId(r.ownerId) },
   weight: r.weight,
   hidden: r.hidden,
-  tags: [],
+  tags: parseTagsJson(r.tags),
 });
 
 const toAgent = (r: typeof schema.agents.$inferSelect, w: WorldId): Agent => ({
@@ -515,7 +569,7 @@ const toAgent = (r: typeof schema.agents.$inferSelect, w: WorldId): Agent => ({
   goal: r.goal,
   autonomous: r.autonomous,
   awake: r.awake,
-  tags: [],
+  tags: parseTagsJson(r.tags),
 });
 
 function toMonsterTemplate(
@@ -532,7 +586,17 @@ function toMonsterTemplate(
     hp: r.hp,
     mood: r.mood,
     startingItems: JSON.parse(r.startingItemsJson) as StarterPackEntry[],
-    tags: [],
+    tags: parseTagsJson(r.tags),
+  };
+}
+
+function toTagLore(r: typeof schema.tagLore.$inferSelect, w: WorldId): TagLore {
+  return {
+    id: r.id as TagLoreId,
+    worldId: w,
+    tag: r.tag,
+    title: r.title,
+    description: r.description,
   };
 }
 

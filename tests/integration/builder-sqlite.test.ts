@@ -7,7 +7,7 @@ import {
   upsertItem,
   upsertLocation,
 } from '@core/builder/index';
-import { asAgentId, asExitId, asItemId, asLocationId } from '@core/domain/ids';
+import { asAgentId, asExitId, asItemId, asLocationId, asTagLoreId } from '@core/domain/ids';
 import { Direction, OwnerKind } from '@core/domain/kinds';
 import { SqliteBuilderRepository } from '@infra/builder-sqlite-repository';
 import { type DbHandle, openDb } from '@infra/db';
@@ -150,5 +150,63 @@ describe('SqliteBuilderRepository (via builder facade)', () => {
     const liveAgentsAfter = await repo.listAgents(live);
     expect(liveLocationsAfter).toHaveLength(2);
     expect(liveAgentsAfter).toHaveLength(1);
+  });
+});
+
+describe('SqliteBuilderRepository — lore', () => {
+  it('readWorldLore returns defaults when no row exists', async () => {
+    const created = await createDraft(repo, { displayName: 'W', label: 'W' });
+    if (!created.ok) throw new Error('createDraft failed');
+    const W = created.value;
+    const lore = await repo.readWorldLore(W);
+    expect(lore).toEqual({ worldId: W, worldOverview: '', storySoFar: '' });
+  });
+
+  it('writeWorldLore + readWorldLore round-trip via SQLite', async () => {
+    const created = await createDraft(repo, { displayName: 'W', label: 'W' });
+    if (!created.ok) throw new Error('createDraft failed');
+    const W = created.value;
+    await repo.writeWorldLore(W, {
+      worldOverview: 'a noir city',
+      storySoFar: 'the lights flicker',
+    });
+    const lore = await repo.readWorldLore(W);
+    expect(lore.worldOverview).toBe('a noir city');
+    expect(lore.storySoFar).toBe('the lights flicker');
+    // Idempotent upsert: writing again replaces.
+    await repo.writeWorldLore(W, {
+      worldOverview: 'a haunted city',
+      storySoFar: 'the lights have gone out',
+    });
+    const lore2 = await repo.readWorldLore(W);
+    expect(lore2.worldOverview).toBe('a haunted city');
+  });
+
+  it('tag_lore CRUD round-trip through SQLite', async () => {
+    const created = await createDraft(repo, { displayName: 'W', label: 'W' });
+    if (!created.ok) throw new Error('createDraft failed');
+    const W = created.value;
+    const sewerId = asTagLoreId('tlr_sewer');
+    const cultId = asTagLoreId('tlr_cult');
+    await repo.upsertTagLore(W, {
+      id: sewerId,
+      tag: 'sewer',
+      title: 'Sewer',
+      description: 'tunnels under the city',
+    });
+    await repo.upsertTagLore(W, {
+      id: cultId,
+      tag: 'cult',
+      title: 'Cult',
+      description: 'devotees of the Burning Eye',
+    });
+    const all = await repo.listTagLore(W);
+    expect(all).toHaveLength(2);
+    const bySewer = await repo.getTagLoreByTag(W, 'sewer');
+    expect(bySewer?.title).toBe('Sewer');
+    const byId = await repo.getTagLore(W, cultId);
+    expect(byId?.tag).toBe('cult');
+    await repo.deleteTagLore(W, sewerId);
+    expect(await repo.getTagLore(W, sewerId)).toBeNull();
   });
 });
