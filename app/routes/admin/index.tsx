@@ -2,6 +2,7 @@ import { WorldKind } from '@core/domain/builder-kinds';
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router';
 import { useState } from 'react';
 import { cloneLive, createDraft, listWorlds } from '~/server/admin/worlds';
+import { Fonts } from './_components/Fonts';
 
 export const Route = createFileRoute('/admin/')({
   component: AdminIndex,
@@ -26,69 +27,124 @@ function AdminIndex() {
   const liveWorlds = worlds.filter((w) => w.kind === WorldKind.Live);
 
   return (
-    <div style={{ padding: 24, maxWidth: 960 }}>
-      <h1 style={{ fontSize: 18, marginBottom: 16 }}>Campaign Builder</h1>
-      <section style={{ marginBottom: 32 }}>
-        <h2 style={{ fontSize: 14, marginBottom: 8 }}>Drafts</h2>
-        {drafts.length === 0 ? (
-          <p style={{ opacity: 0.6 }}>No drafts yet.</p>
-        ) : (
-          <ul>
-            {drafts.map((w) => (
-              <li key={w.id as string}>
-                <Link to="/admin/$worldId" params={{ worldId: w.id as string }}>
-                  {w.displayName || w.label} ({w.id as string})
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-        <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-          <input
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="Display name"
-            style={{ background: '#111', color: '#cfcfcf', border: '1px solid #333', padding: 4 }}
-          />
-          <input
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            placeholder="World label"
-            style={{ background: '#111', color: '#cfcfcf', border: '1px solid #333', padding: 4 }}
-          />
-          <button type="button" onClick={onCreate}>
-            New draft
-          </button>
-        </div>
-      </section>
+    <div className="admin-root">
+      <Fonts />
+      <div className="index-page">
+        <header>
+          <h1 className="t-headline-lg">Campaign Builder</h1>
+          <p className="t-metadata">Drafts and live worlds.</p>
+        </header>
 
-      <section>
-        <h2 style={{ fontSize: 14, marginBottom: 8 }}>Live worlds</h2>
-        {liveWorlds.length === 0 ? (
-          <p style={{ opacity: 0.6 }}>No live worlds.</p>
-        ) : (
-          <ul>
-            {liveWorlds.map((w) => (
-              <li key={w.id as string} style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                <Link to="/admin/$worldId" params={{ worldId: w.id as string }}>
-                  {w.displayName || w.label} ({w.id as string})
-                </Link>
-                {w.parentDraftId === null && (
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      await cloneLive({ data: { id: w.id as string } });
-                      router.invalidate();
-                    }}
-                  >
-                    Clone as draft
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+        <section>
+          <h2 className="t-label-caps" style={{ marginBottom: 12 }}>
+            Drafts
+          </h2>
+          {drafts.length === 0 ? (
+            <p className="t-metadata" style={{ fontStyle: 'italic' }}>
+              No drafts yet.
+            </p>
+          ) : (
+            <table className="ledger">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>ID</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {drafts.map((w) => (
+                  <tr key={w.id as string}>
+                    <td>
+                      <Link to="/admin/$worldId" params={{ worldId: w.id as string }}>
+                        {w.displayName || w.label}
+                      </Link>
+                    </td>
+                    <td style={{ color: 'var(--parchment-dim)' }}>{w.id as string}</td>
+                    <td>
+                      <span className="chip chip--gold">DRAFT</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          <div style={{ marginTop: 16, display: 'flex', gap: 16, alignItems: 'flex-end' }}>
+            <div className="field" style={{ flex: 1, marginBottom: 0 }}>
+              <label htmlFor="newDraftDisplay">Display name</label>
+              <input
+                id="newDraftDisplay"
+                className="input"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+              />
+            </div>
+            <div className="field" style={{ flex: 1, marginBottom: 0 }}>
+              <label htmlFor="newDraftLabel">World label</label>
+              <input
+                id="newDraftLabel"
+                className="input"
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+              />
+            </div>
+            <button type="button" className="btn btn--primary" onClick={onCreate}>
+              New draft
+            </button>
+          </div>
+        </section>
+
+        <section>
+          <h2 className="t-label-caps" style={{ marginBottom: 12 }}>
+            Live worlds
+          </h2>
+          {liveWorlds.length === 0 ? (
+            <p className="t-metadata" style={{ fontStyle: 'italic' }}>
+              No live worlds.
+            </p>
+          ) : (
+            <table className="ledger">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>ID</th>
+                  <th>Status</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {liveWorlds.map((w) => (
+                  <tr key={w.id as string}>
+                    <td>
+                      <Link to="/admin/$worldId" params={{ worldId: w.id as string }}>
+                        {w.displayName || w.label}
+                      </Link>
+                    </td>
+                    <td style={{ color: 'var(--parchment-dim)' }}>{w.id as string}</td>
+                    <td>
+                      <span className="chip chip--crimson">LIVE</span>
+                    </td>
+                    <td>
+                      {w.parentDraftId === null && (
+                        <button
+                          type="button"
+                          className="btn"
+                          onClick={async () => {
+                            await cloneLive({ data: { id: w.id as string } });
+                            router.invalidate();
+                          }}
+                        >
+                          Clone as draft
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+      </div>
     </div>
   );
 }
