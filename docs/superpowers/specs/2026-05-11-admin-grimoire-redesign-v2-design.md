@@ -11,10 +11,39 @@ Bring the admin UI up to the structural and informational depth of the Stitch mo
 ## Non-goals
 
 - Mobile / responsive collapse.
-- Pixel-exact reproduction of the mockups. The Stitch palette is the warm "Aethelgard" Material-3-derived palette (`#1c1010` background, `#f4dddb` text, `#ebc24f` gold, `#ffb3ae` crimson). v1 chose the colder narrative palette (`#0a0a0a` / `#d1d1d1` / `#b69121` / `#9e2a2b`). v2 keeps **v1's palette**. We don't switch palettes mid-redesign for no reason; the narrative palette was deliberately chosen over the frontmatter palette in v1.
+- Pixel-exact reproduction of the mockups. v2 switches to the **warm "Aethelgard" Material-3-derived palette** from the DESIGN.md frontmatter (`#1c1010` background, `#f4dddb` on-surface, `#ebc24f` secondary/gold, `#ffb3ae` primary/crimson, `#58413f` outline-variant). This supersedes v1's colder narrative palette. The token names in `admin.css` change values; class names stay stable so the rest of the rewrite isn't disrupted.
 - Decorative features unsupported by data: world stat counts that aren't computable, X/Y coordinates, mini-maps, "related lore" cross-references, "Chronicle Log" / "Bulk Import", FAB. Skip all of these.
 - Tailwind. We keep plain CSS + tokens in `app/routes/admin/admin.css`.
 - Material Symbols icon font. Adds a 1MB+ font dependency for icons. Use a small inline-SVG icon set (or Unicode glyphs from v1) instead.
+
+## Palette retune (v1 → v2)
+
+The CSS variable names in `admin.css` are kept; only the values change. This means components don't need to be touched for the palette swap — just `admin.css`.
+
+| Token | v1 value | v2 value | Source token in DESIGN.md frontmatter |
+|---|---|---|---|
+| `--ink-black` | `#0a0a0a` | `#1c1010` | `surface` / `background` |
+| `--charcoal` | `#121212` | `#291d1c` | `surface-container` |
+| `--charcoal-hover` | `#1a1a1a` | `#342726` | `surface-container-high` |
+| `--parchment` | `#d1d1d1` | `#f4dddb` | `on-surface` |
+| `--parchment-dim` | `#a78a88` | `#dfbfbc` | `on-surface-variant` |
+| `--crimson` | `#9e2a2b` | `#ffb3ae` | `primary` (used for primary actions, draft underline) |
+| `--crimson-bright` | `#ffb3ae` | `#ffb9b4` | `on-primary-container` (used for text on crimson surfaces) |
+| `--crimson-container` *(new)* | — | `#9e2a2b` | `primary-container` (used for the publish button background) |
+| `--gold` | `#b69121` | `#b08c1b` | `secondary-container` (active nav border, selection underline) |
+| `--gold-bright` | `#ebc24f` | `#ebc24f` | `secondary` (focus underline) |
+| `--border` | `#262626` | `#58413f` | `outline-variant` |
+| `--border-strong` *(new)* | — | `#a78a88` | `outline` (rare; current-selection separators) |
+| `--tertiary` | `#8bd2db` | `#8bd2db` | `tertiary` (info accents — unchanged) |
+| `--surface-low` *(new)* | — | `#251918` | `surface-container-low` (input wells, top-bar search) |
+| `--surface-lowest` *(new)* | — | `#160b0b` | `surface-container-lowest` (manuscript card body, footer) |
+
+Three additional tokens (`--crimson-container`, `--border-strong`, `--surface-low`, `--surface-lowest`) appear because v2 introduces UI surfaces the v1 spec didn't have (publish button fill, top-bar search field, manuscript card interior). Add them to `:root` in `admin.css` alongside the retuned existing values.
+
+Where to use the **filled** crimson vs. **outlined** crimson:
+
+- **Filled** (`background: var(--crimson-container); color: var(--crimson-bright)`): the global Publish button — the mockup's only filled accent.
+- **Outlined / underlined** (`color: var(--crimson); border-bottom: 1px solid var(--crimson)`): everything else that was crimson in v1 — primary action underlines, LIVE chips, problem dots.
 
 ## Backend additions
 
