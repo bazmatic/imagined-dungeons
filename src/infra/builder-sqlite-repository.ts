@@ -96,10 +96,7 @@ export class SqliteBuilderRepository implements BuilderRepository {
   }
 
   async updateWorldCover(id: WorldId, coverImageUrl: string | null): Promise<void> {
-    await this.db
-      .update(schema.worlds)
-      .set({ coverImageUrl })
-      .where(eq(schema.worlds.id, id));
+    await this.db.update(schema.worlds).set({ coverImageUrl }).where(eq(schema.worlds.id, id));
   }
 
   async listLocations(w: WorldId) {

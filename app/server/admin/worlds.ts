@@ -47,11 +47,7 @@ export const getWorld = createServerFn({ method: 'GET' })
 
 export const updateWorldCover = createServerFn({ method: 'POST' })
   .inputValidator((d: unknown) => {
-    if (
-      typeof d !== 'object' ||
-      d === null ||
-      typeof (d as { id?: unknown }).id !== 'string'
-    ) {
+    if (typeof d !== 'object' || d === null || typeof (d as { id?: unknown }).id !== 'string') {
       throw new Error('Expected { id: string, coverImageUrl: string | null }');
     }
     const cover = (d as { coverImageUrl?: unknown }).coverImageUrl;
