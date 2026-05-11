@@ -8,12 +8,14 @@ export interface TopBarProps {
   readonly onPaletteOpen?: () => void;
   readonly onPublish?: () => void;
   readonly onReset?: () => void;
+  readonly onWorldSettings?: () => void;
   readonly publishLabel?: string;
   readonly extra?: ReactNode;
 }
 
 export function TopBar(props: TopBarProps) {
-  const { activeTab, showDraftChip, onSearch, onPaletteOpen, onPublish, onReset } = props;
+  const { activeTab, showDraftChip, onSearch, onPaletteOpen, onPublish, onReset, onWorldSettings } =
+    props;
   return (
     <header className="top-bar">
       <div className="top-bar__left">
@@ -43,6 +45,11 @@ export function TopBar(props: TopBarProps) {
           />
         ) : null}
         {showDraftChip ? <span className="top-bar__draft-chip">Draft Version</span> : null}
+        {onWorldSettings ? (
+          <button type="button" className="btn" onClick={onWorldSettings}>
+            World Settings
+          </button>
+        ) : null}
         {onReset ? (
           <button type="button" className="btn" onClick={onReset}>
             Reset

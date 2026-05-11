@@ -1,4 +1,4 @@
-export type SideNavCategory = 'lore' | 'locations' | 'bestiary' | 'items' | 'characters';
+export type SideNavCategory = 'locations' | 'bestiary' | 'agents' | 'items';
 
 export interface SideNavProps {
   readonly active: SideNavCategory;
@@ -9,13 +9,11 @@ export interface SideNavProps {
 const ITEMS: ReadonlyArray<{
   readonly key: SideNavCategory;
   readonly label: string;
-  readonly enabled: boolean;
 }> = [
-  { key: 'lore', label: 'Lore', enabled: false },
-  { key: 'locations', label: 'Locations', enabled: true },
-  { key: 'bestiary', label: 'Bestiary', enabled: true },
-  { key: 'items', label: 'Items', enabled: false },
-  { key: 'characters', label: 'Characters', enabled: false },
+  { key: 'locations', label: 'Locations' },
+  { key: 'bestiary', label: 'Bestiary' },
+  { key: 'agents', label: 'Agents' },
+  { key: 'items', label: 'Items' },
 ];
 
 export function SideNav({ active, onSelect, onCreateNew }: SideNavProps) {
@@ -30,10 +28,8 @@ export function SideNav({ active, onSelect, onCreateNew }: SideNavProps) {
           <li key={item.key}>
             <button
               type="button"
-              className={`side-nav__link${active === item.key ? ' side-nav__link--active' : ''}${item.enabled ? '' : ' side-nav__link--disabled'}`}
-              disabled={!item.enabled}
-              title={item.enabled ? undefined : 'Coming soon.'}
-              onClick={() => item.enabled && onSelect(item.key)}
+              className={`side-nav__link${active === item.key ? ' side-nav__link--active' : ''}`}
+              onClick={() => onSelect(item.key)}
             >
               {item.label}
             </button>
