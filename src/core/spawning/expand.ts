@@ -32,7 +32,7 @@ export function expandSpawn(args: {
       mood: args.template.mood,
       goal: null,
       autonomous: false,
-      tags: args.template.tags,
+      tags: [...args.template.tags],
     });
   }
   return out;
