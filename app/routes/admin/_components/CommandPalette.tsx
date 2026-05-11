@@ -1,6 +1,6 @@
 import type { EntityKind } from '@core/domain/builder-kinds';
 import type { WorldTree } from '@core/domain/builder-types';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { type PaletteResult, filterTree } from './filter-tree';
 
 type EntityKindValue = (typeof EntityKind)[keyof typeof EntityKind];
@@ -15,6 +15,7 @@ export interface CommandPaletteProps {
 export function CommandPalette({ tree, open, onClose, onSelect }: CommandPaletteProps) {
   const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const results: readonly PaletteResult[] = useMemo(
     () => (open ? filterTree(tree, query) : []),
@@ -30,6 +31,8 @@ export function CommandPalette({ tree, open, onClose, onSelect }: CommandPalette
     if (!open) {
       setQuery('');
       setHighlight(0);
+    } else {
+      inputRef.current?.focus();
     }
   }, [open]);
 
@@ -66,10 +69,12 @@ export function CommandPalette({ tree, open, onClose, onSelect }: CommandPalette
     >
       <div
         className="palette"
-        onKeyDown={(e) => e.key === 'Escape' && e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
         role="presentation"
       >
         <input
+          ref={inputRef}
           className="palette__input"
           placeholder="Jump to entity..."
           value={query}
