@@ -18,6 +18,7 @@ const loc: Location = {
   label: 'Loc',
   shortDescription: '',
   longDescription: '',
+  tags: [],
 };
 const mkAgent = (id: AgentId): Agent => ({
   id,

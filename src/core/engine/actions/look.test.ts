@@ -12,6 +12,7 @@ const loc: Location = {
   label: 'The Goblet',
   shortDescription: 's',
   longDescription: 'A tavern.',
+  tags: [],
 };
 const map: Item = {
   id: asItemId('item_map'),

@@ -17,6 +17,7 @@ const emptyTree = (id = W, kind: WorldKind = WorldKind.Live): WorldTree => ({
     displayName: 'D',
     parentDraftId: null,
     playerAgentId: null,
+    coverImageUrl: null,
   },
   locations: [],
   exits: [],
@@ -32,6 +33,7 @@ const loc = (id: string, label: string) => ({
   label,
   shortDescription: '',
   longDescription: '',
+  tags: [] as readonly string[],
 });
 
 describe('computeMergePlan', () => {

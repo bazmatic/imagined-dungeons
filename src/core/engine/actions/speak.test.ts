@@ -13,6 +13,7 @@ const locA: Location = {
   label: 'A',
   shortDescription: '',
   longDescription: '',
+  tags: [],
 };
 const locB: Location = {
   id: B,
@@ -20,6 +21,7 @@ const locB: Location = {
   label: 'B',
   shortDescription: '',
   longDescription: '',
+  tags: [],
 };
 const paff: Agent = {
   id: asAgentId('char_p'),

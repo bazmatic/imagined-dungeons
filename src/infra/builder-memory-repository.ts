@@ -10,6 +10,7 @@ import type {
   UpsertLocationSpawnTriggerInput,
   UpsertMonsterTemplateInput,
   WorldSummary,
+  WorldSummaryWithStats,
 } from '@core/domain/builder-types';
 import type { Agent, Exit, Item, Location } from '@core/domain/entities';
 import {
@@ -59,8 +60,14 @@ export class MemoryBuilderRepository implements BuilderRepository {
     return b;
   }
 
-  async listWorlds() {
-    return [...this.worlds.values()];
+  async listWorlds(): Promise<readonly WorldSummaryWithStats[]> {
+    const summaries = [...this.worlds.values()];
+    return summaries.map((s) => ({
+      ...s,
+      locationCount: this.locations.get(s.id)?.size ?? 0,
+      agentCount: this.agents.get(s.id)?.size ?? 0,
+      itemCount: this.items.get(s.id)?.size ?? 0,
+    }));
   }
   async getWorldSummary(id: WorldId) {
     return this.worlds.get(id) ?? null;
@@ -72,6 +79,11 @@ export class MemoryBuilderRepository implements BuilderRepository {
     const cur = this.worlds.get(id);
     if (!cur) return;
     this.worlds.set(id, { ...cur, ...patch });
+  }
+  async updateWorldCover(id: WorldId, coverImageUrl: string | null): Promise<void> {
+    const w = this.worlds.get(id);
+    if (!w) return;
+    this.worlds.set(id, { ...w, coverImageUrl });
   }
 
   async listLocations(w: WorldId) {
@@ -94,6 +106,7 @@ export class MemoryBuilderRepository implements BuilderRepository {
       label: i.label,
       shortDescription: i.shortDescription,
       longDescription: i.longDescription,
+      tags: [...i.tags],
     });
   }
   async upsertExit(w: WorldId, i: UpsertExitInput) {

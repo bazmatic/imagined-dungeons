@@ -70,6 +70,7 @@ describe('builder facade — simple ops', () => {
       label: 'A',
       shortDescription: 'a',
       longDescription: 'a',
+      tags: [],
     });
     expect(r.ok).toBe(true);
     const tree = await getWorldTree(repo, W);
@@ -92,6 +93,7 @@ describe('builder facade — simple ops', () => {
       label: 'A',
       shortDescription: 'a',
       longDescription: 'a',
+      tags: [],
     });
     const r = await deleteLocation(repo, W, asLocationId('loc_a'));
     expect(r.ok).toBe(true);
@@ -134,12 +136,14 @@ describe('builder facade — simple ops', () => {
       displayName: 'L',
       parentDraftId: null,
       playerAgentId: null,
+      coverImageUrl: null,
     });
     const r = await upsertLocation(repo, liveId, {
       id: asLocationId('loc_x'),
       label: 'X',
       shortDescription: '',
       longDescription: '',
+      tags: [],
     });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error.kind).toBe('world_kind_mismatch');
@@ -155,6 +159,7 @@ const seedMinimalDraft = async (repo: MemoryBuilderRepository) => {
     label: 'A',
     shortDescription: '',
     longDescription: '',
+    tags: [],
   });
   await upsertAgent(repo, W, {
     id: asAgentId('char_p'),
@@ -215,6 +220,7 @@ describe('publish', () => {
       label: 'A from gameplay',
       shortDescription: '',
       longDescription: '',
+      tags: [],
     });
     // Author edits the same location.
     await upsertLocation(repo, draftId, {
@@ -222,6 +228,7 @@ describe('publish', () => {
       label: 'A from author',
       shortDescription: '',
       longDescription: '',
+      tags: [],
     });
 
     const second = await publish(repo, draftId);
@@ -269,6 +276,7 @@ describe('upsert/delete monster template + trigger', () => {
       displayName: 'L',
       parentDraftId: null,
       playerAgentId: null,
+      coverImageUrl: null,
     });
     const r = await upsertMonsterTemplate(repo, live, sampleTemplateInput());
     expect(r.ok).toBe(false);
@@ -284,6 +292,7 @@ describe('upsert/delete monster template + trigger', () => {
       label: 'A',
       shortDescription: 'a',
       longDescription: 'a',
+      tags: [],
     });
     await upsertMonsterTemplate(repo, draft.value, sampleTemplateInput());
     const r = await upsertLocationSpawnTrigger(repo, draft.value, sampleTriggerInput());
@@ -318,6 +327,7 @@ const seedDraftWithInitialSpawn = async (repo: MemoryBuilderRepository) => {
     label: 'A',
     shortDescription: 'a',
     longDescription: 'a',
+    tags: [],
   });
   await upsertAgent(repo, W, {
     id: asAgentId('char_p'),
@@ -428,6 +438,7 @@ describe('resetLiveToDraft', () => {
       label: 'A drifted',
       shortDescription: '',
       longDescription: '',
+      tags: [],
     });
     const r = await resetLiveToDraft(repo, draftId);
     expect(r.ok).toBe(true);

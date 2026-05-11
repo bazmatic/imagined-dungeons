@@ -13,6 +13,7 @@ const loc: Location = {
   label: 'A',
   shortDescription: 'short A',
   longDescription: 'long A',
+  tags: [],
 };
 const lantern: Item = {
   id: asItemId('item_lantern'),

@@ -45,12 +45,14 @@ describe('spawning end-to-end (tick pass)', () => {
       label: 'Tavern',
       shortDescription: 'a tavern',
       longDescription: 'A cosy tavern.',
+      tags: [],
     });
     await upsertLocation(builderRepo, W, {
       id: LOC_SEWER,
       label: 'Sewer',
       shortDescription: 'a sewer',
       longDescription: 'A dark, dank sewer.',
+      tags: [],
     });
 
     const PLAYER = asAgentId('char_player');
@@ -143,12 +145,14 @@ describe('spawning end-to-end (tick pass)', () => {
       label: 'Tavern',
       shortDescription: 'a tavern',
       longDescription: 'a tavern',
+      tags: [],
     });
     await upsertLocation(builderRepo, W, {
       id: LOC_SEWER,
       label: 'Sewer',
       shortDescription: 'a sewer',
       longDescription: 'a sewer',
+      tags: [],
     });
     const PLAYER = asAgentId('char_player');
     await upsertAgent(builderRepo, W, {

@@ -30,6 +30,15 @@ const toLocation = (r: typeof schema.locations.$inferSelect, worldId: WorldId): 
   label: r.label,
   shortDescription: r.shortDescription,
   longDescription: r.longDescription,
+  tags: (() => {
+    try {
+      const parsed = JSON.parse(r.tags);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.filter((v): v is string => typeof v === 'string');
+    } catch {
+      return [];
+    }
+  })(),
 });
 
 const toAgent = (r: typeof schema.agents.$inferSelect, worldId: WorldId): Agent => ({

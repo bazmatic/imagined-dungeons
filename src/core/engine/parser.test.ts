@@ -28,6 +28,7 @@ const LOC: Location = {
   label: 'A',
   shortDescription: '',
   longDescription: '',
+  tags: [],
 };
 const map: Item = {
   id: asItemId('item_map'),

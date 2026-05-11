@@ -78,6 +78,7 @@ export async function createDraft(
     displayName: input.displayName,
     parentDraftId: null,
     playerAgentId: null,
+    coverImageUrl: null,
   });
   return Ok(id);
 }
@@ -243,6 +244,14 @@ export async function listWorlds(repo: BuilderRepository) {
   return repo.listWorlds();
 }
 
+export async function updateWorldCover(
+  repo: BuilderRepository,
+  id: WorldId,
+  coverImageUrl: string | null,
+): Promise<void> {
+  return repo.updateWorldCover(id, coverImageUrl);
+}
+
 const newLiveId = (): WorldId => asWorldId(`w_live_${Math.random().toString(36).slice(2, 10)}`);
 
 async function findLiveForDraft(
@@ -259,6 +268,7 @@ const asLocInput = (l: Location): UpsertLocationInput => ({
   label: l.label,
   shortDescription: l.shortDescription,
   longDescription: l.longDescription,
+  tags: l.tags,
 });
 const asExitInput = (e: Exit): UpsertExitInput => ({
   id: e.id,
@@ -408,6 +418,7 @@ export async function publish(
         displayName: draftSummary.value.displayName,
         parentDraftId: draftId,
         playerAgentId: draftSummary.value.playerAgentId,
+        coverImageUrl: draftSummary.value.coverImageUrl,
       });
       await copyTreeIntoWorld(tx, draftTree.value, newId);
       const now = Date.now();
@@ -528,6 +539,7 @@ export async function cloneLiveAsDraft(
     displayName: live.value.displayName,
     parentDraftId: null,
     playerAgentId: live.value.playerAgentId,
+    coverImageUrl: live.value.coverImageUrl,
   });
   await copyTreeIntoWorld(repo, liveTree.value, draftId);
   await repo.updateWorldSummary(liveWorldId, { parentDraftId: draftId });

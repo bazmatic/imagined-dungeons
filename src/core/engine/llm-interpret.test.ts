@@ -13,6 +13,7 @@ const tavern: Location = {
   label: 'Tavern',
   shortDescription: '',
   longDescription: '',
+  tags: [],
 };
 const paff: Agent = {
   id: asAgentId('char_p'),

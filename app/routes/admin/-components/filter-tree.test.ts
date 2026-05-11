@@ -22,6 +22,7 @@ function makeTree(): WorldTree {
       displayName: 'World',
       parentDraftId: null,
       playerAgentId: null,
+      coverImageUrl: null,
     },
     locations: [
       {
@@ -30,6 +31,7 @@ function makeTree(): WorldTree {
         label: 'The Drunken Goblin',
         shortDescription: '',
         longDescription: '',
+        tags: [],
       },
       {
         id: 'loc-cave' as LocationId,
@@ -37,6 +39,7 @@ function makeTree(): WorldTree {
         label: 'Dark Cave',
         shortDescription: '',
         longDescription: '',
+        tags: [],
       },
     ],
     exits: [
@@ -136,6 +139,7 @@ describe('filterTree', () => {
       label: `Place ${i}`,
       shortDescription: '',
       longDescription: '',
+      tags: [] as readonly string[],
     }));
     const big: WorldTree = { ...tree, locations: many };
     expect(filterTree(big, 'place').length).toBe(50);

@@ -11,6 +11,7 @@ const tavern: Location = {
   label: 'The Flaming Goblet',
   shortDescription: '',
   longDescription: 'A warm tavern.',
+  tags: [],
 };
 const paff: Agent = {
   id: asAgentId('char_p'),

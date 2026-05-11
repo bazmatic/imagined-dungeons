@@ -12,6 +12,7 @@ const loc: Location = {
   label: 'A',
   shortDescription: '',
   longDescription: '',
+  tags: [],
 };
 const paff: Agent = {
   id: asAgentId('char_p'),

@@ -58,8 +58,8 @@ let builderRepo: MemoryBuilderRepository;
 beforeEach(async () => {
   engineRepo = new MemoryRepository(W, {
     locations: [
-      { id: LOC_A, worldId: W, label: 'A', shortDescription: 'a', longDescription: 'a' },
-      { id: LOC_B, worldId: W, label: 'B', shortDescription: 'b', longDescription: 'b' },
+      { id: LOC_A, worldId: W, label: 'A', shortDescription: 'a', longDescription: 'a', tags: [] },
+      { id: LOC_B, worldId: W, label: 'B', shortDescription: 'b', longDescription: 'b', tags: [] },
     ],
     exits: [],
     items: [],

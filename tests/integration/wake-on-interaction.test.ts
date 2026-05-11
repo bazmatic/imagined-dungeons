@@ -16,6 +16,7 @@ const loc: Location = {
   label: 'A room',
   shortDescription: '',
   longDescription: 'Just a room.',
+  tags: [],
 };
 
 const player: Agent = {

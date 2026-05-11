@@ -13,6 +13,7 @@ import type {
   UpsertLocationSpawnTriggerInput,
   UpsertMonsterTemplateInput,
   WorldSummary,
+  WorldSummaryWithStats,
 } from '@core/domain/builder-types';
 import type { Agent, Exit, Item, Location } from '@core/domain/entities';
 import {
@@ -38,9 +39,31 @@ import * as schema from './schema';
 export class SqliteBuilderRepository implements BuilderRepository {
   constructor(private readonly db: DB) {}
 
-  async listWorlds(): Promise<readonly WorldSummary[]> {
-    const rows = await this.db.select().from(schema.worlds);
-    return rows.map(toSummary);
+  async listWorlds(): Promise<readonly WorldSummaryWithStats[]> {
+    const worldRows = await this.db.select().from(schema.worlds);
+    if (worldRows.length === 0) return [];
+    const locationRows = await this.db.select().from(schema.locations);
+    const agentRows = await this.db.select().from(schema.agents);
+    const itemRows = await this.db.select().from(schema.items);
+
+    const countByWorld = (rows: readonly { worldId: string }[]): Map<string, number> => {
+      const m = new Map<string, number>();
+      for (const r of rows) m.set(r.worldId, (m.get(r.worldId) ?? 0) + 1);
+      return m;
+    };
+    const locByWorld = countByWorld(locationRows);
+    const agentByWorld = countByWorld(agentRows);
+    const itemByWorld = countByWorld(itemRows);
+
+    return worldRows.map((r) => {
+      const s = toSummary(r);
+      return {
+        ...s,
+        locationCount: locByWorld.get(s.id) ?? 0,
+        agentCount: agentByWorld.get(s.id) ?? 0,
+        itemCount: itemByWorld.get(s.id) ?? 0,
+      };
+    });
   }
   async getWorldSummary(id: WorldId): Promise<WorldSummary | null> {
     const rows = await this.db.select().from(schema.worlds).where(eq(schema.worlds.id, id));
@@ -56,6 +79,7 @@ export class SqliteBuilderRepository implements BuilderRepository {
       displayName: s.displayName,
       playerAgentId: s.playerAgentId,
       rngSeed: 1,
+      coverImageUrl: s.coverImageUrl,
     });
   }
   async updateWorldSummary(
@@ -69,6 +93,13 @@ export class SqliteBuilderRepository implements BuilderRepository {
     if (patch.playerAgentId !== undefined) update.playerAgentId = patch.playerAgentId;
     if (Object.keys(update).length === 0) return;
     await this.db.update(schema.worlds).set(update).where(eq(schema.worlds.id, id));
+  }
+
+  async updateWorldCover(id: WorldId, coverImageUrl: string | null): Promise<void> {
+    await this.db
+      .update(schema.worlds)
+      .set({ coverImageUrl })
+      .where(eq(schema.worlds.id, id));
   }
 
   async listLocations(w: WorldId) {
@@ -92,6 +123,7 @@ export class SqliteBuilderRepository implements BuilderRepository {
   }
 
   async upsertLocation(w: WorldId, i: UpsertLocationInput): Promise<void> {
+    const tagsJson = JSON.stringify(i.tags);
     await this.db
       .insert(schema.locations)
       .values({
@@ -100,6 +132,7 @@ export class SqliteBuilderRepository implements BuilderRepository {
         label: i.label,
         shortDescription: i.shortDescription,
         longDescription: i.longDescription,
+        tags: tagsJson,
       })
       .onConflictDoUpdate({
         target: [schema.locations.worldId, schema.locations.id],
@@ -107,6 +140,7 @@ export class SqliteBuilderRepository implements BuilderRepository {
           label: i.label,
           shortDescription: i.shortDescription,
           longDescription: i.longDescription,
+          tags: tagsJson,
         },
       });
   }
@@ -385,6 +419,16 @@ export class SqliteBuilderRepository implements BuilderRepository {
   }
 }
 
+function parseTagsJson(raw: string): readonly string[] {
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((v): v is string => typeof v === 'string');
+  } catch {
+    return [];
+  }
+}
+
 const toSummary = (r: typeof schema.worlds.$inferSelect): WorldSummary => ({
   id: r.id as WorldId,
   kind: r.kind as WorldKind,
@@ -392,6 +436,7 @@ const toSummary = (r: typeof schema.worlds.$inferSelect): WorldSummary => ({
   displayName: r.displayName || r.label,
   parentDraftId: (r.parentDraftId ?? null) as WorldId | null,
   playerAgentId: (r.playerAgentId ?? null) as AgentId | null,
+  coverImageUrl: r.coverImageUrl ?? null,
 });
 
 const toLocation = (r: typeof schema.locations.$inferSelect, w: WorldId): Location => ({
@@ -400,6 +445,7 @@ const toLocation = (r: typeof schema.locations.$inferSelect, w: WorldId): Locati
   label: r.label,
   shortDescription: r.shortDescription,
   longDescription: r.longDescription,
+  tags: parseTagsJson(r.tags),
 });
 
 const toExit = (r: typeof schema.exits.$inferSelect, w: WorldId): Exit => ({

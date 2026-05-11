@@ -13,6 +13,7 @@ const locA: Location = {
   label: 'A',
   shortDescription: 'a',
   longDescription: 'a',
+  tags: [],
 };
 const locB: Location = {
   id: B,
@@ -20,6 +21,7 @@ const locB: Location = {
   label: 'B',
   shortDescription: 'b',
   longDescription: 'b',
+  tags: [],
 };
 const exitN: Exit = {
   id: asExitId('e1'),

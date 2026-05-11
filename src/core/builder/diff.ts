@@ -149,10 +149,17 @@ function refOf(kind: EntityKind, id: string): EntityRef {
   return { kind, id: id as never };
 }
 
+function arrayEq(a: readonly string[], b: readonly string[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+
 const locEq = (a: Location, b: Location) =>
   a.label === b.label &&
   a.shortDescription === b.shortDescription &&
-  a.longDescription === b.longDescription;
+  a.longDescription === b.longDescription &&
+  arrayEq(a.tags, b.tags);
 
 const exitEq = (a: Exit, b: Exit) =>
   a.from === b.from &&

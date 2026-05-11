@@ -21,6 +21,7 @@ const loc: Location = {
   label: 'The Flaming Goblet',
   shortDescription: 'a tavern with a wall on fire',
   longDescription: 'A tavern with one wall constantly aflame.',
+  tags: [],
 };
 
 const player: Agent = {

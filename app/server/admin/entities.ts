@@ -42,6 +42,7 @@ export const saveEntity = createServerFn({ method: 'POST' })
         label: p.label as string,
         shortDescription: p.shortDescription as string,
         longDescription: p.longDescription as string,
+        tags: Array.isArray(p.tags) ? (p.tags as string[]) : [],
       });
     }
     if (data.entity === EntityKind.Exit) {

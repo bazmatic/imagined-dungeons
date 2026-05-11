@@ -32,6 +32,7 @@ describe('SqliteBuilderRepository (via builder facade)', () => {
       label: 'A',
       shortDescription: '',
       longDescription: '',
+      tags: [],
     });
     await upsertAgent(repo, W, {
       id: asAgentId('char_p'),
@@ -67,12 +68,14 @@ describe('SqliteBuilderRepository (via builder facade)', () => {
       label: 'Kitchen',
       shortDescription: 'k',
       longDescription: 'kitchen',
+      tags: [],
     });
     await upsertLocation(repo, draft, {
       id: asLocationId('loc_pantry'),
       label: 'Pantry',
       shortDescription: 'p',
       longDescription: 'pantry',
+      tags: [],
     });
     await upsertExit(repo, draft, {
       id: asExitId('exit_kitchen_pantry'),

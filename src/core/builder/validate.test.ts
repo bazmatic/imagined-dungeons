@@ -23,6 +23,7 @@ const baseTree = (): WorldTree => ({
     displayName: 'D',
     parentDraftId: null,
     playerAgentId: asAgentId('char_p'),
+    coverImageUrl: null,
   },
   locations: [
     {
@@ -31,6 +32,7 @@ const baseTree = (): WorldTree => ({
       label: 'A',
       shortDescription: 'a',
       longDescription: 'a',
+      tags: [],
     },
     {
       id: asLocationId('loc_b'),
@@ -38,6 +40,7 @@ const baseTree = (): WorldTree => ({
       label: 'B',
       shortDescription: 'b',
       longDescription: 'b',
+      tags: [],
     },
   ],
   exits: [],

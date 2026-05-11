@@ -24,6 +24,7 @@ const loc: Location = {
   label: 'The Goblet',
   shortDescription: 'A tavern.',
   longDescription: 'A tavern with one wall aflame.',
+  tags: [],
 };
 
 const itemA: Item = {

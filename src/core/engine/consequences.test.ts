@@ -15,6 +15,7 @@ const loc: Location = {
   label: 'Workshop',
   shortDescription: 'a workshop',
   longDescription: 'a tidy workshop full of tools',
+  tags: [],
 };
 const lantern: Item = {
   id: asItemId('item_lantern'),

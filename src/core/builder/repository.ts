@@ -9,6 +9,7 @@ import type {
   UpsertLocationSpawnTriggerInput,
   UpsertMonsterTemplateInput,
   WorldSummary,
+  WorldSummaryWithStats,
 } from '@core/domain/builder-types';
 import type { Agent, Exit, Item, Location } from '@core/domain/entities';
 import type {
@@ -31,10 +32,11 @@ import type {
  * `SqliteBuilderRepository` (production).
  */
 export interface BuilderRepository {
-  listWorlds(): Promise<readonly WorldSummary[]>;
+  listWorlds(): Promise<readonly WorldSummaryWithStats[]>;
   getWorldSummary(id: WorldId): Promise<WorldSummary | null>;
   createWorld(summary: WorldSummary): Promise<void>;
   updateWorldSummary(id: WorldId, patch: Partial<Omit<WorldSummary, 'id' | 'kind'>>): Promise<void>;
+  updateWorldCover(id: WorldId, coverImageUrl: string | null): Promise<void>;
 
   listLocations(worldId: WorldId): Promise<readonly Location[]>;
   listExits(worldId: WorldId): Promise<readonly Exit[]>;

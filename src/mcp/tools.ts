@@ -141,6 +141,7 @@ export const TOOLS: readonly ToolDef[] = [
         label: a.label as string,
         shortDescription: a.shortDescription as string,
         longDescription: a.longDescription as string,
+        tags: Array.isArray(a.tags) ? (a.tags as string[]) : [],
       }),
   },
   {
