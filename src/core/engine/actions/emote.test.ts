@@ -39,6 +39,7 @@ const paff: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  tags: [],
 };
 const spark: Agent = {
   id: asAgentId('char_spark'),
@@ -56,6 +57,7 @@ const spark: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  tags: [],
 };
 
 describe('handleEmote', () => {

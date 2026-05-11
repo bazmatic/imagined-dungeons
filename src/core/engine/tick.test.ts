@@ -65,6 +65,7 @@ const player: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  tags: [],
 };
 
 const spark: Agent = {
@@ -83,6 +84,7 @@ const spark: Agent = {
   goal: 'Explore',
   autonomous: true,
   awake: true,
+  tags: [],
 };
 
 const ember: Agent = {
@@ -101,6 +103,7 @@ const ember: Agent = {
   goal: 'Spread chaos',
   autonomous: true,
   awake: true,
+  tags: [],
 };
 
 const makeWorld = (
@@ -203,6 +206,7 @@ describe('runTick', () => {
       owner: { kind: OwnerKind.Location, id: A },
       weight: 1,
       hidden: false,
+      tags: [],
     };
     const sys: Agent = {
       id: SYSTEM_AGENT_ID,
@@ -220,6 +224,7 @@ describe('runTick', () => {
       goal: null,
       autonomous: false,
       awake: false,
+      tags: [],
     };
     const repo = makeWorld([player, sys], [lantern]);
     const llm = makeFakeLanguageModel({

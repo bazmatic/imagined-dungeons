@@ -138,6 +138,7 @@ export class MemoryBuilderRepository implements BuilderRepository {
       owner,
       weight: i.weight,
       hidden: i.hidden,
+      tags: [...i.tags],
     });
   }
   async upsertAgent(w: WorldId, i: UpsertAgentInput) {
@@ -158,6 +159,7 @@ export class MemoryBuilderRepository implements BuilderRepository {
       goal: i.goal,
       autonomous: i.autonomous,
       awake: existing ? existing.awake : false,
+      tags: [...i.tags],
     });
   }
 
@@ -191,6 +193,7 @@ export class MemoryBuilderRepository implements BuilderRepository {
       hp: i.hp,
       mood: i.mood,
       startingItems: i.startingItems,
+      tags: [...i.tags],
     });
   }
   async deleteMonsterTemplate(w: WorldId, id: MonsterTemplateId) {

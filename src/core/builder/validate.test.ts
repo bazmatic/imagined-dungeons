@@ -62,10 +62,13 @@ const baseTree = (): WorldTree => ({
       goal: null,
       autonomous: false,
       awake: false,
+      tags: [],
     },
   ],
   templates: [],
   triggers: [],
+  worldLore: { worldId: W, worldOverview: '', storySoFar: '' },
+  tagLore: [],
 });
 
 const baseTemplate = (id = 'tpl_goblin') => ({
@@ -78,6 +81,7 @@ const baseTemplate = (id = 'tpl_goblin') => ({
   hp: 5,
   mood: null,
   startingItems: [],
+  tags: [],
 });
 
 describe('validateWorld', () => {
@@ -159,6 +163,7 @@ describe('validateWorld', () => {
           owner: { kind: OwnerKind.Location, id: asLocationId('loc_missing') },
           weight: 1,
           hidden: false,
+          tags: [],
         },
       ],
     };

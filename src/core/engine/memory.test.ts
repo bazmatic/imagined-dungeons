@@ -36,6 +36,7 @@ const mkAgent = (id: AgentId): Agent => ({
   goal: null,
   autonomous: false,
   awake: false,
+  tags: [],
 });
 
 const baseEvent = (i: number, actor: AgentId, witnesses: readonly AgentId[]): DomainEvent => ({

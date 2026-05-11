@@ -30,6 +30,7 @@ const paff: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  tags: [],
 };
 const map: Item = {
   id: asItemId('item_map'),
@@ -40,6 +41,7 @@ const map: Item = {
   owner: { kind: 'location', id: A },
   weight: 1,
   hidden: false,
+  tags: [],
 };
 const view = { actor: paff, location: tavern, items: [map], agents: [], exits: [] };
 

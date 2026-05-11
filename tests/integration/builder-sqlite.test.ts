@@ -47,6 +47,7 @@ describe('SqliteBuilderRepository (via builder facade)', () => {
       mood: null,
       goal: null,
       autonomous: false,
+      tags: [],
     });
     await repo.updateWorldSummary(W, { playerAgentId: asAgentId('char_p') });
     const pub = await publish(repo, W);
@@ -95,6 +96,7 @@ describe('SqliteBuilderRepository (via builder facade)', () => {
       ownerId: 'loc_kitchen',
       weight: 1,
       hidden: false,
+      tags: [],
     });
     await upsertAgent(repo, draft, {
       id: asAgentId('char_serena'),
@@ -109,6 +111,7 @@ describe('SqliteBuilderRepository (via builder facade)', () => {
       mood: null,
       goal: null,
       autonomous: false,
+      tags: [],
     });
     await repo.updateWorldSummary(draft, { playerAgentId: asAgentId('char_serena') });
 

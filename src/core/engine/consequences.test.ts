@@ -26,6 +26,7 @@ const lantern: Item = {
   owner: { kind: OwnerKind.Location, id: A },
   weight: 1,
   hidden: false,
+  tags: [],
 };
 const paff: Agent = {
   id: asAgentId('char_p'),
@@ -43,6 +44,7 @@ const paff: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  tags: [],
 };
 
 const takeEvent: DomainEvent = {

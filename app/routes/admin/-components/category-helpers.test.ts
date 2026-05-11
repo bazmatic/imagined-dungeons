@@ -76,6 +76,7 @@ describe('resolveOwnerSubtitle', () => {
       autonomous: false,
       shortTermIntent: null,
       awake: false,
+      tags: [],
     },
   ];
   const items: readonly Item[] = [
@@ -88,6 +89,7 @@ describe('resolveOwnerSubtitle', () => {
       owner: { kind: OwnerKind.Location, id: 'loc-tavern' as LocationId },
       weight: 1,
       hidden: false,
+      tags: [],
     },
   ];
 

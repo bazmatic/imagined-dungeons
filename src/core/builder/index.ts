@@ -105,6 +105,8 @@ export async function getWorldTree(
     agents,
     templates,
     triggers,
+    worldLore: { worldId: id, worldOverview: '', storySoFar: '' },
+    tagLore: [],
   });
 }
 
@@ -288,6 +290,7 @@ const asItemInput = (i: Item): UpsertItemInput => ({
   ownerId: i.owner.id as string,
   weight: i.weight,
   hidden: i.hidden,
+  tags: i.tags,
 });
 const asAgentInput = (a: Agent): UpsertAgentInput => ({
   id: a.id,
@@ -302,6 +305,7 @@ const asAgentInput = (a: Agent): UpsertAgentInput => ({
   mood: a.mood,
   goal: a.goal,
   autonomous: a.autonomous,
+  tags: a.tags,
 });
 const asTemplateInput = (t: MonsterTemplate): UpsertMonsterTemplateInput => ({
   id: t.id,
@@ -312,6 +316,7 @@ const asTemplateInput = (t: MonsterTemplate): UpsertMonsterTemplateInput => ({
   hp: t.hp,
   mood: t.mood,
   startingItems: t.startingItems,
+  tags: t.tags,
 });
 const asTriggerInput = (t: LocationSpawnTrigger): UpsertLocationSpawnTriggerInput => ({
   id: t.id,
@@ -457,6 +462,8 @@ export async function publish(
     const snapTree: WorldTree = snap
       ? {
           summary: liveTree.value.summary,
+          worldLore: liveTree.value.worldLore,
+          tagLore: liveTree.value.tagLore,
           ...(JSON.parse(snap.json) as Pick<
             WorldTree,
             'locations' | 'exits' | 'items' | 'agents' | 'templates' | 'triggers'

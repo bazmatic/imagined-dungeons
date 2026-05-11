@@ -14,6 +14,7 @@ const tpl: MonsterTemplate = {
   hp: 5,
   mood: 'wary',
   startingItems: [],
+  tags: [],
 };
 
 describe('expandSpawn', () => {

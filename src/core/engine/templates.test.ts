@@ -36,6 +36,7 @@ const itemA: Item = {
   owner: { kind: 'location', id: A },
   weight: 1,
   hidden: false,
+  tags: [],
 };
 
 const npc: Agent = {
@@ -54,6 +55,7 @@ const npc: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  tags: [],
 };
 
 const exitN: Exit = {
@@ -185,6 +187,7 @@ describe('renderEmoteMechanical', () => {
     goal: null,
     autonomous: false,
     awake: false,
+    tags: [],
   };
   const spark: Agent = {
     id: asAgentId('char_s'),
@@ -202,6 +205,7 @@ describe('renderEmoteMechanical', () => {
     goal: null,
     autonomous: false,
     awake: false,
+    tags: [],
   };
   const ember: Agent = {
     id: asAgentId('char_e'),
@@ -219,6 +223,7 @@ describe('renderEmoteMechanical', () => {
     goal: null,
     autonomous: false,
     awake: false,
+    tags: [],
   };
   const evWith = (
     description: string,

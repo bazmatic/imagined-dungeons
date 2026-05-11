@@ -38,6 +38,7 @@ const playerAgent: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  tags: [],
 };
 
 const moveEvent = (to = LOC_A): DomainEvent => ({
@@ -75,6 +76,7 @@ beforeEach(async () => {
     hp: 5,
     mood: null,
     startingItems: [],
+    tags: [],
   });
 });
 

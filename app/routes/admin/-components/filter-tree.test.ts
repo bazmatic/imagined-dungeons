@@ -64,6 +64,7 @@ function makeTree(): WorldTree {
         owner: { kind: OwnerKind.Location, id: 'loc-tavern' as LocationId },
         weight: 1,
         hidden: false,
+        tags: [],
       },
     ],
     agents: [
@@ -83,6 +84,7 @@ function makeTree(): WorldTree {
         goal: null,
         autonomous: false,
         awake: false,
+        tags: [],
       },
     ],
     templates: [
@@ -96,6 +98,7 @@ function makeTree(): WorldTree {
         hp: 5,
         mood: null,
         startingItems: [],
+        tags: [],
       },
     ],
     triggers: [
@@ -110,6 +113,8 @@ function makeTree(): WorldTree {
         fireOnInitialPublish: false,
       },
     ],
+    worldLore: { worldId: 'w1' as WorldId, worldOverview: '', storySoFar: '' },
+    tagLore: [],
   };
 }
 

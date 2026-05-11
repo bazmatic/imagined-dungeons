@@ -69,6 +69,7 @@ describe('spawning end-to-end (tick pass)', () => {
       mood: null,
       goal: null,
       autonomous: false,
+      tags: [],
     });
 
     await builderRepo.updateWorldSummary(W, { playerAgentId: PLAYER });
@@ -83,6 +84,7 @@ describe('spawning end-to-end (tick pass)', () => {
       hp: 5,
       mood: null,
       startingItems: [],
+      tags: [],
     });
 
     await upsertLocationSpawnTrigger(builderRepo, W, {
@@ -168,6 +170,7 @@ describe('spawning end-to-end (tick pass)', () => {
       mood: null,
       goal: null,
       autonomous: false,
+      tags: [],
     });
     await builderRepo.updateWorldSummary(W, { playerAgentId: PLAYER });
     await upsertMonsterTemplate(builderRepo, W, {
@@ -179,6 +182,7 @@ describe('spawning end-to-end (tick pass)', () => {
       hp: 5,
       mood: null,
       startingItems: [],
+      tags: [],
     });
     await upsertLocationSpawnTrigger(builderRepo, W, {
       id: asSpawnTriggerId('trg_sewer_goblin'),

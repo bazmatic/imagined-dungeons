@@ -44,6 +44,7 @@ const map: Item = {
   owner: { kind: 'location', id: A },
   weight: 1,
   hidden: false,
+  tags: [],
 };
 const paff: Agent = {
   id: asAgentId('char_p'),
@@ -61,6 +62,7 @@ const paff: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  tags: [],
 };
 
 describe('composite parser through runTurn', () => {

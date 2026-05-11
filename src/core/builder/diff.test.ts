@@ -25,6 +25,8 @@ const emptyTree = (id = W, kind: WorldKind = WorldKind.Live): WorldTree => ({
   agents: [],
   templates: [],
   triggers: [],
+  worldLore: { worldId: id, worldOverview: '', storySoFar: '' },
+  tagLore: [],
 });
 
 const loc = (id: string, label: string) => ({
@@ -108,6 +110,7 @@ describe('computeMergePlan', () => {
       goal: null,
       autonomous: false,
       awake: false,
+      tags: [],
     };
     const snap = { ...emptyTree(), agents: [{ ...baseAgent }] };
     // Live diverges only on runtime fields (hp, mood, shortTermIntent, awake).

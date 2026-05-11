@@ -57,6 +57,7 @@ const toAgent = (r: typeof schema.agents.$inferSelect, worldId: WorldId): Agent 
   goal: r.goal,
   autonomous: r.autonomous,
   awake: r.awake,
+  tags: [],
 });
 
 const toItem = (r: typeof schema.items.$inferSelect, worldId: WorldId): Item => ({
@@ -68,6 +69,7 @@ const toItem = (r: typeof schema.items.$inferSelect, worldId: WorldId): Item => 
   owner: ownerOf(r.ownerKind, r.ownerId),
   weight: r.weight,
   hidden: r.hidden,
+  tags: [],
 });
 
 const toExit = (r: typeof schema.exits.$inferSelect, worldId: WorldId): Exit => ({

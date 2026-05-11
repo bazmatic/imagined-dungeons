@@ -30,6 +30,7 @@ const agent = (id: string, label: string, locId: string): Agent => ({
   goal: null,
   autonomous: false,
   awake: false,
+  tags: [],
 });
 
 const item = (
@@ -49,6 +50,7 @@ const item = (
       : { kind: 'agent', id: asAgentId(ownerId) },
   weight: 1,
   hidden: false,
+  tags: [],
 });
 
 describe('MemoryRepository', () => {

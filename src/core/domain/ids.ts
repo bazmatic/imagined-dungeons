@@ -9,6 +9,7 @@ export type EventId = Branded<string, 'EventId'>;
 export type WorldId = Branded<string, 'WorldId'>;
 export type MonsterTemplateId = Branded<string, 'MonsterTemplateId'>;
 export type SpawnTriggerId = Branded<string, 'SpawnTriggerId'>;
+export type TagLoreId = Branded<string, 'TagLoreId'>;
 
 export const asLocationId = (s: string): LocationId => s as LocationId;
 export const asItemId = (s: string): ItemId => s as ItemId;
@@ -18,6 +19,7 @@ export const asEventId = (s: string): EventId => s as EventId;
 export const asWorldId = (s: string): WorldId => s as WorldId;
 export const asMonsterTemplateId = (s: string): MonsterTemplateId => s as MonsterTemplateId;
 export const asSpawnTriggerId = (s: string): SpawnTriggerId => s as SpawnTriggerId;
+export const asTagLoreId = (s: string): TagLoreId => s as TagLoreId;
 
 /**
  * The synthetic "system" agent — used as the actorId on actions and events

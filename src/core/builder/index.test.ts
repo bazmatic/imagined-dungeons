@@ -36,6 +36,7 @@ const sampleTemplateInput = () => ({
   hp: 5,
   mood: null,
   startingItems: [],
+  tags: [],
 });
 
 const sampleTriggerInput = () => ({
@@ -122,6 +123,7 @@ describe('builder facade — simple ops', () => {
       mood: null,
       goal: null,
       autonomous: false,
+      tags: [],
     });
     expect(r.ok).toBe(false);
   });
@@ -174,6 +176,7 @@ const seedMinimalDraft = async (repo: MemoryBuilderRepository) => {
     mood: null,
     goal: null,
     autonomous: false,
+    tags: [],
   });
   await repo.updateWorldSummary(W, { playerAgentId: asAgentId('char_p') });
   return W;
@@ -342,6 +345,7 @@ const seedDraftWithInitialSpawn = async (repo: MemoryBuilderRepository) => {
     mood: null,
     goal: null,
     autonomous: false,
+    tags: [],
   });
   await repo.updateWorldSummary(W, { playerAgentId: asAgentId('char_p') });
   await upsertMonsterTemplate(repo, W, sampleTemplateInput());

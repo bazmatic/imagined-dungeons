@@ -43,6 +43,7 @@ const map: Item = {
   owner: { kind: 'location', id: A },
   weight: 1,
   hidden: false,
+  tags: [],
 };
 const paff: Agent = {
   id: asAgentId('char_p'),
@@ -60,6 +61,7 @@ const paff: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  tags: [],
 };
 
 describe('runTurn', () => {
@@ -133,6 +135,7 @@ describe('runTurn with narrated events', () => {
     goal: 'observe',
     autonomous: false,
     awake: false,
+    tags: [],
   };
 
   it('populates per-witness narrations on a speak event (mechanical fallback)', async () => {

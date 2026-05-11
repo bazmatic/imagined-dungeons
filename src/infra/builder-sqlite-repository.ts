@@ -470,6 +470,7 @@ const toItem = (r: typeof schema.items.$inferSelect, w: WorldId): Item => ({
         : { kind: OwnerKind.Item, id: asItemId(r.ownerId) },
   weight: r.weight,
   hidden: r.hidden,
+  tags: [],
 });
 
 const toAgent = (r: typeof schema.agents.$inferSelect, w: WorldId): Agent => ({
@@ -488,6 +489,7 @@ const toAgent = (r: typeof schema.agents.$inferSelect, w: WorldId): Agent => ({
   goal: r.goal,
   autonomous: r.autonomous,
   awake: r.awake,
+  tags: [],
 });
 
 function toMonsterTemplate(
@@ -504,6 +506,7 @@ function toMonsterTemplate(
     hp: r.hp,
     mood: r.mood,
     startingItems: JSON.parse(r.startingItemsJson) as StarterPackEntry[],
+    tags: [],
   };
 }
 

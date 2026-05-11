@@ -29,6 +29,7 @@ const paff: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  tags: [],
 };
 const spark: Agent = {
   ...paff,
@@ -44,6 +45,7 @@ const map: Item = {
   owner: { kind: 'location', id: A },
   weight: 1,
   hidden: false,
+  tags: [],
 };
 const exitSouth: Exit = {
   id: asExitId('e_s'),

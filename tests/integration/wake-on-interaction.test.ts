@@ -35,6 +35,7 @@ const player: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  tags: [],
 };
 
 const dormantSerena: Agent = {
@@ -53,6 +54,7 @@ const dormantSerena: Agent = {
   goal: 'Return to the sea',
   autonomous: false,
   awake: false,
+  tags: [],
 };
 
 describe('wake-on-interaction', () => {

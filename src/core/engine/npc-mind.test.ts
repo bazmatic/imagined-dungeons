@@ -36,6 +36,7 @@ const spark: Agent = {
   goal: 'Map out all safe routes in the district',
   autonomous: true,
   awake: true,
+  tags: [],
 };
 
 const paff: Agent = {
@@ -54,6 +55,7 @@ const paff: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  tags: [],
 };
 
 const makeRepo = (): MemoryRepository =>

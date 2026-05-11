@@ -59,6 +59,7 @@ const paff: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  tags: [],
 };
 
 describe('handleMove', () => {

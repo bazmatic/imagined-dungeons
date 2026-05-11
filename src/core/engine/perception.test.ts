@@ -33,6 +33,7 @@ const agent = (id: string, locId: string): Agent => ({
   goal: null,
   autonomous: false,
   awake: false,
+  tags: [],
 });
 
 const item = (id: string, ownerLoc: string, hidden = false): Item => ({
@@ -44,6 +45,7 @@ const item = (id: string, ownerLoc: string, hidden = false): Item => ({
   owner: { kind: 'location', id: asLocationId(ownerLoc) },
   weight: 1,
   hidden,
+  tags: [],
 });
 
 const exit: Exit = {

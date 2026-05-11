@@ -1,5 +1,7 @@
 import type {
   BuilderErrorKind,
+  DiscoverySubjectKind,
+  DiscoveryTriggerKind,
   EntityKind,
   ProblemKind,
   PublishOutcomeKind,
@@ -16,6 +18,7 @@ import type {
   LocationId,
   MonsterTemplateId,
   SpawnTriggerId,
+  TagLoreId,
   WorldId,
 } from './ids';
 import type { OwnerKind } from './kinds';
@@ -56,6 +59,7 @@ export interface MonsterTemplate {
   readonly hp: number;
   readonly mood: string | null;
   readonly startingItems: readonly StarterPackEntry[];
+  readonly tags: readonly string[];
 }
 
 export type TriggerParams =
@@ -76,6 +80,68 @@ export interface LocationSpawnTrigger {
   readonly fireOnInitialPublish: boolean;
 }
 
+export interface WorldLore {
+  readonly worldId: WorldId;
+  readonly worldOverview: string;
+  readonly storySoFar: string;
+}
+
+export interface TagLore {
+  readonly id: TagLoreId;
+  readonly worldId: WorldId;
+  readonly tag: string;
+  readonly title: string;
+  readonly description: string;
+}
+
+export interface UpsertTagLoreInput {
+  readonly id: TagLoreId;
+  readonly tag: string;
+  readonly title: string;
+  readonly description: string;
+}
+
+export interface LoreContext {
+  readonly worldOverview: string;
+  readonly storySoFar: string;
+  readonly tagDescriptions: Readonly<Record<string, string>>;
+}
+
+export interface LoreSubject {
+  readonly tags: readonly string[];
+  readonly locationId: LocationId | null;
+}
+
+export interface DiscoverySubject {
+  readonly kind: DiscoverySubjectKind;
+  readonly label: string;
+  readonly shortDescription: string;
+  readonly longDescription: string;
+}
+
+export interface DiscoveryRequest {
+  readonly trigger: DiscoveryTriggerKind;
+  readonly actorId: AgentId;
+  readonly locationId: LocationId;
+  readonly query: string;
+  readonly subject: DiscoverySubject | null;
+  readonly loreContext: LoreContext;
+  readonly visibleItems: readonly Item[];
+  readonly visibleAgents: readonly Agent[];
+}
+
+export interface DiscoveryResponse {
+  readonly narration: string;
+  // When non-null and the id is in the request's visible list, the
+  // engine routes through the normal `look <entity>` path and shows
+  // the entity's authored description. `narration` and spawn fields
+  // are ignored in this case.
+  readonly matchedItemId: ItemId | null;
+  readonly matchedAgentId: AgentId | null;
+  readonly spawnedItem: UpsertItemInput | null;
+  readonly spawnedAgent: UpsertAgentInput | null;
+}
+
 export interface WorldTree {
   readonly summary: WorldSummary;
   readonly locations: readonly Location[];
@@ -84,6 +150,8 @@ export interface WorldTree {
   readonly agents: readonly Agent[];
   readonly templates: readonly MonsterTemplate[];
   readonly triggers: readonly LocationSpawnTrigger[];
+  readonly worldLore: WorldLore;
+  readonly tagLore: readonly TagLore[];
 }
 
 export interface Problem {
@@ -105,7 +173,8 @@ export type EntityRef =
   | { kind: typeof EntityKind.Item; id: ItemId }
   | { kind: typeof EntityKind.Agent; id: AgentId }
   | { kind: typeof EntityKind.MonsterTemplate; id: MonsterTemplateId }
-  | { kind: typeof EntityKind.LocationSpawnTrigger; id: SpawnTriggerId };
+  | { kind: typeof EntityKind.LocationSpawnTrigger; id: SpawnTriggerId }
+  | { kind: typeof EntityKind.TagLore; id: TagLoreId };
 
 export interface SkipReport {
   readonly ref: EntityRef;
@@ -173,6 +242,7 @@ export interface UpsertItemInput {
   readonly ownerId: string;
   readonly weight: number;
   readonly hidden: boolean;
+  readonly tags: readonly string[];
 }
 
 export interface UpsertAgentInput {
@@ -188,6 +258,7 @@ export interface UpsertAgentInput {
   readonly mood: string | null;
   readonly goal: string | null;
   readonly autonomous: boolean;
+  readonly tags: readonly string[];
 }
 
 export interface UpsertMonsterTemplateInput {
@@ -199,6 +270,7 @@ export interface UpsertMonsterTemplateInput {
   readonly hp: number;
   readonly mood: string | null;
   readonly startingItems: readonly StarterPackEntry[];
+  readonly tags: readonly string[];
 }
 
 export interface UpsertLocationSpawnTriggerInput {

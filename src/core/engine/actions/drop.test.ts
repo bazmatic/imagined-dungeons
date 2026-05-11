@@ -30,6 +30,7 @@ const paff: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  tags: [],
 };
 const heldMap: Item = {
   id: asItemId('item_map'),
@@ -40,6 +41,7 @@ const heldMap: Item = {
   owner: { kind: 'agent', id: paff.id },
   weight: 1,
   hidden: false,
+  tags: [],
 };
 
 describe('handleDrop', () => {

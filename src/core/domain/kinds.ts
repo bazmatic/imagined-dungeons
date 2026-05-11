@@ -21,6 +21,7 @@ export const ActionKind = {
   Emote: 'emote',
   Attack: 'attack',
   UpdateDescription: 'update_description',
+  Search: 'search',
 } as const;
 export type ActionKind = (typeof ActionKind)[keyof typeof ActionKind];
 

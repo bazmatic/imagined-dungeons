@@ -39,6 +39,7 @@ const baseAgent = {
   goal: null,
   autonomous: false,
   awake: false,
+  tags: [],
 } as const;
 
 const paff: Agent = { ...baseAgent, id: asAgentId('char_paff'), label: 'Paff', locationId: A };
@@ -59,6 +60,7 @@ const heldByPaff: Item = {
   owner: { kind: OwnerKind.Agent, id: paff.id },
   weight: 1,
   hidden: false,
+  tags: [],
 };
 
 describe('handleGive', () => {

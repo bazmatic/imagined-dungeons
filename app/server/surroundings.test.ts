@@ -40,6 +40,7 @@ const player: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  tags: [],
 };
 
 const spark: Agent = {
@@ -58,6 +59,7 @@ const spark: Agent = {
   goal: null,
   autonomous: true,
   awake: true,
+  tags: [],
 };
 
 const paff: Agent = {
@@ -76,6 +78,7 @@ const paff: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  tags: [],
 };
 
 const map: Item = {
@@ -87,6 +90,7 @@ const map: Item = {
   owner: { kind: OwnerKind.Location, id: LOC },
   weight: 1,
   hidden: false,
+  tags: [],
 };
 
 const hidden: Item = {
@@ -98,6 +102,7 @@ const hidden: Item = {
   owner: { kind: OwnerKind.Location, id: LOC },
   weight: 1,
   hidden: true,
+  tags: [],
 };
 
 const exitN: Exit = {

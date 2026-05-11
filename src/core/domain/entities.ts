@@ -37,6 +37,7 @@ export interface Item {
   readonly owner: Owner;
   readonly weight: number;
   readonly hidden: boolean;
+  readonly tags: readonly string[];
 }
 
 export interface Agent {
@@ -67,4 +68,5 @@ export interface Agent {
    * the agent has finished what they were drawn into.
    */
   readonly awake: boolean;
+  readonly tags: readonly string[];
 }

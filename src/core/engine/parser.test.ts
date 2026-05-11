@@ -21,6 +21,7 @@ const ACTOR: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  tags: [],
 };
 const LOC: Location = {
   id: asLocationId('loc_a'),
@@ -39,6 +40,7 @@ const map: Item = {
   owner: { kind: 'location', id: LOC.id },
   weight: 1,
   hidden: false,
+  tags: [],
 };
 const rustyKey: Item = {
   id: asItemId('item_rusty'),
@@ -49,6 +51,7 @@ const rustyKey: Item = {
   owner: { kind: 'location', id: LOC.id },
   weight: 1,
   hidden: false,
+  tags: [],
 };
 const silverKey: Item = {
   id: asItemId('item_silver'),
@@ -59,6 +62,7 @@ const silverKey: Item = {
   owner: { kind: 'location', id: LOC.id },
   weight: 1,
   hidden: false,
+  tags: [],
 };
 const exitN: Exit = {
   id: asExitId('e'),
@@ -87,6 +91,7 @@ const spark: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  tags: [],
 };
 const ember: Agent = {
   id: asAgentId('char_ember'),
@@ -104,6 +109,7 @@ const ember: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  tags: [],
 };
 
 const view = (items: Item[] = [map], agents: Agent[] = []): PerceptionView => ({
@@ -363,6 +369,7 @@ describe('parse', () => {
       goal: null,
       autonomous: false,
       awake: false,
+      tags: [],
     };
     const speakerView: PerceptionView = {
       actor: spark,

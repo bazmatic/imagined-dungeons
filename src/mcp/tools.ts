@@ -213,6 +213,7 @@ export const TOOLS: readonly ToolDef[] = [
         ownerId: a.ownerId as string,
         weight: Number(a.weight),
         hidden: Boolean(a.hidden),
+        tags: [],
       }),
   },
   {
@@ -263,6 +264,7 @@ export const TOOLS: readonly ToolDef[] = [
         mood: (a.mood as string | null) ?? null,
         goal: (a.goal as string | null) ?? null,
         autonomous: Boolean(a.autonomous),
+        tags: [],
       }),
   },
   {
@@ -370,6 +372,7 @@ export const TOOLS: readonly ToolDef[] = [
         hp: Number(a.hp),
         mood: (a.mood as string | null) ?? null,
         startingItems: (a.startingItems as never) ?? [],
+        tags: [],
       }),
   },
   {

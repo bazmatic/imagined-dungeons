@@ -41,6 +41,7 @@ const mkAgent = (id: AgentId, opts: Partial<Agent>): Agent => ({
   goal: null,
   autonomous: false,
   awake: false,
+  tags: [],
   ...opts,
 });
 

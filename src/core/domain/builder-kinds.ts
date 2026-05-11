@@ -17,6 +17,7 @@ export const EntityKind = {
   Agent: 'agent',
   MonsterTemplate: 'monster_template',
   LocationSpawnTrigger: 'location_spawn_trigger',
+  TagLore: 'tag_lore',
 } as const;
 export type EntityKind = (typeof EntityKind)[keyof typeof EntityKind];
 
@@ -36,6 +37,8 @@ export const ProblemKind = {
   LocationSpawnTriggerLocationMissing: 'location_spawn_trigger_location_missing',
   LocationSpawnTriggerCountInvalid: 'location_spawn_trigger_count_invalid',
   LocationSpawnTriggerParamsInvalid: 'location_spawn_trigger_params_invalid',
+  TagLoreTagEmpty: 'tag_lore_tag_empty',
+  TagLoreDuplicate: 'tag_lore_duplicate',
 } as const;
 export type ProblemKind = (typeof ProblemKind)[keyof typeof ProblemKind];
 
@@ -75,3 +78,16 @@ export const StarterPackEntryKind = {
   Inline: 'inline',
 } as const;
 export type StarterPackEntryKind = (typeof StarterPackEntryKind)[keyof typeof StarterPackEntryKind];
+
+export const DiscoverySubjectKind = {
+  Location: 'location',
+  Item: 'item',
+  Agent: 'agent',
+} as const;
+export type DiscoverySubjectKind = (typeof DiscoverySubjectKind)[keyof typeof DiscoverySubjectKind];
+
+export const DiscoveryTriggerKind = {
+  FailedLook: 'failed_look',
+  Search: 'search',
+} as const;
+export type DiscoveryTriggerKind = (typeof DiscoveryTriggerKind)[keyof typeof DiscoveryTriggerKind];
