@@ -1,5 +1,7 @@
 import { EntityKind } from '@core/domain/builder-kinds';
 import type { WorldTree } from '@core/domain/builder-types';
+import { OwnerKind } from '@core/domain/kinds';
+import { Link } from '@tanstack/react-router';
 import { useState } from 'react';
 import { deleteEntity, saveEntity } from '~/server/admin/entities';
 import { EntityHeader } from './EntityHeader';
@@ -10,6 +12,7 @@ import { ManuscriptCard } from './ManuscriptCard';
 import { MetadataColumn } from './MetadataColumn';
 import { TagSelectorPanel } from './TagSelectorPanel';
 import { TriggersEditor } from './TriggersEditor';
+import { CategoryKind } from './category-helpers';
 
 export interface LocationFormProps {
   readonly tree: WorldTree;
@@ -66,6 +69,11 @@ export function LocationForm({
 
   const exitsHere = tree.exits.filter((e) => (e.from as string) === locationId);
   const triggersHere = tree.triggers.filter((t) => (t.locationId as string) === locationId);
+  const itemsHere = tree.items.filter(
+    (it) => it.owner.kind === OwnerKind.Location && (it.owner.id as string) === locationId,
+  );
+  const agentsHere = tree.agents.filter((a) => (a.locationId as string) === locationId);
+  const worldIdString = tree.summary.id as string;
 
   return (
     <>
@@ -125,6 +133,60 @@ export function LocationForm({
           </div>
         </MetadataColumn>
       </div>
+
+      {(itemsHere.length > 0 || agentsHere.length > 0) && (
+        <section style={{ marginTop: 'var(--s-4)' }}>
+          <h3 style={{ marginBottom: 'var(--s-2)' }}>Present here</h3>
+          {agentsHere.length > 0 && (
+            <div style={{ marginBottom: 'var(--s-3)' }}>
+              <span className="form-grid__field-label">Characters</span>
+              <ul className="tree-list">
+                {agentsHere.map((a) => (
+                  <li key={a.id as string}>
+                    <Link
+                      to="/admin/$worldId"
+                      params={{ worldId: worldIdString }}
+                      search={{ cat: CategoryKind.Agents, sel: a.id as string }}
+                      className="tree-leaf"
+                    >
+                      {a.label}
+                      {a.autonomous ? (
+                        <span className="t-metadata" style={{ marginLeft: 8 }}>
+                          (autonomous)
+                        </span>
+                      ) : null}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {itemsHere.length > 0 && (
+            <div>
+              <span className="form-grid__field-label">Items</span>
+              <ul className="tree-list">
+                {itemsHere.map((it) => (
+                  <li key={it.id as string}>
+                    <Link
+                      to="/admin/$worldId"
+                      params={{ worldId: worldIdString }}
+                      search={{ cat: CategoryKind.Items, sel: it.id as string }}
+                      className="tree-leaf"
+                    >
+                      {it.label}
+                      {it.hidden ? (
+                        <span className="t-metadata" style={{ marginLeft: 8 }}>
+                          (hidden)
+                        </span>
+                      ) : null}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      )}
 
       <ExitsEditor
         worldId={tree.summary.id as string}
