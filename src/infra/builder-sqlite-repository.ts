@@ -36,7 +36,7 @@ import {
   asSpawnTriggerId,
 } from '@core/domain/ids';
 import { type Direction, OwnerKind } from '@core/domain/kinds';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, or, sql } from 'drizzle-orm';
 import type { DB } from './db';
 import * as schema from './schema';
 
@@ -258,6 +258,38 @@ export class SqliteBuilderRepository implements BuilderRepository {
   async deleteAgent(w: WorldId, id: AgentId) {
     await this.db
       .delete(schema.agents)
+      .where(and(eq(schema.agents.worldId, w), eq(schema.agents.id, id)));
+  }
+
+  async silenceAllAgents(w: WorldId): Promise<{ changed: number; total: number }> {
+    const totalRows = await this.db
+      .select({ id: schema.agents.id })
+      .from(schema.agents)
+      .where(eq(schema.agents.worldId, w));
+    const total = totalRows.length;
+    const dirty = await this.db
+      .select({ id: schema.agents.id })
+      .from(schema.agents)
+      .where(
+        and(
+          eq(schema.agents.worldId, w),
+          or(eq(schema.agents.autonomous, true), eq(schema.agents.awake, true)),
+        ),
+      );
+    const changed = dirty.length;
+    if (changed > 0) {
+      await this.db
+        .update(schema.agents)
+        .set({ autonomous: false, awake: false })
+        .where(eq(schema.agents.worldId, w));
+    }
+    return { changed, total };
+  }
+
+  async setAgentAutonomous(w: WorldId, id: AgentId, autonomous: boolean): Promise<void> {
+    await this.db
+      .update(schema.agents)
+      .set({ autonomous })
       .where(and(eq(schema.agents.worldId, w), eq(schema.agents.id, id)));
   }
 

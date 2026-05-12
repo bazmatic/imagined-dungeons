@@ -2,6 +2,7 @@ import { EntityKind } from '@core/domain/builder-kinds';
 import type { WorldTree } from '@core/domain/builder-types';
 import { useState } from 'react';
 import { deleteEntity, saveEntity } from '~/server/admin/entities';
+import { setAgentAutonomous } from '~/server/admin/worlds';
 import { EntityHeader } from './EntityHeader';
 import { FootnoteBar } from './FootnoteBar';
 import { ManuscriptCard } from './ManuscriptCard';
@@ -209,13 +210,33 @@ export function AgentForm({ tree, agentId, problemCount, onSaved, onDeleted }: A
                 onChange={(e) => setV({ ...v, mood: e.target.value })}
               />
             </div>
-            <label className="row-editor__checkbox" style={{ gridColumn: 'span 12' }}>
+            <label
+              className="row-editor__checkbox"
+              style={{ gridColumn: 'span 12' }}
+              title="Persists immediately — works on draft and live worlds (admin override)."
+            >
               <input
                 type="checkbox"
                 checked={v.autonomous}
-                onChange={(e) => setV({ ...v, autonomous: e.target.checked })}
+                onChange={async (e) => {
+                  const next = e.target.checked;
+                  setV({ ...v, autonomous: next });
+                  const r = await setAgentAutonomous({
+                    data: {
+                      worldId: tree.summary.id as string,
+                      agentId: v.id,
+                      autonomous: next,
+                    },
+                  });
+                  if (!r.ok) {
+                    alert('Failed to update autonomy.');
+                    setV({ ...v, autonomous: !next });
+                    return;
+                  }
+                  onSaved();
+                }}
               />
-              Autonomous
+              Autonomous <span className="t-metadata">(persists on change)</span>
             </label>
           </div>
           <div>

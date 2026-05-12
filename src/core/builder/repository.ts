@@ -57,6 +57,21 @@ export interface BuilderRepository {
   deleteItem(worldId: WorldId, id: ItemId): Promise<void>;
   deleteAgent(worldId: WorldId, id: AgentId): Promise<void>;
 
+  /**
+   * Admin debug override: bulk-clear `autonomous` and `awake` on every agent
+   * in this world. Returns the number of rows changed and the total agent
+   * count. Bypasses the authoring/runtime split — used to quickly silence
+   * all NPCs during gameplay debugging.
+   */
+  silenceAllAgents(worldId: WorldId): Promise<{ changed: number; total: number }>;
+
+  /**
+   * Admin debug override: flip the `autonomous` bit on a single agent.
+   * Bypasses the draft/live gate (the AgentForm toggle uses it for live
+   * adjustment during gameplay debugging).
+   */
+  setAgentAutonomous(worldId: WorldId, id: AgentId, autonomous: boolean): Promise<void>;
+
   listMonsterTemplates(worldId: WorldId): Promise<readonly MonsterTemplate[]>;
   getMonsterTemplate(worldId: WorldId, id: MonsterTemplateId): Promise<MonsterTemplate | null>;
   upsertMonsterTemplate(worldId: WorldId, input: UpsertMonsterTemplateInput): Promise<void>;

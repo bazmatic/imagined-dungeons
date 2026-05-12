@@ -5,7 +5,7 @@ import {
   listWorlds as listWorldsCore,
   updateWorldCover as updateWorldCoverCore,
 } from '@core/builder/index';
-import { asWorldId } from '@core/domain/ids';
+import { asAgentId, asWorldId } from '@core/domain/ids';
 import { createServerFn } from '@tanstack/react-start';
 import { getBuilderRepo } from './repo';
 
@@ -46,12 +46,35 @@ export const getWorld = createServerFn({ method: 'GET' })
   .handler(async ({ data }) => getWorldTree(await getBuilderRepo(), asWorldId(data.id)));
 
 /**
- * Bulk-flip every agent in the world to `autonomous = false`. Writes go
- * through the BuilderRepository port directly so this works on live worlds
- * as well as drafts (mirrors the runtime-bypass used by the spawn and
- * consequence engines). Intended as a debug override during dev.
+ * Bulk-silence every agent in the world: clears `autonomous` and `awake`.
+ * Writes go through the BuilderRepository port directly so this works on
+ * live worlds as well as drafts (the spawn and consequence engines use the
+ * same runtime-bypass pattern). Intended as a debug override during dev.
  */
-export const disableAllAgentAutonomy = createServerFn({ method: 'POST' })
+/**
+ * Admin debug override: flip the `autonomous` bit on a single agent.
+ * Bypasses requireDraft so it works on live worlds.
+ */
+export const setAgentAutonomous = createServerFn({ method: 'POST' })
+  .inputValidator((d: unknown) => {
+    if (
+      typeof d !== 'object' ||
+      d === null ||
+      typeof (d as { worldId?: unknown }).worldId !== 'string' ||
+      typeof (d as { agentId?: unknown }).agentId !== 'string' ||
+      typeof (d as { autonomous?: unknown }).autonomous !== 'boolean'
+    ) {
+      throw new Error('Expected { worldId: string, agentId: string, autonomous: boolean }');
+    }
+    return d as { worldId: string; agentId: string; autonomous: boolean };
+  })
+  .handler(async ({ data }) => {
+    const repo = await getBuilderRepo();
+    await repo.setAgentAutonomous(asWorldId(data.worldId), asAgentId(data.agentId), data.autonomous);
+    return { ok: true as const };
+  });
+
+export const silenceAllAgents = createServerFn({ method: 'POST' })
   .inputValidator((d: unknown) => {
     if (typeof d !== 'object' || d === null || typeof (d as { id?: unknown }).id !== 'string') {
       throw new Error('Expected { id: string }');
@@ -60,29 +83,8 @@ export const disableAllAgentAutonomy = createServerFn({ method: 'POST' })
   })
   .handler(async ({ data }) => {
     const repo = await getBuilderRepo();
-    const W = asWorldId(data.id);
-    const agents = await repo.listAgents(W);
-    let changed = 0;
-    for (const a of agents) {
-      if (!a.autonomous) continue;
-      await repo.upsertAgent(W, {
-        id: a.id,
-        label: a.label,
-        shortDescription: a.shortDescription,
-        longDescription: a.longDescription,
-        locationId: a.locationId,
-        hp: a.hp,
-        damage: a.damage,
-        defense: a.defense,
-        capacity: a.capacity,
-        mood: a.mood,
-        goal: a.goal,
-        autonomous: false,
-        tags: a.tags,
-      });
-      changed += 1;
-    }
-    return { ok: true as const, value: { changed, total: agents.length } };
+    const result = await repo.silenceAllAgents(asWorldId(data.id));
+    return { ok: true as const, value: result };
   });
 
 export const updateWorldCover = createServerFn({ method: 'POST' })

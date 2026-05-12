@@ -1,6 +1,6 @@
 import type { WorldTree } from '@core/domain/builder-types';
 import { useState } from 'react';
-import { disableAllAgentAutonomy, updateWorldCover } from '~/server/admin/worlds';
+import { silenceAllAgents, updateWorldCover } from '~/server/admin/worlds';
 import { EntityHeader } from './EntityHeader';
 import { KeyVisualPanel } from './KeyVisualPanel';
 import { MetadataColumn } from './MetadataColumn';
@@ -12,26 +12,26 @@ export interface WorldSettingsFormProps {
 
 export function WorldSettingsForm({ tree, onSaved }: WorldSettingsFormProps) {
   const name = tree.summary.displayName || tree.summary.label;
-  const autonomousCount = tree.agents.filter((a) => a.autonomous).length;
+  const activeCount = tree.agents.filter((a) => a.autonomous || a.awake).length;
   const [busy, setBusy] = useState(false);
 
-  const disableAutonomy = async (): Promise<void> => {
+  const silence = async (): Promise<void> => {
     if (busy) return;
     if (
       !confirm(
-        `Set autonomous=false on every agent in this world? (${autonomousCount} currently autonomous)`,
+        `Silence all NPCs (clear autonomous + awake) on every agent in this world? (${activeCount} currently active)`,
       )
     ) {
       return;
     }
     setBusy(true);
     try {
-      const r = await disableAllAgentAutonomy({ data: { id: tree.summary.id as string } });
+      const r = await silenceAllAgents({ data: { id: tree.summary.id as string } });
       if (!r.ok) {
         alert(`Failed: ${(r as { error?: { message: string } }).error?.message ?? 'unknown'}`);
         return;
       }
-      alert(`Disabled autonomy on ${r.value.changed} of ${r.value.total} agents.`);
+      alert(`Silenced ${r.value.changed} of ${r.value.total} agents.`);
       onSaved();
     } finally {
       setBusy(false);
@@ -48,18 +48,19 @@ export function WorldSettingsForm({ tree, onSaved }: WorldSettingsFormProps) {
             key-visual panel.
           </p>
           <div style={{ marginTop: 'var(--s-4)' }}>
-            <span className="form-grid__field-label">NPC autonomy</span>
+            <span className="form-grid__field-label">Silence NPCs</span>
             <p className="t-metadata" style={{ margin: '0 0 var(--s-2) 0' }}>
-              {autonomousCount} of {tree.agents.length} agents are currently autonomous (they act
-              every tick they share a location with the player).
+              {activeCount} of {tree.agents.length} agents are currently active (autonomous or
+              awake). Silencing clears both flags so they will not tick until something wakes them
+              again.
             </p>
             <button
               type="button"
               className="btn"
-              onClick={disableAutonomy}
-              disabled={busy || autonomousCount === 0}
+              onClick={silence}
+              disabled={busy || activeCount === 0}
             >
-              {busy ? 'Disabling…' : `Disable NPC autonomy${autonomousCount > 0 ? ` (${autonomousCount})` : ''}`}
+              {busy ? 'Silencing…' : `Silence all NPCs${activeCount > 0 ? ` (${activeCount})` : ''}`}
             </button>
           </div>
         </div>

@@ -183,6 +183,24 @@ export class MemoryBuilderRepository implements BuilderRepository {
     this.bucket(this.agents, w).delete(id);
   }
 
+  async silenceAllAgents(w: WorldId) {
+    const bucket = this.bucket(this.agents, w);
+    let changed = 0;
+    for (const [id, a] of bucket) {
+      if (!a.autonomous && !a.awake) continue;
+      bucket.set(id, { ...a, autonomous: false, awake: false });
+      changed += 1;
+    }
+    return { changed, total: bucket.size };
+  }
+
+  async setAgentAutonomous(w: WorldId, id: AgentId, autonomous: boolean) {
+    const bucket = this.bucket(this.agents, w);
+    const a = bucket.get(id);
+    if (!a) return;
+    bucket.set(id, { ...a, autonomous });
+  }
+
   async listMonsterTemplates(w: WorldId) {
     return [...this.bucket(this.templates, w).values()];
   }
