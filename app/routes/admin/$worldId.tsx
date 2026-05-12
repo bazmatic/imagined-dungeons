@@ -51,7 +51,10 @@ function AdminWorld() {
   const t = tree.value;
   const isDraft = t.summary.kind === WorldKind.Draft;
 
-  const refresh = (): Promise<void> => router.invalidate();
+  // sync:true forces the returned promise to resolve only after affected
+  // loaders have actually re-run. The default invalidate is fire-and-forget,
+  // which races against navigation in the create-and-navigate flow.
+  const refresh = (): Promise<void> => router.invalidate({ sync: true });
 
   const setCategory = (cat: AdminSearch['cat']): void => {
     void navigate({ search: { cat } });
