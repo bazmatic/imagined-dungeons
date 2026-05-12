@@ -36,6 +36,81 @@ describe('MCP tool surface', () => {
     expect(TOOL_BY_NAME.reset_live_to_draft).toBeUndefined();
   });
 
+  it('exposes lore tools (get/update world lore + tag lore CRUD)', () => {
+    const names = Object.keys(TOOL_BY_NAME);
+    expect(names).toEqual(
+      expect.arrayContaining([
+        'get_world_lore',
+        'update_world_lore',
+        'list_tag_lore',
+        'upsert_tag_lore',
+        'delete_tag_lore',
+      ]),
+    );
+  });
+
+  it('round-trips world lore and tag lore through MCP tools', async () => {
+    const repo = new MemoryBuilderRepository();
+    const createDraftTool = TOOL_BY_NAME.create_draft;
+    const updateLoreTool = TOOL_BY_NAME.update_world_lore;
+    const getLoreTool = TOOL_BY_NAME.get_world_lore;
+    const upsertTagTool = TOOL_BY_NAME.upsert_tag_lore;
+    const listTagTool = TOOL_BY_NAME.list_tag_lore;
+    const deleteTagTool = TOOL_BY_NAME.delete_tag_lore;
+    if (
+      !createDraftTool ||
+      !updateLoreTool ||
+      !getLoreTool ||
+      !upsertTagTool ||
+      !listTagTool ||
+      !deleteTagTool
+    ) {
+      throw new Error('tool missing');
+    }
+
+    const created = (await createDraftTool.run(repo, {
+      displayName: 'Lore World',
+      label: 'lore',
+    })) as { ok: boolean; value?: string };
+    expect(created.ok).toBe(true);
+    const worldId = created.value as string;
+
+    const upd = (await updateLoreTool.run(repo, {
+      id: worldId,
+      worldOverview: 'Overview text',
+      storySoFar: 'Story text',
+    })) as { ok: boolean };
+    expect(upd.ok).toBe(true);
+
+    const got = (await getLoreTool.run(repo, { id: worldId })) as {
+      ok: boolean;
+      value?: { worldOverview: string; storySoFar: string };
+    };
+    expect(got.ok).toBe(true);
+    expect(got.value).toEqual(
+      expect.objectContaining({ worldOverview: 'Overview text', storySoFar: 'Story text' }),
+    );
+
+    const upserted = (await upsertTagTool.run(repo, {
+      worldId,
+      payload: {
+        id: 'tl_1',
+        tag: 'city:varos',
+        title: 'Varos',
+        description: 'A coastal city.',
+      },
+    })) as { ok: boolean };
+    expect(upserted.ok).toBe(true);
+
+    const list = (await listTagTool.run(repo, { worldId })) as Array<{ id: string; tag: string }>;
+    expect(list).toContainEqual(expect.objectContaining({ id: 'tl_1', tag: 'city:varos' }));
+
+    const del = (await deleteTagTool.run(repo, { worldId, id: 'tl_1' })) as { ok: boolean };
+    expect(del.ok).toBe(true);
+    const list2 = (await listTagTool.run(repo, { worldId })) as Array<{ id: string }>;
+    expect(list2.find((r) => r.id === 'tl_1')).toBeUndefined();
+  });
+
   it('template and trigger tools work end-to-end', async () => {
     const repo = new MemoryBuilderRepository();
     const createDraftTool = TOOL_BY_NAME.create_draft;

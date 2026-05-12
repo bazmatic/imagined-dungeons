@@ -7,15 +7,19 @@ import {
   deleteLocation,
   deleteLocationSpawnTrigger,
   deleteMonsterTemplate,
+  deleteTagLore,
+  getWorldLore,
   getWorldTree,
   listWorlds,
   publish,
+  updateWorldLore,
   upsertAgent,
   upsertExit,
   upsertItem,
   upsertLocation,
   upsertLocationSpawnTrigger,
   upsertMonsterTemplate,
+  upsertTagLore,
 } from '@core/builder/index';
 import type { BuilderRepository } from '@core/builder/repository';
 import { validateWorld } from '@core/builder/validate';
@@ -26,6 +30,7 @@ import {
   asLocationId,
   asMonsterTemplateId,
   asSpawnTriggerId,
+  asTagLoreId,
   asWorldId,
 } from '@core/domain/ids';
 import type { OwnerKind } from '@core/domain/kinds';
@@ -426,6 +431,90 @@ export const TOOLS: readonly ToolDef[] = [
         oneShot: Boolean(a.oneShot),
         fireOnInitialPublish: Boolean(a.fireOnInitialPublish),
       }),
+  },
+  {
+    name: 'get_world_lore',
+    description: 'Return the world lore (worldOverview, storySoFar) for a world.',
+    inputSchema: {
+      type: 'object',
+      properties: { id: stringField('world id') },
+      required: ['id'],
+    },
+    run: (repo, a) => getWorldLore(repo, asWorldId(a.id as string)),
+  },
+  {
+    name: 'update_world_lore',
+    description: 'Update world lore (worldOverview, storySoFar) on a draft.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: stringField('world id'),
+        worldOverview: stringField('world overview'),
+        storySoFar: stringField('story so far'),
+      },
+      required: ['id', 'worldOverview', 'storySoFar'],
+    },
+    run: (repo, a) =>
+      updateWorldLore(repo, asWorldId(a.id as string), {
+        worldOverview: a.worldOverview as string,
+        storySoFar: a.storySoFar as string,
+      }),
+  },
+  {
+    name: 'list_tag_lore',
+    description: 'List tag lore entries for a world.',
+    inputSchema: {
+      type: 'object',
+      properties: { worldId: stringField('world id') },
+      required: ['worldId'],
+    },
+    run: async (repo, a) => repo.listTagLore(asWorldId(a.worldId as string)),
+  },
+  {
+    name: 'upsert_tag_lore',
+    description: 'Create or update a tag lore entry on a draft.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        worldId: stringField('world id'),
+        payload: {
+          type: 'object',
+          properties: {
+            id: stringField('tag lore id'),
+            tag: stringField('tag value, e.g. "city:varos"'),
+            title: stringField('title'),
+            description: stringField('description'),
+          },
+          required: ['id', 'tag', 'title', 'description'],
+        },
+      },
+      required: ['worldId', 'payload'],
+    },
+    run: (repo, a) => {
+      const payload = a.payload as {
+        id: string;
+        tag: string;
+        title: string;
+        description: string;
+      };
+      return upsertTagLore(repo, asWorldId(a.worldId as string), {
+        id: asTagLoreId(payload.id),
+        tag: payload.tag,
+        title: payload.title,
+        description: payload.description,
+      });
+    },
+  },
+  {
+    name: 'delete_tag_lore',
+    description: 'Delete a tag lore entry from a draft.',
+    inputSchema: {
+      type: 'object',
+      properties: { worldId: stringField('world id'), id: stringField('tag lore id') },
+      required: ['worldId', 'id'],
+    },
+    run: (repo, a) =>
+      deleteTagLore(repo, asWorldId(a.worldId as string), asTagLoreId(a.id as string)),
   },
   {
     name: 'delete_location_spawn_trigger',
