@@ -8,7 +8,7 @@ import {
   asLocationId,
   asWorldId,
 } from '@core/domain/ids';
-import { EventKind, OwnerKind } from '@core/domain/kinds';
+import { EventKind, ExaminableKind, OwnerKind } from '@core/domain/kinds';
 import { MemoryBuilderRepository } from '@infra/builder-memory-repository';
 import { MemoryRepository } from '@infra/memory-repository';
 import { describe, expect, it } from 'vitest';
@@ -283,13 +283,28 @@ describe('runTick', () => {
       }),
     });
     const parse = makeCompositeParser({ llm: null });
-    await runTick(player.id, 'search dusty corner', repo, {
+    const r = await runTick(player.id, 'search dusty corner', repo, {
       parse,
       llm,
       builderRepo,
     });
     const discoveryCalls = llm.calls.filter((c) => c.schemaName === 'discovery_response');
+    // Exactly one discovery LLM call fired this tick.
     expect(discoveryCalls.length).toBe(1);
+    // And it was the player's — the player's query appears in the prompt.
+    const first = discoveryCalls[0];
+    if (!first) throw new Error('expected one discovery call');
+    expect(first.user).toContain('dusty corner');
+
+    // Spark's `search the bar` turn also fired, but the budget was exhausted:
+    // runTurn emits a Look(target=Room) event via the budget-exhausted
+    // fallback branch (no LLM call) instead of dispatching to handleSearch.
+    // We assert that event exists for Spark to prove the fallback path ran.
+    const sparkFallback = r.events.find(
+      (e) =>
+        e.actorId === SPARK && e.kind === EventKind.Look && e.target.kind === ExaminableKind.Room,
+    );
+    expect(sparkFallback).toBeDefined();
   });
 
   it('aggregates events from player + NPCs in order', async () => {
