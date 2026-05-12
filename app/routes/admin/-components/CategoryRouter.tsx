@@ -5,8 +5,11 @@ import { CreateAffordance } from './CreateAffordance';
 import { ItemForm } from './ItemForm';
 import { LocationForm } from './LocationForm';
 import { MasterList, type MasterListItem } from './MasterList';
+import { TagLoreForm } from './TagLoreForm';
 import { TemplateForm } from './TemplateForm';
+import { WorldLoreForm } from './WorldLoreForm';
 import { type Category, resolveOwnerSubtitle } from './category-helpers';
+import { WORLD_LORE_SEL, collectLoreTags } from './lore-helpers';
 
 export interface CategoryRouterProps {
   readonly tree: WorldTree;
@@ -40,15 +43,17 @@ export function useCategoryRouter({
       }}
       filterPlaceholder={`Filter ${category}…`}
       header={
-        <CreateAffordance
-          tree={tree}
-          category={category}
-          onCreated={(id) => {
-            setJsonFallback(null);
-            onSelect(id);
-            onSaved();
-          }}
-        />
+        category === 'lore' ? null : (
+          <CreateAffordance
+            tree={tree}
+            category={category}
+            onCreated={(id) => {
+              setJsonFallback(null);
+              onSelect(id);
+              onSaved();
+            }}
+          />
+        )
       }
     />
   );
@@ -84,6 +89,17 @@ function listItemsForCategory(category: Category, tree: WorldTree): readonly Mas
       };
     });
   }
+  if (category === 'lore') {
+    const tags = collectLoreTags(tree);
+    const authored = new Set(tree.tagLore.map((t) => t.tag));
+    const worldRow: MasterListItem = { id: WORLD_LORE_SEL, label: 'World lore' };
+    const tagRows: MasterListItem[] = tags.map((tag) => ({
+      id: tag,
+      label: tag,
+      subtitle: authored.has(tag) ? 'authored' : '+ add description',
+    }));
+    return [worldRow, ...tagRows];
+  }
   return tree.items.map((it) => ({
     id: it.id as string,
     label: it.label,
@@ -110,6 +126,23 @@ function renderDetail(args: {
     );
   }
   const problemCount = problems.filter((p) => p.entityId === selectedId).length;
+  if (category === 'lore') {
+    if (selectedId === WORLD_LORE_SEL) {
+      return (
+        <WorldLoreForm key="world-lore" tree={tree} problemCount={problemCount} onSaved={onSaved} />
+      );
+    }
+    return (
+      <TagLoreForm
+        key={`tag-lore-${selectedId}`}
+        tree={tree}
+        tag={selectedId}
+        problemCount={problemCount}
+        onSaved={onSaved}
+        onDeleted={onDeleted}
+      />
+    );
+  }
   if (category === 'locations') {
     return (
       <LocationForm
@@ -165,5 +198,6 @@ function singular(c: Category): string {
   if (c === 'locations') return 'location';
   if (c === 'bestiary') return 'template';
   if (c === 'agents') return 'agent';
+  if (c === 'lore') return 'lore entry';
   return 'item';
 }

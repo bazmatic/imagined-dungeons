@@ -1,4 +1,4 @@
-export type SideNavCategory = 'locations' | 'bestiary' | 'agents' | 'items';
+export type SideNavCategory = 'locations' | 'bestiary' | 'agents' | 'items' | 'lore';
 
 export interface SideNavProps {
   readonly active: SideNavCategory;
@@ -14,6 +14,7 @@ const ITEMS: ReadonlyArray<{
   { key: 'bestiary', label: 'Bestiary' },
   { key: 'agents', label: 'Agents' },
   { key: 'items', label: 'Items' },
+  { key: 'lore', label: 'Lore' },
 ];
 
 export function SideNav({ active, onSelect, onCreateNew }: SideNavProps) {

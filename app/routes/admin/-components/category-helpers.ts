@@ -1,7 +1,7 @@
 import type { Agent, Item, Location } from '@core/domain/entities';
 import { OwnerKind } from '@core/domain/kinds';
 
-export const CATEGORIES = ['locations', 'bestiary', 'agents', 'items'] as const;
+export const CATEGORIES = ['locations', 'bestiary', 'agents', 'items', 'lore'] as const;
 export type Category = (typeof CATEGORIES)[number];
 
 export function isCategory(v: unknown): v is Category {

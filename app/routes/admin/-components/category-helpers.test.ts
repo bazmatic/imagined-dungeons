@@ -10,8 +10,8 @@ import {
 } from './category-helpers';
 
 describe('CATEGORIES', () => {
-  it('exposes exactly the four supported categories', () => {
-    expect(CATEGORIES).toEqual(['locations', 'bestiary', 'agents', 'items']);
+  it('exposes exactly the five supported categories', () => {
+    expect(CATEGORIES).toEqual(['locations', 'bestiary', 'agents', 'items', 'lore']);
   });
 });
 
@@ -21,9 +21,10 @@ describe('isCategory', () => {
     expect(isCategory('bestiary')).toBe(true);
     expect(isCategory('agents')).toBe(true);
     expect(isCategory('items')).toBe(true);
+    expect(isCategory('lore')).toBe(true);
   });
   it('rejects unknown values', () => {
-    expect(isCategory('lore')).toBe(false);
+    expect(isCategory('nonsense')).toBe(false);
     expect(isCategory('')).toBe(false);
     expect(isCategory(undefined)).toBe(false);
   });
@@ -41,7 +42,7 @@ describe('parseSearchParams', () => {
     });
   });
   it('drops invalid cat (falls back to locations)', () => {
-    expect(parseSearchParams({ cat: 'lore' })).toEqual({ cat: 'locations' });
+    expect(parseSearchParams({ cat: 'nonsense' })).toEqual({ cat: 'locations' });
   });
   it('drops invalid view', () => {
     expect(parseSearchParams({ view: 'nonsense' })).toEqual({ cat: 'locations' });

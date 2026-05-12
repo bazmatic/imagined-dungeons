@@ -158,7 +158,9 @@ function AdminWorld() {
                     ? 'Bestiary'
                     : search.cat === 'agents'
                       ? 'Agents'
-                      : 'Items'}
+                      : search.cat === 'lore'
+                        ? 'Lore'
+                        : 'Items'}
               </span>
             </div>
             {masterList}
@@ -169,7 +171,7 @@ function AdminWorld() {
               <Breadcrumbs
                 tree={t}
                 sel={
-                  showingSettings
+                  showingSettings || search.cat === 'lore'
                     ? { kind: 'world' }
                     : search.sel !== undefined
                       ? ({ kind: categoryToEntityKind(search.cat), id: search.sel } as never)
