@@ -21,7 +21,7 @@ describe('MCP tool surface', () => {
       label: 'L',
     })) as { ok: boolean; value?: string };
     expect(created.ok).toBe(true);
-    const got = await get.run(repo, { worldId: created.value });
+    const got = await get.run(repo, { id: created.value });
     expect((got as { ok: boolean }).ok).toBe(true);
   });
 
@@ -182,5 +182,102 @@ describe('MCP tool surface', () => {
     expect(templates).toContainEqual(
       expect.objectContaining({ id: 'tpl_goblin', label: 'Goblin' }),
     );
+  });
+
+  it('upsert tools persist tags on location/item/agent/monster_template', async () => {
+    const repo = new MemoryBuilderRepository();
+    const createDraftTool = TOOL_BY_NAME.create_draft;
+    const upsertLocationTool = TOOL_BY_NAME.upsert_location;
+    const upsertItemTool = TOOL_BY_NAME.upsert_item;
+    const upsertAgentTool = TOOL_BY_NAME.upsert_agent;
+    const upsertTemplateTool = TOOL_BY_NAME.upsert_monster_template;
+    const getWorldTool = TOOL_BY_NAME.get_world;
+    const listTemplatesTool = TOOL_BY_NAME.list_monster_templates;
+    if (
+      !createDraftTool ||
+      !upsertLocationTool ||
+      !upsertItemTool ||
+      !upsertAgentTool ||
+      !upsertTemplateTool ||
+      !getWorldTool ||
+      !listTemplatesTool
+    ) {
+      throw new Error('tool missing');
+    }
+
+    const created = (await createDraftTool.run(repo, {
+      displayName: 'Tags World',
+      label: 'tags',
+    })) as { ok: boolean; value?: string };
+    expect(created.ok).toBe(true);
+    const worldId = created.value as string;
+
+    await upsertLocationTool.run(repo, {
+      worldId,
+      id: 'loc_1',
+      label: 'Spot',
+      shortDescription: 's',
+      longDescription: 'l',
+      tags: ['sewer', 'cult'],
+    });
+    await upsertItemTool.run(repo, {
+      worldId,
+      id: 'itm_1',
+      label: 'Locket',
+      shortDescription: 's',
+      longDescription: 'l',
+      ownerKind: 'location',
+      ownerId: 'loc_1',
+      weight: 0,
+      hidden: false,
+      tags: ['heirloom'],
+    });
+    await upsertAgentTool.run(repo, {
+      worldId,
+      id: 'agt_1',
+      label: 'Rat',
+      shortDescription: 's',
+      longDescription: 'l',
+      locationId: 'loc_1',
+      hp: 1,
+      damage: 1,
+      defense: 0,
+      capacity: 0,
+      autonomous: false,
+      tags: ['vermin'],
+    });
+    await upsertTemplateTool.run(repo, {
+      worldId,
+      id: 'tpl_goblin',
+      templateKey: 'goblin',
+      label: 'Goblin',
+      shortDescription: 's',
+      longDescription: 'l',
+      hp: 5,
+      mood: null,
+      startingItems: [],
+      tags: ['humanoid'],
+    });
+
+    const tree = (await getWorldTool.run(repo, { id: worldId })) as {
+      ok: boolean;
+      value?: {
+        locations: ReadonlyArray<{ id: string; tags: readonly string[] }>;
+        items: ReadonlyArray<{ id: string; tags: readonly string[] }>;
+        agents: ReadonlyArray<{ id: string; tags: readonly string[] }>;
+      };
+    };
+    expect(tree.ok).toBe(true);
+    const v = tree.value;
+    if (!v) throw new Error('tree.value missing');
+    expect(v.locations.find((l) => l.id === 'loc_1')?.tags).toEqual(['sewer', 'cult']);
+    expect(v.items.find((i) => i.id === 'itm_1')?.tags).toEqual(['heirloom']);
+    expect(v.agents.find((a) => a.id === 'agt_1')?.tags).toEqual(['vermin']);
+
+    const templates = (await listTemplatesTool.run(repo, { worldId })) as ReadonlyArray<{
+      id: string;
+      tags: readonly string[];
+    }>;
+    expect(templates.find((t) => t.id === 'tpl_goblin')?.tags).toEqual(['humanoid']);
   });
 });

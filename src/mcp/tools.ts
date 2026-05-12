@@ -54,6 +54,15 @@ export interface ToolDef {
 
 const stringField = (description: string) => ({ type: 'string', description });
 
+const tagsField = {
+  type: 'array',
+  items: { type: 'string' },
+  description: 'tag names — must already exist as tag_lore rows on the world',
+};
+
+const readTags = (a: Record<string, unknown>): readonly string[] =>
+  Array.isArray(a.tags) ? (a.tags as string[]) : [];
+
 export const TOOLS: readonly ToolDef[] = [
   {
     name: 'list_worlds',
@@ -66,10 +75,10 @@ export const TOOLS: readonly ToolDef[] = [
     description: 'Return the full tree (locations, exits, items, agents) for a world.',
     inputSchema: {
       type: 'object',
-      properties: { worldId: stringField('world id') },
-      required: ['worldId'],
+      properties: { id: stringField('world id') },
+      required: ['id'],
     },
-    run: (repo, a) => getWorldTree(repo, asWorldId(a.worldId as string)),
+    run: (repo, a) => getWorldTree(repo, asWorldId(a.id as string)),
   },
   {
     name: 'create_draft',
@@ -93,21 +102,21 @@ export const TOOLS: readonly ToolDef[] = [
     description: 'Clone an existing live world into a new editable draft.',
     inputSchema: {
       type: 'object',
-      properties: { worldId: stringField('live world id') },
-      required: ['worldId'],
+      properties: { id: stringField('live world id') },
+      required: ['id'],
     },
-    run: (repo, a) => cloneLiveAsDraft(repo, asWorldId(a.worldId as string)),
+    run: (repo, a) => cloneLiveAsDraft(repo, asWorldId(a.id as string)),
   },
   {
     name: 'validate_world',
     description: 'Return structural problems for a world. Empty array means clean.',
     inputSchema: {
       type: 'object',
-      properties: { worldId: stringField('world id') },
-      required: ['worldId'],
+      properties: { id: stringField('world id') },
+      required: ['id'],
     },
     run: async (repo, a) => {
-      const tree = await getWorldTree(repo, asWorldId(a.worldId as string));
+      const tree = await getWorldTree(repo, asWorldId(a.id as string));
       if (!tree.ok) return tree;
       return { ok: true, problems: validateWorld(tree.value) };
     },
@@ -118,10 +127,10 @@ export const TOOLS: readonly ToolDef[] = [
       'Publish a draft to its live world. Validates first; structural three-way merge with skipped-change report.',
     inputSchema: {
       type: 'object',
-      properties: { draftId: stringField('draft world id') },
-      required: ['draftId'],
+      properties: { id: stringField('draft world id') },
+      required: ['id'],
     },
-    run: (repo, a) => publish(repo, asWorldId(a.draftId as string)),
+    run: (repo, a) => publish(repo, asWorldId(a.id as string)),
   },
   // NOTE: reset_live_to_draft is intentionally NOT exposed via MCP — it wipes
   // gameplay state. It remains available in the UI (with a confirmation
@@ -137,6 +146,7 @@ export const TOOLS: readonly ToolDef[] = [
         label: stringField('label'),
         shortDescription: stringField('short description'),
         longDescription: stringField('long description'),
+        tags: tagsField,
       },
       required: ['worldId', 'id', 'label', 'shortDescription', 'longDescription'],
     },
@@ -146,7 +156,7 @@ export const TOOLS: readonly ToolDef[] = [
         label: a.label as string,
         shortDescription: a.shortDescription as string,
         longDescription: a.longDescription as string,
-        tags: Array.isArray(a.tags) ? (a.tags as string[]) : [],
+        tags: readTags(a),
       }),
   },
   {
@@ -195,6 +205,7 @@ export const TOOLS: readonly ToolDef[] = [
         ownerId: stringField('owner id'),
         weight: { type: 'number' },
         hidden: { type: 'boolean' },
+        tags: tagsField,
       },
       required: [
         'worldId',
@@ -218,7 +229,7 @@ export const TOOLS: readonly ToolDef[] = [
         ownerId: a.ownerId as string,
         weight: Number(a.weight),
         hidden: Boolean(a.hidden),
-        tags: [],
+        tags: readTags(a),
       }),
   },
   {
@@ -240,6 +251,7 @@ export const TOOLS: readonly ToolDef[] = [
         mood: { type: ['string', 'null'] },
         goal: { type: ['string', 'null'] },
         autonomous: { type: 'boolean' },
+        tags: tagsField,
       },
       required: [
         'worldId',
@@ -269,7 +281,7 @@ export const TOOLS: readonly ToolDef[] = [
         mood: (a.mood as string | null) ?? null,
         goal: (a.goal as string | null) ?? null,
         autonomous: Boolean(a.autonomous),
-        tags: [],
+        tags: readTags(a),
       }),
   },
   {
@@ -355,6 +367,7 @@ export const TOOLS: readonly ToolDef[] = [
         hp: { type: 'number' },
         mood: { type: ['string', 'null'] },
         startingItems: { type: 'array' },
+        tags: tagsField,
       },
       required: [
         'worldId',
@@ -377,7 +390,7 @@ export const TOOLS: readonly ToolDef[] = [
         hp: Number(a.hp),
         mood: (a.mood as string | null) ?? null,
         startingItems: (a.startingItems as never) ?? [],
-        tags: [],
+        tags: readTags(a),
       }),
   },
   {
