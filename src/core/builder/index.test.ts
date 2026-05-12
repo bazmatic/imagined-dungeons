@@ -72,6 +72,7 @@ describe('builder facade — simple ops', () => {
       shortDescription: 'a',
       longDescription: 'a',
       tags: [],
+      secretDescription: '',
     });
     expect(r.ok).toBe(true);
     const tree = await getWorldTree(repo, W);
@@ -95,6 +96,7 @@ describe('builder facade — simple ops', () => {
       shortDescription: 'a',
       longDescription: 'a',
       tags: [],
+      secretDescription: '',
     });
     const r = await deleteLocation(repo, W, asLocationId('loc_a'));
     expect(r.ok).toBe(true);
@@ -146,6 +148,7 @@ describe('builder facade — simple ops', () => {
       shortDescription: '',
       longDescription: '',
       tags: [],
+      secretDescription: '',
     });
     expect(r.ok).toBe(true);
   });
@@ -161,6 +164,7 @@ const seedMinimalScratch = async (repo: MemoryBuilderRepository) => {
     shortDescription: '',
     longDescription: '',
     tags: [],
+    secretDescription: '',
   });
   await upsertAgent(repo, W, {
     id: asAgentId('char_p'),
@@ -236,6 +240,7 @@ describe('resetLiveFromStartingState', () => {
       shortDescription: '',
       longDescription: '',
       tags: [],
+      secretDescription: '',
     });
     await repo.upsertLocation(liveId, {
       id: asLocationId('loc_stray'),
@@ -243,6 +248,7 @@ describe('resetLiveFromStartingState', () => {
       shortDescription: '',
       longDescription: '',
       tags: [],
+      secretDescription: '',
     });
     await repo.writeWorldLore(liveId, { worldOverview: 'drifted', storySoFar: 'drifted' });
 
@@ -388,6 +394,7 @@ describe('templates and triggers', () => {
       shortDescription: 'a',
       longDescription: 'a',
       tags: [],
+      secretDescription: '',
     });
     await upsertMonsterTemplate(repo, draft.value, sampleTemplateInput());
     const r = await upsertLocationSpawnTrigger(repo, draft.value, sampleTriggerInput());

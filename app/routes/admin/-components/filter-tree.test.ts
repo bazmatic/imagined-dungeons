@@ -32,6 +32,7 @@ function makeTree(): WorldTree {
         shortDescription: '',
         longDescription: '',
         tags: [],
+        secretDescription: '',
       },
       {
         id: 'loc-cave' as LocationId,
@@ -40,6 +41,7 @@ function makeTree(): WorldTree {
         shortDescription: '',
         longDescription: '',
         tags: [],
+        secretDescription: '',
       },
     ],
     exits: [
@@ -146,6 +148,7 @@ describe('filterTree', () => {
       shortDescription: '',
       longDescription: '',
       tags: [] as readonly string[],
+      secretDescription: '',
     }));
     const big: WorldTree = { ...tree, locations: many };
     expect(filterTree(big, 'place').length).toBe(50);

@@ -14,6 +14,7 @@ const loc: Location = {
   shortDescription: '',
   longDescription: '',
   tags: [],
+  secretDescription: '',
 };
 const paff: Agent = {
   id: asAgentId('char_p'),

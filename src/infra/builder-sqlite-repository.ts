@@ -134,6 +134,7 @@ export class SqliteBuilderRepository implements BuilderRepository {
         shortDescription: i.shortDescription,
         longDescription: i.longDescription,
         tags: tagsJson,
+        secretDescription: i.secretDescription,
       })
       .onConflictDoUpdate({
         target: [schema.locations.worldId, schema.locations.id],
@@ -142,6 +143,7 @@ export class SqliteBuilderRepository implements BuilderRepository {
           shortDescription: i.shortDescription,
           longDescription: i.longDescription,
           tags: tagsJson,
+          secretDescription: i.secretDescription,
         },
       });
   }
@@ -555,6 +557,7 @@ const toLocation = (r: typeof schema.locations.$inferSelect, w: WorldId): Locati
   shortDescription: r.shortDescription,
   longDescription: r.longDescription,
   tags: parseTagsJson(r.tags),
+  secretDescription: r.secretDescription,
 });
 
 const toExit = (r: typeof schema.exits.$inferSelect, w: WorldId): Exit => ({

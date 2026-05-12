@@ -15,6 +15,15 @@ export interface Location {
   readonly shortDescription: string;
   readonly longDescription: string;
   readonly tags: readonly string[];
+  /**
+   * GM-only secret notes about this location. Visible to the consequence
+   * engine and the admin UI, but NEVER surfaced to the player, the
+   * narrator, NPC minds, or any player-visible event. Use for hidden
+   * dynamics — who's secretly working with whom, what's behind the wall,
+   * what the room contains that no one's discovered yet. The consequence
+   * engine reads this when deciding what to reveal, spawn, or change.
+   */
+  readonly secretDescription: string;
 }
 
 export interface Exit {

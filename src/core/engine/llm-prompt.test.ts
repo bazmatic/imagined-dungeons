@@ -12,6 +12,7 @@ const tavern: Location = {
   shortDescription: '',
   longDescription: 'A warm tavern.',
   tags: [],
+  secretDescription: '',
 };
 const paff: Agent = {
   id: asAgentId('char_p'),

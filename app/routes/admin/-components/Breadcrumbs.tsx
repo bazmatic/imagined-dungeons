@@ -30,17 +30,17 @@ function buildSegments(
   }
   if (sel.kind === EntityKind.Location) {
     const loc = tree.locations.find((l) => (l.id as string) === sel.id);
-    return ['Aethelgard', 'World Editor', worldName, 'Locations', loc?.label ?? sel.id];
+    return ['Imagined', 'World Editor', worldName, 'Locations', loc?.label ?? sel.id];
   }
   if (sel.kind === EntityKind.MonsterTemplate) {
     const tpl = tree.templates.find((t) => (t.id as string) === sel.id);
-    return ['Aethelgard', 'World Editor', worldName, 'Bestiary', tpl?.label ?? sel.id];
+    return ['Imagined', 'World Editor', worldName, 'Bestiary', tpl?.label ?? sel.id];
   }
   if (sel.kind === EntityKind.Exit) {
     const ex = tree.exits.find((e) => (e.id as string) === sel.id);
     const parent = ex ? tree.locations.find((l) => (l.id as string) === (ex.from as string)) : null;
     return [
-      'Aethelgard',
+      'Imagined',
       'World Editor',
       worldName,
       'Locations',
@@ -55,7 +55,7 @@ function buildSegments(
       ? tree.locations.find((l) => (l.id as string) === (ag.locationId as string))
       : null;
     return [
-      'Aethelgard',
+      'Imagined',
       'World Editor',
       worldName,
       'Locations',
@@ -70,7 +70,7 @@ function buildSegments(
       ? tree.locations.find((l) => (l.id as string) === (trg.locationId as string))
       : null;
     return [
-      'Aethelgard',
+      'Imagined',
       'World Editor',
       worldName,
       'Locations',
@@ -81,5 +81,5 @@ function buildSegments(
   }
   // Item
   const item = tree.items.find((i) => (i.id as string) === sel.id);
-  return ['Aethelgard', 'World Editor', worldName, 'Items', item?.label ?? sel.id];
+  return ['Imagined', 'World Editor', worldName, 'Items', item?.label ?? sel.id];
 }

@@ -28,6 +28,9 @@ export const locations = sqliteTable(
     shortDescription: text('short_description').notNull(),
     longDescription: text('long_description').notNull(),
     tags: text('tags').notNull().default('[]'),
+    // GM-only field; surfaced to the consequence engine but never to
+    // player-visible narration or NPC prompts.
+    secretDescription: text('secret_description').notNull().default(''),
   },
   (t) => [primaryKey({ columns: [t.worldId, t.id] })],
 );

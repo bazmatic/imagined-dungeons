@@ -14,6 +14,7 @@ const locA: Location = {
   shortDescription: 'a',
   longDescription: 'a',
   tags: [],
+  secretDescription: '',
 };
 const locB: Location = {
   id: B,
@@ -22,6 +23,7 @@ const locB: Location = {
   shortDescription: 'b',
   longDescription: 'b',
   tags: [],
+  secretDescription: '',
 };
 const exitN: Exit = {
   id: asExitId('e1'),

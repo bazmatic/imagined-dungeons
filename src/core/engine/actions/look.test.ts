@@ -13,6 +13,7 @@ const loc: Location = {
   shortDescription: 's',
   longDescription: 'A tavern.',
   tags: [],
+  secretDescription: '',
 };
 const map: Item = {
   id: asItemId('item_map'),

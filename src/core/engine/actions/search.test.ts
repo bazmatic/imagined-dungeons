@@ -17,6 +17,7 @@ const loc: Location = {
   shortDescription: 'a tavern',
   longDescription: 'A dim tavern.',
   tags: ['tavern'],
+  secretDescription: '',
 };
 
 const paff: Agent = {

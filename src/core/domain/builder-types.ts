@@ -229,6 +229,8 @@ export interface UpsertLocationInput {
   readonly shortDescription: string;
   readonly longDescription: string;
   readonly tags: readonly string[];
+  /** GM-only secret notes; never surfaced to the player. Default ''. */
+  readonly secretDescription: string;
 }
 
 export interface UpsertExitInput {

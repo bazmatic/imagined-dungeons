@@ -12,6 +12,7 @@ const loc = (id: string, label: string): Location => ({
   shortDescription: label,
   longDescription: label,
   tags: [],
+  secretDescription: '',
 });
 
 const agent = (id: string, label: string, locId: string): Agent => ({

@@ -97,9 +97,9 @@ function AdminIndex() {
               <div className="workspace-card__eyebrow">Workspace</div>
               <h1 className="workspace-card__title">World Builder</h1>
               <p className="workspace-card__lede">
-                Each world has a scratch page where you edit the starting state, and a live
-                world that runs the game. Save commits your scratch as the starting state; Reset
-                rewinds the live world back to it.
+                Each world has a scratch page where you edit the starting state, and a live world
+                that runs the game. Save commits your scratch as the starting state; Reset rewinds
+                the live world back to it.
               </p>
             </div>
           </aside>

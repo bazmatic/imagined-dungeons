@@ -30,6 +30,7 @@ const LOC: Location = {
   shortDescription: '',
   longDescription: '',
   tags: [],
+  secretDescription: '',
 };
 const map: Item = {
   id: asItemId('item_map'),

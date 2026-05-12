@@ -30,6 +30,7 @@ const locA: Location = {
   shortDescription: 'a tavern',
   longDescription: 'A tavern.',
   tags: [],
+  secretDescription: '',
 };
 const locB: Location = {
   id: B,
@@ -38,6 +39,7 @@ const locB: Location = {
   shortDescription: '',
   longDescription: 'A street.',
   tags: [],
+  secretDescription: '',
 };
 const door: Exit = {
   id: asExitId('e_north'),

@@ -58,6 +58,7 @@ describe('resolveOwnerSubtitle', () => {
       shortDescription: '',
       longDescription: '',
       tags: [],
+      secretDescription: '',
     },
   ];
   const agents: readonly Agent[] = [

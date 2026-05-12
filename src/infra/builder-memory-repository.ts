@@ -114,6 +114,7 @@ export class MemoryBuilderRepository implements BuilderRepository {
       shortDescription: i.shortDescription,
       longDescription: i.longDescription,
       tags: [...i.tags],
+      secretDescription: i.secretDescription,
     });
   }
   async upsertExit(w: WorldId, i: UpsertExitInput) {

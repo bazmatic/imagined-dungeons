@@ -44,6 +44,7 @@ describe('SqliteBuilderRepository (via builder facade)', () => {
       shortDescription: 'k',
       longDescription: 'kitchen',
       tags: [],
+      secretDescription: '',
     });
     await upsertLocation(repo, scratch, {
       id: asLocationId('loc_pantry'),
@@ -51,6 +52,7 @@ describe('SqliteBuilderRepository (via builder facade)', () => {
       shortDescription: 'p',
       longDescription: 'pantry',
       tags: [],
+      secretDescription: '',
     });
     await upsertExit(repo, scratch, {
       id: asExitId('exit_kitchen_pantry'),
@@ -114,6 +116,7 @@ describe('SqliteBuilderRepository (via builder facade)', () => {
       shortDescription: '',
       longDescription: '',
       tags: [],
+      secretDescription: '',
     });
     await upsertAgent(repo, scratch, {
       id: asAgentId('char_p'),
@@ -144,6 +147,7 @@ describe('SqliteBuilderRepository (via builder facade)', () => {
       shortDescription: '',
       longDescription: '',
       tags: [],
+      secretDescription: '',
     });
     const r = await resetLiveFromStartingState(repo, scratch);
     expect(r.ok).toBe(true);

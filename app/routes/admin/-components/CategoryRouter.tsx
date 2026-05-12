@@ -35,10 +35,13 @@ export function useCategoryRouter({
   const items = listItemsForCategory(category, tree);
   const [jsonFallback, setJsonFallback] = useState<string | null>(null);
 
+  const effectiveSelectedId =
+    selectedId ?? (category === CategoryKind.Lore ? WORLD_LORE_SEL : undefined);
+
   const masterList = (
     <MasterList
       items={items}
-      {...(selectedId !== undefined ? { selectedId } : {})}
+      {...(effectiveSelectedId !== undefined ? { selectedId: effectiveSelectedId } : {})}
       onSelect={(id) => {
         setJsonFallback(null);
         onSelect(id);
@@ -46,14 +49,29 @@ export function useCategoryRouter({
       filterPlaceholder={`Filter ${category}…`}
       header={
         category === CategoryKind.Lore ? (
-          <NewTagAffordance
-            tree={tree}
-            onCreated={(tag) => {
-              setJsonFallback(null);
-              onSelect(tag);
-              onSaved();
-            }}
-          />
+          <>
+            <button
+              type="button"
+              className={`tree-leaf${effectiveSelectedId === WORLD_LORE_SEL ? ' tree-leaf--selected' : ''}`}
+              onClick={() => {
+                setJsonFallback(null);
+                onSelect(WORLD_LORE_SEL);
+              }}
+            >
+              <div>World lore</div>
+            </button>
+            <div className="t-label-caps" style={{ padding: 'var(--s-3) var(--s-3) var(--s-2)' }}>
+              Tags
+            </div>
+            <NewTagAffordance
+              tree={tree}
+              onCreated={(tag) => {
+                setJsonFallback(null);
+                onSelect(tag);
+                onSaved();
+              }}
+            />
+          </>
         ) : (
           <CreateAffordance
             tree={tree}
@@ -72,7 +90,7 @@ export function useCategoryRouter({
   const detail = renderDetail({
     tree,
     category,
-    selectedId,
+    selectedId: effectiveSelectedId,
     problems,
     jsonFallback,
     onJsonFallback: setJsonFallback,
@@ -101,14 +119,11 @@ function listItemsForCategory(category: Category, tree: WorldTree): readonly Mas
     });
   }
   if (category === CategoryKind.Lore) {
-    const tags = collectLoreTags(tree);
-    const worldRow: MasterListItem = { id: WORLD_LORE_SEL, label: 'World lore' };
-    const tagRows: MasterListItem[] = tags.map((tag) => ({
+    return collectLoreTags(tree).map((tag) => ({
       id: tag,
       label: tag,
       subtitle: 'authored',
     }));
-    return [worldRow, ...tagRows];
   }
   return tree.items.map((it) => ({
     id: it.id as string,

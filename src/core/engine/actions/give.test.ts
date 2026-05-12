@@ -16,6 +16,7 @@ const here: Location = {
   shortDescription: '',
   longDescription: '',
   tags: [],
+  secretDescription: '',
 };
 const there: Location = {
   id: B,
@@ -24,6 +25,7 @@ const there: Location = {
   shortDescription: '',
   longDescription: '',
   tags: [],
+  secretDescription: '',
 };
 
 const baseAgent = {

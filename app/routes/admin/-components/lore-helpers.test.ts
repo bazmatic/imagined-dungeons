@@ -47,6 +47,7 @@ describe('collectLoreTags', () => {
           shortDescription: '',
           longDescription: '',
           tags: ['forest', 'wet'],
+          secretDescription: '',
         },
       ],
       items: [

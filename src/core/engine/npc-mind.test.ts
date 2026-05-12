@@ -18,6 +18,7 @@ const loc: Location = {
   shortDescription: 'a tavern with a wall on fire',
   longDescription: 'A tavern with one wall constantly aflame.',
   tags: [],
+  secretDescription: '',
 };
 
 const spark: Agent = {

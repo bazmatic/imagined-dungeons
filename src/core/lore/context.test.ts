@@ -15,6 +15,7 @@ const sewerLocation = (): Location => ({
   shortDescription: 'wet',
   longDescription: 'wet and dark',
   tags: ['sewer'],
+  secretDescription: '',
 });
 
 const setUp = async () => {

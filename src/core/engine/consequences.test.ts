@@ -17,6 +17,7 @@ const loc: Location = {
   shortDescription: 'a workshop',
   longDescription: 'a tidy workshop full of tools',
   tags: [],
+  secretDescription: '',
 };
 const lantern: Item = {
   id: asItemId('item_lantern'),
@@ -316,5 +317,48 @@ describe('consequencesFor', () => {
     });
     const r = await consequencesFor([takeEvent], repo, llm);
     expect(r).toEqual([]);
+  });
+
+  it('surfaces a location secretDescription in the user prompt; system prompt warns never to echo it', async () => {
+    const secretLoc: Location = {
+      ...loc,
+      secretDescription:
+        'The workshop has a false floorboard beneath the workbench. The Thieves Guild leaves messages there.',
+    };
+    const repoWithSecret = new MemoryRepository(W, {
+      locations: [secretLoc],
+      exits: [],
+      items: [lantern],
+      agents: [paff],
+    });
+    const llm = makeFakeLanguageModel({
+      responder: () => ({
+        raw: '',
+        parsed: { consequences: [], updatedStorySoFar: null },
+      }),
+    });
+    await consequencesFor([takeEvent], repoWithSecret, llm);
+    expect(llm.calls).toHaveLength(1);
+    const call = llm.calls[0];
+    if (!call) throw new Error('expected call');
+    expect(call.user).toContain('GM-only notes');
+    expect(call.user).toContain('false floorboard');
+    expect(call.system.toLowerCase()).toContain('gm-only');
+    expect(call.system.toLowerCase()).toContain('never echo');
+  });
+
+  it('does NOT emit a GM-only line when the location has no secretDescription', async () => {
+    const repo = repoFor();
+    const llm = makeFakeLanguageModel({
+      responder: () => ({
+        raw: '',
+        parsed: { consequences: [], updatedStorySoFar: null },
+      }),
+    });
+    await consequencesFor([takeEvent], repo, llm);
+    expect(llm.calls).toHaveLength(1);
+    const call = llm.calls[0];
+    if (!call) throw new Error('expected call');
+    expect(call.user).not.toContain('GM-only notes');
   });
 });

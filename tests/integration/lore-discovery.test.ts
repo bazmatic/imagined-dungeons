@@ -44,6 +44,7 @@ describe('lore + generative discovery — end-to-end', () => {
       shortDescription: 'a sewer',
       longDescription: 'A dank, dripping sewer.',
       tags: ['sewer'],
+      secretDescription: '',
     });
     if (!loc.ok) throw new Error(loc.error.message);
 

@@ -15,6 +15,7 @@ const here: Location = {
   shortDescription: '',
   longDescription: '',
   tags: [],
+  secretDescription: '',
 };
 const elsewhere: Location = {
   id: ELSEWHERE,
@@ -23,6 +24,7 @@ const elsewhere: Location = {
   shortDescription: '',
   longDescription: '',
   tags: [],
+  secretDescription: '',
 };
 
 const mkAgent = (id: AgentId, opts: Partial<Agent>): Agent => ({

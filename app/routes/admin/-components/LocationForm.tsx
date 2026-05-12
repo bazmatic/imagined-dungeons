@@ -37,6 +37,7 @@ export function LocationForm({
         shortDescription: loc.shortDescription,
         longDescription: loc.longDescription,
         tags: loc.tags,
+        secretDescription: loc.secretDescription ?? '',
       }
     : null;
   const [v, setV] = useState(initial);
@@ -109,6 +110,24 @@ export function LocationForm({
             <ManuscriptCard
               value={v.longDescription}
               onChange={(next) => setV({ ...v, longDescription: next })}
+            />
+          </div>
+          <div>
+            <label htmlFor="loc-secret" className="form-grid__field-label">
+              GM-only Notes
+            </label>
+            <p className="t-metadata" style={{ margin: '0 0 var(--s-2) 0' }}>
+              Visible only to the consequence engine — never to the player, the narrator, or NPCs.
+              Use for hidden dynamics (factions in disguise, things behind walls, items waiting to
+              be discovered). The engine reads these when deciding what to reveal, spawn, or change.
+            </p>
+            <textarea
+              id="loc-secret"
+              className="manuscript-input-v2"
+              rows={4}
+              placeholder="(secret)"
+              value={v.secretDescription}
+              onChange={(e) => setV({ ...v, secretDescription: e.target.value })}
             />
           </div>
           <div style={{ display: 'flex', gap: 16 }}>

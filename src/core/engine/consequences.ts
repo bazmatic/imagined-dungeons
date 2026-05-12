@@ -33,6 +33,8 @@ const SYSTEM_PROMPT_LINES: readonly string[] = [
   '',
   'You can emit two kinds of consequence actions: `update_description` (mutate a stored description / mood) and `reveal_item` (flip a hidden item to visible). Be conservative — most batches need no consequences. Reply with a JSON object containing a `consequences` array (possibly empty).',
   '',
+  'GM-only notes: Some locations carry `GM-only notes` — secret information about hidden dynamics, things behind the wall, factional alignments the player has not learned, items waiting to be discovered, etc. ONLY YOU see these notes; the player, the narrator, and the NPC minds never do. Use the notes to inform what you reveal, spawn, or change in response to player actions. Never echo a GM-only note verbatim into a description; that would leak it. Use the notes as inspiration; surface their content only when the player has earned it through their actions.',
+  '',
   'When to emit `reveal_item`:',
   '- The player disturbed, broke, or rearranged the scene in a way that would expose something previously hidden (smashing a chest, knocking over a pile, lifting a tapestry, kicking aside a rug, lighting a dark corner).',
   "- The player's narrated action contextually suggests they would now notice a specific hidden item that exists at the location.",
@@ -396,6 +398,13 @@ async function buildUserPrompt(events: readonly DomainEvent[], repo: Repository)
       lines.push(`- LOCATION ${l.label}`);
       lines.push(`    short: ${l.shortDescription}`);
       lines.push(`    long: ${l.longDescription}`);
+      // GM-only secret notes. Surfaced ONLY to the consequence engine; the
+      // player, narrator, and NPC minds never see this. Use these to inform
+      // hidden dynamics — what's behind the wall, who's secretly involved,
+      // what the room contains that no one's discovered yet.
+      if (l.secretDescription && l.secretDescription.length > 0) {
+        lines.push(`    GM-only notes: ${l.secretDescription}`);
+      }
     }
   }
 

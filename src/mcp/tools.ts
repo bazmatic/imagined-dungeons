@@ -123,6 +123,9 @@ export const TOOLS: readonly ToolDef[] = [
         shortDescription: stringField('short description'),
         longDescription: stringField('long description'),
         tags: tagsField,
+        secretDescription: stringField(
+          'GM-only secret notes about this location. Surfaced ONLY to the consequence engine (never to the player, narrator, or NPC minds). Use for hidden dynamics, things behind walls, faction secrets, etc.',
+        ),
       },
       required: ['worldId', 'id', 'label', 'shortDescription', 'longDescription'],
     },
@@ -133,6 +136,7 @@ export const TOOLS: readonly ToolDef[] = [
         shortDescription: a.shortDescription as string,
         longDescription: a.longDescription as string,
         tags: readTags(a),
+        secretDescription: typeof a.secretDescription === 'string' ? a.secretDescription : '',
       }),
   },
   {

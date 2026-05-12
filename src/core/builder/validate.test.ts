@@ -34,6 +34,7 @@ const baseTree = (): WorldTree => ({
       shortDescription: 'a',
       longDescription: 'a',
       tags: [],
+      secretDescription: '',
     },
     {
       id: asLocationId('loc_b'),
@@ -42,6 +43,7 @@ const baseTree = (): WorldTree => ({
       shortDescription: 'b',
       longDescription: 'b',
       tags: [],
+      secretDescription: '',
     },
   ],
   exits: [],

@@ -14,6 +14,7 @@ const loc: Location = {
   shortDescription: '',
   longDescription: '',
   tags: [],
+  secretDescription: '',
 };
 const cloak: Item = {
   id: asItemId('item_cloak'),

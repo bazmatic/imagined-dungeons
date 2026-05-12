@@ -43,6 +43,7 @@ export const saveEntity = createServerFn({ method: 'POST' })
         shortDescription: p.shortDescription as string,
         longDescription: p.longDescription as string,
         tags: Array.isArray(p.tags) ? (p.tags as string[]) : [],
+        secretDescription: typeof p.secretDescription === 'string' ? p.secretDescription : '',
       });
     }
     if (data.entity === EntityKind.Exit) {

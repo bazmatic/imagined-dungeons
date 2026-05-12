@@ -357,6 +357,8 @@ const asLocInput = (l: Location): UpsertLocationInput => ({
   shortDescription: l.shortDescription,
   longDescription: l.longDescription,
   tags: l.tags,
+  // Defensive default for snapshots predating the secret-description field.
+  secretDescription: l.secretDescription ?? '',
 });
 const asExitInput = (e: Exit): UpsertExitInput => ({
   id: e.id,

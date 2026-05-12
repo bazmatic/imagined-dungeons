@@ -14,6 +14,7 @@ const locA: Location = {
   shortDescription: '',
   longDescription: '',
   tags: [],
+  secretDescription: '',
 };
 const locB: Location = {
   id: B,
@@ -22,6 +23,7 @@ const locB: Location = {
   shortDescription: '',
   longDescription: '',
   tags: [],
+  secretDescription: '',
 };
 const paff = (overrides: Partial<Agent> = {}): Agent => ({
   id: asAgentId('char_p'),

@@ -39,6 +39,7 @@ const toLocation = (r: typeof schema.locations.$inferSelect, worldId: WorldId): 
       return [];
     }
   })(),
+  secretDescription: r.secretDescription,
 });
 
 const toAgent = (r: typeof schema.agents.$inferSelect, worldId: WorldId): Agent => ({
