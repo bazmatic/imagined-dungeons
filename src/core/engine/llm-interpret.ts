@@ -138,6 +138,8 @@ export async function llmInterpret(
         targetAgentId: r.agent.id,
       };
     }
+    case ActionKind.Search:
+      return { kind: ActionKind.Search, actorId: actor.id, query: validated.query };
     case 'unknown':
     case 'invalid':
       return null;

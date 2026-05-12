@@ -27,6 +27,7 @@ const INTERPRETER_KINDS = [
   ActionKind.Speak,
   ActionKind.Emote,
   ActionKind.Attack,
+  ActionKind.Search,
 ] as const;
 const KINDS = [...INTERPRETER_KINDS, UnknownKind] as const;
 type Kind = (typeof KINDS)[number];
@@ -123,6 +124,7 @@ export type ValidatedPlayerAction =
       readonly targetAgentRef: string | null;
     }
   | { readonly kind: 'attack'; readonly targetAgentRef: string }
+  | { readonly kind: 'search'; readonly query: string }
   | { readonly kind: 'unknown'; readonly reason: string }
   | { readonly kind: 'invalid' };
 
@@ -224,6 +226,11 @@ export function validatePlayerAction(input: unknown): ValidatedPlayerAction {
           ? rawTargetAgentRef
           : null;
       return { kind: ActionKind.Emote, emoteDescription, targetAgentRef };
+    }
+    case ActionKind.Search: {
+      const rawQuery = input.targetRef;
+      const query = typeof rawQuery === 'string' ? rawQuery : '';
+      return { kind: ActionKind.Search, query };
     }
     case UnknownKind: {
       const reason = input.reason;

@@ -16,7 +16,8 @@ Available actions:
   All other fields null.
   Example "head south" -> { "kind":"move", "direction":"south", "targetKind":null, "targetRef":null, "itemRef":null, "targetAgentRef":null, "utterance":null, "reason":null }.
 
-- look: examine something around you. The target can be the room, an item, another character, or an exit.
+- look: a bare glance at something already visible. The target can be the room, an item, another character, or an exit.
+  Use look ONLY for short, direct phrasings like "look at X", "examine X", "look around". If the player is asking to inspect carefully, hunt for hidden things, or describe a scene in detail, use search instead (see below).
   Set: kind="look".
     - To look at the room: targetKind="room" (or null) and targetRef=null.
     - To look at an item: targetKind="item", targetRef as a short natural-language reference (e.g. "fire map").
@@ -27,6 +28,15 @@ Available actions:
   Example "examine the fire map" -> { "kind":"look", "direction":null, "targetKind":"item", "targetRef":"fire map", "itemRef":null, "targetAgentRef":null, "utterance":null, "reason":null }.
   Example "look at Spark" -> { "kind":"look", "direction":null, "targetKind":"agent", "targetRef":"Spark", "itemRef":null, "targetAgentRef":null, "utterance":null, "reason":null }.
   Example "examine the locked door" -> { "kind":"look", "direction":null, "targetKind":"exit", "targetRef":"locked door", "itemRef":null, "targetAgentRef":null, "utterance":null, "reason":null }.
+
+- search: a careful, exploratory inspection. Use search when the player wants to look in detail, hunt for hidden objects, scan a part of the scene, or examine the surroundings for things that may not yet be listed. Triggers a discovery pass that may invent or reveal new items, characters, or flavour rooted in the world's lore.
+  Choose search over look when the input contains words like "search", "look carefully", "look closely", "look around in detail", "examine the room", "hunt for", "explore the corner", "what's behind X", "anything hidden", "any X here?". A short "look at the bar" is still look; "look around in detail" or "search for objects" is search.
+  Set: kind="search", targetRef as a short natural-language description of what the player is searching for or where they're looking. May be empty/null for a bare exploratory search of the surroundings.
+  All other fields null.
+  Example "search the dusty corner" -> { "kind":"search", "direction":null, "targetKind":null, "targetRef":"dusty corner", "itemRef":null, "targetAgentRef":null, "utterance":null, "emoteDescription":null, "reason":null }.
+  Example "look around in detail, examining the room" -> { "kind":"search", "direction":null, "targetKind":null, "targetRef":"the room in detail", "itemRef":null, "targetAgentRef":null, "utterance":null, "emoteDescription":null, "reason":null }.
+  Example "look carefully behind the bar" -> { "kind":"search", "direction":null, "targetKind":null, "targetRef":"behind the bar", "itemRef":null, "targetAgentRef":null, "utterance":null, "emoteDescription":null, "reason":null }.
+  Example "is anything hidden under the table?" -> { "kind":"search", "direction":null, "targetKind":null, "targetRef":"under the table", "itemRef":null, "targetAgentRef":null, "utterance":null, "emoteDescription":null, "reason":null }.
 
 - take: pick up an item visible in the location.
   Set: kind="take", itemRef as a short natural-language reference. All other fields null.

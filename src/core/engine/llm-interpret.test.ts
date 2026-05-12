@@ -226,4 +226,28 @@ describe('llmInterpret', () => {
     expect(call?.system.length ?? 0).toBeGreaterThan(0);
     expect(call?.user).toContain('what am i carrying');
   });
+
+  it('returns a Search Action when the model emits kind=search with a targetRef query', async () => {
+    const llm = makeFakeLanguageModel({
+      responder: () => respond({ kind: 'search', targetRef: 'dusty corner' }),
+    });
+    const r = await llmInterpret('look carefully in the dusty corner', paff, view, [], llm);
+    expect(r).toEqual({ kind: 'search', actorId: paff.id, query: 'dusty corner' });
+  });
+
+  it('returns a Search Action with an empty query when targetRef is null', async () => {
+    const llm = makeFakeLanguageModel({
+      responder: () => respond({ kind: 'search', targetRef: null }),
+    });
+    const r = await llmInterpret('look around in detail', paff, view, [], llm);
+    expect(r).toEqual({ kind: 'search', actorId: paff.id, query: '' });
+  });
+
+  it("system prompt teaches the interpreter to choose search over look for 'in detail' phrasings", async () => {
+    const llm = makeFakeLanguageModel({ responder: () => respond({ kind: 'inventory' }) });
+    await llmInterpret('anything', paff, view, [], llm);
+    const sys = llm.calls[0]?.system ?? '';
+    expect(sys.toLowerCase()).toContain('search');
+    expect(sys.toLowerCase()).toContain('in detail');
+  });
 });
