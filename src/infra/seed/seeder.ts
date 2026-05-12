@@ -1,5 +1,5 @@
 import type { Campaign } from '@core/domain/campaign';
-import { SYSTEM_AGENT_ID, type WorldId } from '@core/domain/ids';
+import { SYSTEM_AGENT_ID, type WorldId, asWorldId } from '@core/domain/ids';
 import { eq } from 'drizzle-orm';
 import type { DB } from '../db';
 import * as schema from '../schema';
@@ -80,6 +80,98 @@ async function ensureSystemAgent(db: DB, worldId: WorldId): Promise<void> {
   });
 }
 
+function deterministicScratchId(liveId: WorldId): WorldId {
+  // Convention: a live world's paired scratch shares the suffix after the
+  // first underscore (`w_burning_district` ↔ `w_draft_burning_district`).
+  const raw = liveId as string;
+  const tail = raw.startsWith('w_') ? raw.slice(2) : raw;
+  return asWorldId(`w_draft_${tail}`);
+}
+
+async function insertSeedRows(db: DB, campaign: Campaign, worldId: WorldId): Promise<void> {
+  await db.insert(schema.locations).values(campaign.seed.locations.map((l) => ({ ...l, worldId })));
+
+  await db
+    .insert(schema.agents)
+    .values(campaign.seed.agents.map((a) => ({ ...a, worldId, awake: false })));
+
+  const flatItems = campaign.seed.items.filter((i) => i.ownerKind !== 'item');
+  const containerItems = campaign.seed.items.filter((i) => i.ownerKind === 'item');
+  if (flatItems.length > 0) {
+    await db.insert(schema.items).values(flatItems.map((i) => ({ ...i, worldId })));
+  }
+  if (containerItems.length > 0) {
+    await db.insert(schema.items).values(containerItems.map((i) => ({ ...i, worldId })));
+  }
+
+  await db.insert(schema.exits).values(
+    campaign.seed.exits.map((e) => ({
+      id: e.id,
+      worldId,
+      fromLocationId: e.from,
+      toLocationId: e.to,
+      direction: e.direction,
+      label: e.label,
+      locked: e.locked,
+      lockedByItemId: e.lockedByItem,
+    })),
+  );
+}
+
+async function writeStartingStateSnapshot(
+  db: DB,
+  campaign: Campaign,
+  scratchId: WorldId,
+): Promise<void> {
+  // Build a snapshot blob shaped the same way builder/index.ts emits it.
+  const locations = campaign.seed.locations.map((l) => ({ ...l, worldId: scratchId }));
+  const exits = campaign.seed.exits.map((e) => ({ ...e, worldId: scratchId }));
+  const items = campaign.seed.items.map((i) => ({
+    id: i.id,
+    worldId: scratchId,
+    label: i.label,
+    shortDescription: i.shortDescription,
+    longDescription: i.longDescription,
+    weight: i.weight,
+    hidden: i.hidden,
+    tags: [],
+    owner: { kind: i.ownerKind, id: i.ownerId },
+    equipped: false,
+  }));
+  const agents = campaign.seed.agents.map((a) => ({
+    id: a.id,
+    worldId: scratchId,
+    label: a.label,
+    shortDescription: a.shortDescription,
+    longDescription: a.longDescription,
+    locationId: a.locationId,
+    hp: a.hp,
+    damage: a.damage,
+    defense: a.defense,
+    capacity: a.capacity,
+    mood: a.mood ?? null,
+    goal: a.goal ?? null,
+    autonomous: a.autonomous,
+    awake: false,
+    tags: [],
+  }));
+  const blob = {
+    locations,
+    exits,
+    items,
+    agents,
+    templates: [],
+    triggers: [],
+    worldLore: { worldOverview: '', storySoFar: '' },
+    tagLore: [],
+  };
+  await db.insert(schema.worldSnapshots).values({
+    worldId: scratchId,
+    snapshotJson: JSON.stringify(blob),
+    takenAt: new Date(),
+  });
+}
+
 export async function seedIfEmpty(db: DB, campaign: Campaign): Promise<void> {
   const existing = await db.select().from(schema.worlds);
   if (existing.length > 0) {
@@ -89,45 +181,35 @@ export async function seedIfEmpty(db: DB, campaign: Campaign): Promise<void> {
   }
 
   const W = campaign.worldId;
+  const scratchId = deterministicScratchId(W);
+
+  // 1. Scratch (Draft) world — used by the admin to author the starting state.
+  await db.insert(schema.worlds).values({
+    id: scratchId,
+    label: campaign.worldLabel,
+    rngSeed: 1,
+    kind: 'draft',
+    displayName: campaign.displayName,
+    playerAgentId: campaign.playerId as string,
+  });
+  await insertSeedRows(db, campaign, scratchId);
+
+  // 2. Capture starting-state snapshot from the seed (so Load/Reset work
+  //    without an explicit save).
+  await writeStartingStateSnapshot(db, campaign, scratchId);
+
+  // 3. Live world — the running game. parentDraftId pairs it with the scratch.
   await db.insert(schema.worlds).values({
     id: W,
     label: campaign.worldLabel,
     rngSeed: 1,
+    kind: 'live',
+    parentDraftId: scratchId as string,
+    displayName: campaign.displayName,
     playerAgentId: campaign.playerId as string,
   });
 
-  await db
-    .insert(schema.locations)
-    .values(campaign.seed.locations.map((l) => ({ ...l, worldId: W })));
-
-  // `awake` is the runtime flag; campaign seeds never set it, so default
-  // every NPC to dormant. Always-on characters use `autonomous: true`.
-  await db
-    .insert(schema.agents)
-    .values(campaign.seed.agents.map((a) => ({ ...a, worldId: W, awake: false })));
-
-  // Insert items in two passes: those owned by location/agent first, then those owned by other items.
-  const flatItems = campaign.seed.items.filter((i) => i.ownerKind !== 'item');
-  const containerItems = campaign.seed.items.filter((i) => i.ownerKind === 'item');
-  if (flatItems.length > 0) {
-    await db.insert(schema.items).values(flatItems.map((i) => ({ ...i, worldId: W })));
-  }
-  if (containerItems.length > 0) {
-    await db.insert(schema.items).values(containerItems.map((i) => ({ ...i, worldId: W })));
-  }
-
-  await db.insert(schema.exits).values(
-    campaign.seed.exits.map((e) => ({
-      id: e.id,
-      worldId: W,
-      fromLocationId: e.from,
-      toLocationId: e.to,
-      direction: e.direction,
-      label: e.label,
-      locked: e.locked,
-      lockedByItemId: e.lockedByItem,
-    })),
-  );
+  await insertSeedRows(db, campaign, W);
 
   await ensureSystemAgent(db, W);
 }
