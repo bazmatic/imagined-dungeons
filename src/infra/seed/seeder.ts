@@ -1,26 +1,8 @@
 import type { Campaign } from '@core/domain/campaign';
 import { SYSTEM_AGENT_ID, type WorldId } from '@core/domain/ids';
-import { eq, inArray } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import type { DB } from '../db';
 import * as schema from '../schema';
-
-/**
- * Slice 4 introduced autonomous NPCs but the seed module is regenerated only
- * via `pnpm seed:gen`, and existing dev DBs were seeded before any NPC was
- * flagged autonomous. This migration brings any already-seeded world up to
- * the current `autonomous` roster without forcing a manual delete of
- * `imagined-dungeons.db`.
- *
- * Idempotent: re-running it on an already-correct DB is a no-op.
- */
-async function ensureAutonomousFlags(db: DB, campaign: Campaign): Promise<void> {
-  const targetIds = campaign.seed.agents.filter((a) => a.autonomous).map((a) => a.id);
-  if (targetIds.length === 0) return;
-  await db
-    .update(schema.agents)
-    .set({ autonomous: true })
-    .where(inArray(schema.agents.id, targetIds));
-}
 
 /**
  * Refresh agent short/long descriptions from the campaign seed when the stored
@@ -101,7 +83,6 @@ async function ensureSystemAgent(db: DB, worldId: WorldId): Promise<void> {
 export async function seedIfEmpty(db: DB, campaign: Campaign): Promise<void> {
   const existing = await db.select().from(schema.worlds);
   if (existing.length > 0) {
-    await ensureAutonomousFlags(db, campaign);
     await ensureAgentDescriptions(db, campaign);
     await ensureSystemAgent(db, campaign.worldId);
     return;
