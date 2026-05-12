@@ -2,6 +2,7 @@ import type { Agent, Item, Location } from '@core/domain/entities';
 import type { DomainEvent } from '@core/domain/events';
 import { asAgentId, asEventId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
 import { ActionKind, EventKind, OwnerKind } from '@core/domain/kinds';
+import { MemoryBuilderRepository } from '@infra/builder-memory-repository';
 import { MemoryRepository } from '@infra/memory-repository';
 import { describe, expect, it, vi } from 'vitest';
 import { makeFakeLanguageModel } from '../../../tests/helpers/fake-language-model';
@@ -253,6 +254,38 @@ describe('consequencesFor', () => {
     if (!a || a.kind !== ActionKind.UpdateDescription) throw new Error();
     expect(a.mood).toBeNull();
     expect(a.shortTermIntent).toBeNull();
+  });
+
+  it('writes updatedStorySoFar to world_lore when LLM returns one', async () => {
+    const repo = repoFor();
+    const builderRepo = new MemoryBuilderRepository();
+    const llm = makeFakeLanguageModel({
+      responder: () => ({
+        raw: '',
+        parsed: {
+          consequences: [],
+          updatedStorySoFar: 'The cultist guildmaster has fallen.',
+        },
+      }),
+    });
+    await consequencesFor([takeEvent], repo, llm, { builderRepo, worldId: W });
+    const lore = await builderRepo.readWorldLore(W);
+    expect(lore.storySoFar).toBe('The cultist guildmaster has fallen.');
+  });
+
+  it('leaves storySoFar unchanged when updatedStorySoFar is null', async () => {
+    const repo = repoFor();
+    const builderRepo = new MemoryBuilderRepository();
+    await builderRepo.writeWorldLore(W, { worldOverview: '', storySoFar: 'unchanged' });
+    const llm = makeFakeLanguageModel({
+      responder: () => ({
+        raw: '',
+        parsed: { consequences: [], updatedStorySoFar: null },
+      }),
+    });
+    await consequencesFor([takeEvent], repo, llm, { builderRepo, worldId: W });
+    const lore = await builderRepo.readWorldLore(W);
+    expect(lore.storySoFar).toBe('unchanged');
   });
 
   it('drops entries with both descriptions null and unresolvable refs', async () => {

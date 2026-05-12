@@ -1,7 +1,8 @@
+import type { BuilderRepository } from '@core/builder/repository';
 import type { Action, DescriptionTarget } from '@core/domain/actions';
 import type { Agent, Item, Location } from '@core/domain/entities';
 import type { DomainEvent } from '@core/domain/events';
-import { type AgentId, SYSTEM_AGENT_ID } from '@core/domain/ids';
+import { type AgentId, SYSTEM_AGENT_ID, type WorldId } from '@core/domain/ids';
 import { ActionKind, AttackOutcome, EventKind, OwnerKind } from '@core/domain/kinds';
 import { log } from '@core/log';
 import type { JsonSchema, LanguageModel } from './language-model';
@@ -60,6 +61,9 @@ const SYSTEM_PROMPT_LINES: readonly string[] = [
   "- A consequence must change SOMETHING — at least one of shortDescription, longDescription, mood, shortTermIntent must be non-null. (Empty string '' counts as a change for mood/shortTermIntent.)",
   '- Keep prose short, present tense, factual, and grounded in what actually happened in the events.',
   '- Maximum 3 entries in consequences.',
+  '',
+  'updatedStorySoFar:',
+  '- Only set `updatedStorySoFar` for events that meaningfully change the campaign — a major character dying, a quest resolving, a faction shifting. Routine moves, conversations, and inventory changes leave it null.',
 ];
 
 const SYSTEM_PROMPT = SYSTEM_PROMPT_LINES.join('\n');
@@ -72,8 +76,9 @@ const CONSEQUENCE_KINDS = [ActionKind.UpdateDescription] as const;
 export const CONSEQUENCE_SCHEMA: JsonSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['consequences'],
+  required: ['consequences', 'updatedStorySoFar'],
   properties: {
+    updatedStorySoFar: { type: ['string', 'null'] },
     consequences: {
       type: 'array',
       items: {
@@ -412,10 +417,16 @@ async function resolveTarget(
   return { kind: OwnerKind.Agent, id: r.agent.id };
 }
 
+export interface ConsequenceLoreSink {
+  readonly builderRepo: BuilderRepository;
+  readonly worldId: WorldId;
+}
+
 export async function consequencesFor(
   events: readonly DomainEvent[],
   repo: Repository,
   llm: LanguageModel | null,
+  lore?: ConsequenceLoreSink,
 ): Promise<readonly Action[]> {
   if (!llm) return [];
   if (events.length === 0) return [];
@@ -432,6 +443,21 @@ export async function consequencesFor(
   } catch (err) {
     log.warn(`[llm] consequence engine error: ${String(err)}`);
     return [];
+  }
+
+  if (lore && isRecord(parsed)) {
+    const updated = parsed.updatedStorySoFar;
+    if (updated !== null && typeof updated === 'string') {
+      try {
+        const current = await lore.builderRepo.readWorldLore(lore.worldId);
+        await lore.builderRepo.writeWorldLore(lore.worldId, {
+          worldOverview: current.worldOverview,
+          storySoFar: updated,
+        });
+      } catch (err) {
+        log.warn(`[consequence] failed to write updatedStorySoFar: ${String(err)}`);
+      }
+    }
   }
 
   const raws = parseResponse(parsed).slice(0, MAX_CONSEQUENCES_PER_PASS);

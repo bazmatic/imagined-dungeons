@@ -8,7 +8,7 @@ import { log } from '@core/log';
 import { runSpawnTickPass } from '@core/spawning/tick-pass';
 import type { PerceptionView } from '@core/spawning/triggers';
 import { dispatch } from './actions/registry';
-import { MAX_CONSEQUENCE_DEPTH, consequencesFor } from './consequences';
+import { type ConsequenceLoreSink, MAX_CONSEQUENCE_DEPTH, consequencesFor } from './consequences';
 import type { LanguageModel } from './language-model';
 import { decideNpcIntent } from './npc-mind';
 import { MAX_NPCS_PER_TICK, scheduleNpcs } from './npc-scheduler';
@@ -301,9 +301,10 @@ async function runConsequencePass(
   repo: Repository,
   llm: LanguageModel | null,
   depth: number,
+  lore: ConsequenceLoreSink | undefined,
 ): Promise<readonly DomainEvent[]> {
   if (depth > MAX_CONSEQUENCE_DEPTH) return [];
-  const actions: readonly Action[] = await consequencesFor(events, repo, llm);
+  const actions: readonly Action[] = await consequencesFor(events, repo, llm, lore);
   const out: DomainEvent[] = [];
   for (const action of actions) {
     const r = await dispatch(action, repo);
@@ -324,6 +325,19 @@ export async function runTick(
 ): Promise<TickResult> {
   const { parse, llm } = opts;
   const cap = opts.npcCap ?? MAX_NPCS_PER_TICK;
+
+  // The consequence engine writes durable lore (storySoFar) through the
+  // builder port. Only available when the caller supplied a builderRepo;
+  // legacy callers that omit it get the engine-only behaviour.
+  let loreSink: ConsequenceLoreSink | undefined;
+  if (opts.builderRepo) {
+    try {
+      const player = await repo.getAgent(playerId);
+      loreSink = { builderRepo: opts.builderRepo, worldId: player.worldId };
+    } catch {
+      loreSink = undefined;
+    }
+  }
 
   // 1. Player turn — but a "wait" intent is treated symmetrically with NPC
   //    waits: the orchestrator emits no event, no error, and skips the
@@ -353,7 +367,13 @@ export async function runTick(
     await wakeWitnessingNpcs(playerResult.events, repo);
 
     // 2. Consequence pass over the player's events (depth 0).
-    const postPlayerConsequences = await runConsequencePass(playerResult.events, repo, llm, 0);
+    const postPlayerConsequences = await runConsequencePass(
+      playerResult.events,
+      repo,
+      llm,
+      0,
+      loreSink,
+    );
     for (const ev of postPlayerConsequences) {
       events.push(ev);
       const line = await renderWitnessForPlayer(ev, playerId, repo);
@@ -419,7 +439,7 @@ export async function runTick(
   await wakeWitnessingNpcs(npcEvents, repo);
 
   // 6. Consequence pass over the NPC events only (depth 1).
-  const postNpcConsequences = await runConsequencePass(npcEvents, repo, llm, 1);
+  const postNpcConsequences = await runConsequencePass(npcEvents, repo, llm, 1, loreSink);
   for (const ev of postNpcConsequences) {
     events.push(ev);
     const line = await renderWitnessForPlayer(ev, playerId, repo);
