@@ -6,6 +6,7 @@ import { EntityHeader } from './EntityHeader';
 import { FootnoteBar } from './FootnoteBar';
 import { ManuscriptCard } from './ManuscriptCard';
 import { MetadataColumn } from './MetadataColumn';
+import { TagSelectorPanel } from './TagSelectorPanel';
 
 export interface AgentFormProps {
   readonly tree: WorldTree;
@@ -32,12 +33,15 @@ export function AgentForm({ tree, agentId, problemCount, onSaved, onDeleted }: A
           mood: ag.mood ?? '',
           goal: ag.goal ?? '',
           autonomous: ag.autonomous,
+          tags: ag.tags,
         }
       : null,
   );
   const [saving, setSaving] = useState(false);
 
   if (!ag || !v) return <p className="t-metadata">Agent not found.</p>;
+
+  const authoredTags = [...tree.tagLore.map((t) => t.tag)].sort((a, b) => a.localeCompare(b));
 
   const wordCount =
     v.longDescription.trim() === '' ? 0 : v.longDescription.trim().split(/\s+/).length;
@@ -64,6 +68,7 @@ export function AgentForm({ tree, agentId, problemCount, onSaved, onDeleted }: A
             mood: v.mood === '' ? null : v.mood,
             goal: v.goal === '' ? null : v.goal,
             autonomous: v.autonomous,
+            tags: v.tags,
           },
         },
       });
@@ -212,6 +217,14 @@ export function AgentForm({ tree, agentId, problemCount, onSaved, onDeleted }: A
               />
               Autonomous
             </label>
+          </div>
+          <div>
+            <span className="form-grid__field-label">Attributes &amp; Tags</span>
+            <TagSelectorPanel
+              tags={v.tags}
+              availableTags={authoredTags}
+              onChange={(next) => setV({ ...v, tags: next })}
+            />
           </div>
         </MetadataColumn>
       </div>

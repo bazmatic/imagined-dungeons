@@ -69,7 +69,7 @@ export const saveEntity = createServerFn({ method: 'POST' })
         ownerId: p.ownerId as string,
         weight: p.weight as number,
         hidden: Boolean(p.hidden),
-        tags: [],
+        tags: Array.isArray(p.tags) ? (p.tags as string[]) : [],
       });
     }
     return upsertAgentCore(repo, W, {
@@ -85,7 +85,7 @@ export const saveEntity = createServerFn({ method: 'POST' })
       mood: (p.mood as string | null) ?? null,
       goal: (p.goal as string | null) ?? null,
       autonomous: Boolean(p.autonomous),
-      tags: [],
+      tags: Array.isArray(p.tags) ? (p.tags as string[]) : [],
     });
   });
 

@@ -6,6 +6,7 @@ import { FootnoteBar } from './FootnoteBar';
 import { ManuscriptCard } from './ManuscriptCard';
 import { MetadataColumn } from './MetadataColumn';
 import { StarterItemsEditor } from './StarterItemsEditor';
+import { TagSelectorPanel } from './TagSelectorPanel';
 
 export interface TemplateFormProps {
   readonly tree: WorldTree;
@@ -34,12 +35,15 @@ export function TemplateForm({
           hp: tpl.hp,
           mood: tpl.mood ?? '',
           startingItems: tpl.startingItems,
+          tags: tpl.tags,
         }
       : null,
   );
   const [saving, setSaving] = useState(false);
 
   if (!tpl || !v) return <p className="t-metadata">Template not found.</p>;
+
+  const authoredTags = [...tree.tagLore.map((t) => t.tag)].sort((a, b) => a.localeCompare(b));
 
   const wordCount =
     v.longDescription.trim() === '' ? 0 : v.longDescription.trim().split(/\s+/).length;
@@ -61,6 +65,7 @@ export function TemplateForm({
             hp: v.hp,
             mood: v.mood === '' ? null : v.mood,
             startingItems: v.startingItems,
+            tags: v.tags,
           },
         },
       });
@@ -151,6 +156,14 @@ export function TemplateForm({
                 onChange={(e) => setV({ ...v, mood: e.target.value })}
               />
             </div>
+          </div>
+          <div>
+            <span className="form-grid__field-label">Attributes &amp; Tags</span>
+            <TagSelectorPanel
+              tags={v.tags}
+              availableTags={authoredTags}
+              onChange={(next) => setV({ ...v, tags: next })}
+            />
           </div>
         </MetadataColumn>
       </div>

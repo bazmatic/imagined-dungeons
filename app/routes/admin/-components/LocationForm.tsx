@@ -8,7 +8,7 @@ import { FootnoteBar } from './FootnoteBar';
 import { KeyVisualPanel } from './KeyVisualPanel';
 import { ManuscriptCard } from './ManuscriptCard';
 import { MetadataColumn } from './MetadataColumn';
-import { TagsPanel } from './TagsPanel';
+import { TagSelectorPanel } from './TagSelectorPanel';
 import { TriggersEditor } from './TriggersEditor';
 
 export interface LocationFormProps {
@@ -40,6 +40,8 @@ export function LocationForm({
   const [saving, setSaving] = useState(false);
 
   if (!loc || !v) return <p className="t-metadata">Location not found.</p>;
+
+  const authoredTags = [...tree.tagLore.map((t) => t.tag)].sort((a, b) => a.localeCompare(b));
 
   const wordCount =
     v.longDescription.trim() === '' ? 0 : v.longDescription.trim().split(/\s+/).length;
@@ -115,7 +117,11 @@ export function LocationForm({
           />
           <div>
             <span className="form-grid__field-label">Attributes &amp; Tags</span>
-            <TagsPanel tags={v.tags} onChange={(next) => setV({ ...v, tags: next })} />
+            <TagSelectorPanel
+              tags={v.tags}
+              availableTags={authoredTags}
+              onChange={(next) => setV({ ...v, tags: next })}
+            />
           </div>
         </MetadataColumn>
       </div>

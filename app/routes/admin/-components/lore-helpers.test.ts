@@ -37,7 +37,7 @@ function makeTree(partial: Partial<WorldTree>): WorldTree {
 }
 
 describe('collectLoreTags', () => {
-  it('unions tags from all entity types and TagLore, deduped and sorted', () => {
+  it('returns only authored tag_lore rows, deduped and sorted — entity tags are ignored', () => {
     const tree = makeTree({
       locations: [
         {
@@ -100,12 +100,23 @@ describe('collectLoreTags', () => {
         {
           id: 'tlr_x' as TagLoreId,
           worldId: W,
-          tag: 'orphan',
+          tag: 'authored-a',
+          title: '',
+          description: '',
+        },
+        {
+          id: 'tlr_y' as TagLoreId,
+          worldId: W,
+          tag: 'authored-b',
           title: '',
           description: '',
         },
       ],
     });
-    expect(collectLoreTags(tree)).toEqual(['cult', 'cursed', 'forest', 'orphan', 'wet']);
+    expect(collectLoreTags(tree)).toEqual(['authored-a', 'authored-b']);
+  });
+
+  it('returns an empty list when no tag_lore rows exist', () => {
+    expect(collectLoreTags(makeTree({}))).toEqual([]);
   });
 });

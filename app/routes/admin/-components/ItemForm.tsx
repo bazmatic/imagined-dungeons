@@ -7,6 +7,7 @@ import { EntityHeader } from './EntityHeader';
 import { FootnoteBar } from './FootnoteBar';
 import { ManuscriptCard } from './ManuscriptCard';
 import { MetadataColumn } from './MetadataColumn';
+import { TagSelectorPanel } from './TagSelectorPanel';
 
 type SimpleOwnerKind = typeof OwnerKind.Location | typeof OwnerKind.Agent;
 
@@ -42,12 +43,15 @@ export function ItemForm({
           ownerId: isNested ? '' : (item.owner.id as string),
           weight: item.weight,
           hidden: item.hidden,
+          tags: item.tags,
         }
       : null,
   );
   const [saving, setSaving] = useState(false);
 
   if (!item || !v) return <p className="t-metadata">Item not found.</p>;
+
+  const authoredTags = [...tree.tagLore.map((t) => t.tag)].sort((a, b) => a.localeCompare(b));
 
   const wordCount =
     v.longDescription.trim() === '' ? 0 : v.longDescription.trim().split(/\s+/).length;
@@ -71,6 +75,7 @@ export function ItemForm({
             ownerId: v.ownerId,
             weight: v.weight,
             hidden: v.hidden,
+            tags: v.tags,
           },
         },
       });
@@ -207,6 +212,14 @@ export function ItemForm({
               />
               Hidden
             </label>
+          </div>
+          <div>
+            <span className="form-grid__field-label">Attributes &amp; Tags</span>
+            <TagSelectorPanel
+              tags={v.tags}
+              availableTags={authoredTags}
+              onChange={(next) => setV({ ...v, tags: next })}
+            />
           </div>
         </MetadataColumn>
       </div>
