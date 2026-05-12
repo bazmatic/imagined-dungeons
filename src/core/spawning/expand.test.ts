@@ -34,4 +34,13 @@ describe('expandSpawn', () => {
     const ids = new Set(inserts.map((a) => a.id as string));
     expect(ids.size).toBe(4);
   });
+
+  it('copies template.tags onto the spawned agent insert', () => {
+    const tagged: MonsterTemplate = { ...tpl, tags: ['goblin', 'cult'] };
+    const out = expandSpawn({ template: tagged, locationId: asLocationId('loc_a'), count: 1 });
+    expect(out).toHaveLength(1);
+    const [first] = out;
+    if (!first) throw new Error('expected one insert');
+    expect(first.tags).toEqual(['goblin', 'cult']);
+  });
 });

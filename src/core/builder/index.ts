@@ -17,6 +17,8 @@ import type {
   UpsertLocationInput,
   UpsertLocationSpawnTriggerInput,
   UpsertMonsterTemplateInput,
+  UpsertTagLoreInput,
+  WorldLore,
   WorldTree,
 } from '@core/domain/builder-types';
 import type { Agent, Exit, Item, Location } from '@core/domain/entities';
@@ -27,6 +29,7 @@ import {
   type LocationId,
   type MonsterTemplateId,
   type SpawnTriggerId,
+  type TagLoreId,
   type WorldId,
   asWorldId,
 } from '@core/domain/ids';
@@ -89,14 +92,17 @@ export async function getWorldTree(
 ): Promise<Result<WorldTree, BuilderError>> {
   const s = await requireWorld(repo, id);
   if (!s.ok) return s;
-  const [locations, exits, items, agents, templates, triggers] = await Promise.all([
-    repo.listLocations(id),
-    repo.listExits(id),
-    repo.listItems(id),
-    repo.listAgents(id),
-    repo.listMonsterTemplates(id),
-    repo.listLocationSpawnTriggers(id),
-  ]);
+  const [locations, exits, items, agents, templates, triggers, worldLore, tagLore] =
+    await Promise.all([
+      repo.listLocations(id),
+      repo.listExits(id),
+      repo.listItems(id),
+      repo.listAgents(id),
+      repo.listMonsterTemplates(id),
+      repo.listLocationSpawnTriggers(id),
+      repo.readWorldLore(id),
+      repo.listTagLore(id),
+    ]);
   return Ok({
     summary: s.value,
     locations,
@@ -105,8 +111,8 @@ export async function getWorldTree(
     agents,
     templates,
     triggers,
-    worldLore: { worldId: id, worldOverview: '', storySoFar: '' },
-    tagLore: [],
+    worldLore,
+    tagLore,
   });
 }
 
@@ -242,6 +248,52 @@ export async function deleteLocationSpawnTrigger(
   return Ok(undefined);
 }
 
+export async function getWorldLore(
+  repo: BuilderRepository,
+  worldId: WorldId,
+): Promise<Result<WorldLore, BuilderError>> {
+  const s = await requireWorld(repo, worldId);
+  if (!s.ok) return s;
+  return Ok(await repo.readWorldLore(worldId));
+}
+
+export async function updateWorldLore(
+  repo: BuilderRepository,
+  worldId: WorldId,
+  patch: { worldOverview?: string; storySoFar?: string },
+): Promise<Result<void, BuilderError>> {
+  const gate = await requireDraft(repo, worldId);
+  if (!gate.ok) return gate;
+  const current = await repo.readWorldLore(worldId);
+  await repo.writeWorldLore(worldId, {
+    worldOverview: patch.worldOverview ?? current.worldOverview,
+    storySoFar: patch.storySoFar ?? current.storySoFar,
+  });
+  return Ok(undefined);
+}
+
+export async function upsertTagLore(
+  repo: BuilderRepository,
+  worldId: WorldId,
+  input: UpsertTagLoreInput,
+): Promise<Result<TagLoreId, BuilderError>> {
+  const gate = await requireDraft(repo, worldId);
+  if (!gate.ok) return gate;
+  await repo.upsertTagLore(worldId, input);
+  return Ok(input.id);
+}
+
+export async function deleteTagLore(
+  repo: BuilderRepository,
+  worldId: WorldId,
+  id: TagLoreId,
+): Promise<Result<void, BuilderError>> {
+  const gate = await requireDraft(repo, worldId);
+  if (!gate.ok) return gate;
+  await repo.deleteTagLore(worldId, id);
+  return Ok(undefined);
+}
+
 export async function listWorlds(repo: BuilderRepository) {
   return repo.listWorlds();
 }
@@ -341,6 +393,22 @@ async function copyTreeIntoWorld(
     await repo.upsertMonsterTemplate(destWorldId, asTemplateInput(t));
   for (const trg of source.triggers)
     await repo.upsertLocationSpawnTrigger(destWorldId, asTriggerInput(trg));
+  await repo.writeWorldLore(destWorldId, {
+    worldOverview: source.worldLore.worldOverview,
+    storySoFar: source.worldLore.storySoFar,
+  });
+  const existingTagLore = await repo.listTagLore(destWorldId);
+  for (const row of existingTagLore) {
+    await repo.deleteTagLore(destWorldId, row.id);
+  }
+  for (const row of source.tagLore) {
+    await repo.upsertTagLore(destWorldId, {
+      id: row.id,
+      tag: row.tag,
+      title: row.title,
+      description: row.description,
+    });
+  }
 }
 
 interface InitialSpawnResult {

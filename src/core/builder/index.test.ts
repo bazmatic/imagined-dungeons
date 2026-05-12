@@ -9,6 +9,7 @@ import {
   asLocationId,
   asMonsterTemplateId,
   asSpawnTriggerId,
+  asTagLoreId,
   asWorldId,
 } from '@core/domain/ids';
 import { MemoryBuilderRepository } from '@infra/builder-memory-repository';
@@ -18,13 +19,17 @@ import {
   createDraft,
   deleteLocation,
   deleteLocationSpawnTrigger,
+  deleteTagLore,
+  getWorldLore,
   getWorldTree,
   publish,
   resetLiveToDraft,
+  updateWorldLore,
   upsertAgent,
   upsertLocation,
   upsertLocationSpawnTrigger,
   upsertMonsterTemplate,
+  upsertTagLore,
 } from './index';
 
 const sampleTemplateInput = () => ({
@@ -450,6 +455,111 @@ describe('resetLiveToDraft', () => {
     const [first2] = liveLocs;
     if (!first2) throw new Error('expected loc');
     expect(first2.label).toBe('A');
+  });
+
+  it('builder facade — lore: getWorldLore returns defaults for a fresh draft', async () => {
+    const repo = new MemoryBuilderRepository();
+    const created = await createDraft(repo, { displayName: 'D', label: 'L' });
+    if (!created.ok) throw new Error('create failed');
+    const draftId = created.value;
+    const r = await getWorldLore(repo, draftId);
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.value).toEqual({
+        worldId: draftId,
+        worldOverview: '',
+        storySoFar: '',
+      });
+    }
+  });
+
+  it('builder facade — lore: updateWorldLore round-trips on a draft', async () => {
+    const repo = new MemoryBuilderRepository();
+    const created = await createDraft(repo, { displayName: 'D', label: 'L' });
+    if (!created.ok) throw new Error('create failed');
+    const draftId = created.value;
+    const upd = await updateWorldLore(repo, draftId, {
+      worldOverview: 'a noir city',
+      storySoFar: 'the lights flicker',
+    });
+    expect(upd.ok).toBe(true);
+    const got = await getWorldLore(repo, draftId);
+    if (got.ok) {
+      expect(got.value.worldOverview).toBe('a noir city');
+      expect(got.value.storySoFar).toBe('the lights flicker');
+    }
+  });
+
+  it('builder facade — lore: updateWorldLore preserves the other field when only one is patched', async () => {
+    const repo = new MemoryBuilderRepository();
+    const created = await createDraft(repo, { displayName: 'D', label: 'L' });
+    if (!created.ok) throw new Error('create failed');
+    const draftId = created.value;
+    await updateWorldLore(repo, draftId, { worldOverview: 'a', storySoFar: 'b' });
+    await updateWorldLore(repo, draftId, { worldOverview: 'A' });
+    const got = await getWorldLore(repo, draftId);
+    if (got.ok) {
+      expect(got.value.worldOverview).toBe('A');
+      expect(got.value.storySoFar).toBe('b');
+    }
+  });
+
+  it('builder facade — lore: updateWorldLore is rejected on a live world via requireDraft', async () => {
+    const repo = new MemoryBuilderRepository();
+    const liveId = asWorldId('w_live_lore');
+    await repo.createWorld({
+      id: liveId,
+      kind: WorldKind.Live,
+      label: 'L',
+      displayName: 'L',
+      parentDraftId: null,
+      playerAgentId: null,
+      coverImageUrl: null,
+    });
+    const r = await updateWorldLore(repo, liveId, { worldOverview: 'x' });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error.kind).toBe(BuilderErrorKind.WorldKindMismatch);
+  });
+
+  it('builder facade — lore: upsertTagLore is visible in getWorldTree.tagLore', async () => {
+    const repo = new MemoryBuilderRepository();
+    const created = await createDraft(repo, { displayName: 'D', label: 'L' });
+    if (!created.ok) throw new Error('create failed');
+    const draftId = created.value;
+    const tagId = asTagLoreId('tlr_cult');
+    const upserted = await upsertTagLore(repo, draftId, {
+      id: tagId,
+      tag: 'cult',
+      title: 'Cult of Embers',
+      description: 'A secretive faction…',
+    });
+    expect(upserted.ok).toBe(true);
+    const tree = await getWorldTree(repo, draftId);
+    expect(tree.ok).toBe(true);
+    if (tree.ok) {
+      expect(tree.value.tagLore).toHaveLength(1);
+      const [first] = tree.value.tagLore;
+      if (!first) throw new Error('expected one tag lore');
+      expect(first.tag).toBe('cult');
+    }
+  });
+
+  it('builder facade — lore: deleteTagLore removes the row', async () => {
+    const repo = new MemoryBuilderRepository();
+    const created = await createDraft(repo, { displayName: 'D', label: 'L' });
+    if (!created.ok) throw new Error('create failed');
+    const draftId = created.value;
+    const tagId = asTagLoreId('tlr_one');
+    await upsertTagLore(repo, draftId, {
+      id: tagId,
+      tag: 'x',
+      title: 't',
+      description: 'd',
+    });
+    const r = await deleteTagLore(repo, draftId, tagId);
+    expect(r.ok).toBe(true);
+    const tree = await getWorldTree(repo, draftId);
+    if (tree.ok) expect(tree.value.tagLore).toHaveLength(0);
   });
 
   it('resetLiveToDraft removes templates and triggers that the draft no longer has', async () => {
