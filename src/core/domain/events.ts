@@ -61,7 +61,8 @@ export type DomainEvent =
       templateId: MonsterTemplateId;
     })
   | (BaseEvent & { kind: 'equip'; itemId: ItemId; manner: string })
-  | (BaseEvent & { kind: 'unequip'; itemId: ItemId; manner: string });
+  | (BaseEvent & { kind: 'unequip'; itemId: ItemId; manner: string })
+  | (BaseEvent & { kind: 'reveal'; itemId: ItemId; locationId: LocationId });
 
 export const NARRATED_EVENT_KINDS: ReadonlySet<EventKind> = new Set<EventKind>([
   EventKind.Speak,

@@ -141,6 +141,13 @@ export async function handleSearch(
   const locationId: LocationId = view.location.id;
   const witnesses: readonly AgentId[] = view.agents.map((a) => a.id).concat(action.actorId);
 
+  // Hidden items at this location are NOT in view.items (perceive filters
+  // them). We still surface them to the discovery LLM under a separate
+  // 'undiscovered' list so a careful search query can match — and when it
+  // does, the match path below flips hidden=false to reveal them.
+  const allItemsHere = await repo.itemsOwnedBy({ kind: OwnerKind.Location, id: locationId });
+  const undiscoveredItems = allItemsHere.filter((i) => i.hidden);
+
   // Lore context is built from the current location's tags. Search has no
   // subject (it's a sweep of the room), so `subject` is null on the request.
   const loreContext = await loadLoreContext(builderRepo, repo, worldId, {
@@ -156,6 +163,7 @@ export async function handleSearch(
     loreContext,
     visibleItems: view.items,
     visibleAgents: view.agents,
+    undiscoveredItems,
   };
 
   const response = await runDiscovery(request, llm);
@@ -168,18 +176,35 @@ export async function handleSearch(
     createdAt: new Date(),
   };
 
-  // 1. MATCH item — only honour the match if the id is in the visible list.
+  // 1. MATCH item — accept a match against the visible list OR against the
+  // undiscovered (hidden) list at this location. A hidden match triggers a
+  // reveal: we flip hidden=false so the item shows up in perception going
+  // forward, and route through the normal look path to render its
+  // description right now.
   if (response.matchedItemId !== null) {
-    const matched = findItemById(view.items, response.matchedItemId);
-    if (matched) {
+    const matchedVisible = findItemById(view.items, response.matchedItemId);
+    if (matchedVisible) {
       const event: DomainEvent = {
         ...baseEvent,
         kind: EventKind.Look,
         locationId,
-        target: { kind: ExaminableKind.Item, id: matched.id },
+        target: { kind: ExaminableKind.Item, id: matchedVisible.id },
       };
       await repo.appendEvent(event);
-      return Ok({ render: renderLookTarget(matched), event });
+      return Ok({ render: renderLookTarget(matchedVisible), event });
+    }
+    const matchedHidden = findItemById(undiscoveredItems, response.matchedItemId);
+    if (matchedHidden) {
+      await repo.setItemHidden(matchedHidden.id, false);
+      const revealed: Item = { ...matchedHidden, hidden: false };
+      const event: DomainEvent = {
+        ...baseEvent,
+        kind: EventKind.Look,
+        locationId,
+        target: { kind: ExaminableKind.Item, id: revealed.id },
+      };
+      await repo.appendEvent(event);
+      return Ok({ render: renderLookTarget(revealed), event });
     }
     // Hallucinated id — silently fall through to narration.
   }

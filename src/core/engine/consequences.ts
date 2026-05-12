@@ -31,7 +31,13 @@ const SYSTEM_PROMPT_LINES: readonly string[] = [
   '',
   "Given a batch of events that just happened, decide whether the world's stored short/long descriptions should change to reflect those events durably, and whether any agent's mood should be updated. (Agents manage their own shortTermIntent — DO NOT touch it here.)",
   '',
-  'You can only emit `update_description` actions. Be conservative — most batches need no consequences. Reply with a JSON object containing a `consequences` array (possibly empty).',
+  'You can emit two kinds of consequence actions: `update_description` (mutate a stored description / mood) and `reveal_item` (flip a hidden item to visible). Be conservative — most batches need no consequences. Reply with a JSON object containing a `consequences` array (possibly empty).',
+  '',
+  'When to emit `reveal_item`:',
+  '- The player disturbed, broke, or rearranged the scene in a way that would expose something previously hidden (smashing a chest, knocking over a pile, lifting a tapestry, kicking aside a rug, lighting a dark corner).',
+  "- The player's narrated action contextually suggests they would now notice a specific hidden item that exists at the location.",
+  '- For a reveal action, set kind="reveal_item", targetRef = the natural-language name of the hidden item the engine should reveal, targetKind="item", and the description / mood / shortTermIntent fields all null. The engine resolves targetRef against the currently-hidden items at the locations where the events happened.',
+  '- Do NOT use reveal_item when a normal search already matched the hidden item; the search handler reveals it directly. Reveal is for INDIRECT discoveries — actions that incidentally expose something.',
   '',
   'When to emit a description update:',
   '- Only update a description for DURABLE changes — alterations that will still be true an hour from now even if everyone leaves and comes back. Examples: an attack leaves wreckage, blood, or scarring; a key item is destroyed; fire damage marks a wall; a permanent fixture has been added or removed.',
@@ -71,7 +77,7 @@ const SYSTEM_PROMPT = SYSTEM_PROMPT_LINES.join('\n');
 export const CONSEQUENCE_SCHEMA_NAME = 'ConsequenceResponse';
 
 const TARGET_KINDS = [OwnerKind.Location, OwnerKind.Item, OwnerKind.Agent] as const;
-const CONSEQUENCE_KINDS = [ActionKind.UpdateDescription] as const;
+const CONSEQUENCE_KINDS = [ActionKind.UpdateDescription, ActionKind.RevealItem] as const;
 
 export const CONSEQUENCE_SCHEMA: JsonSchema = {
   type: 'object',
@@ -113,15 +119,20 @@ export const MAX_CONSEQUENCES_PER_PASS = 3;
 /** Cap on consequence-pass recursion depth (§9 termination). */
 export const MAX_CONSEQUENCE_DEPTH = 1;
 
-interface RawConsequence {
-  readonly kind: 'update_description';
-  readonly targetKind: 'location' | 'item' | 'agent';
-  readonly targetRef: string;
-  readonly shortDescription: string | null;
-  readonly longDescription: string | null;
-  readonly mood: string | null;
-  readonly shortTermIntent: string | null;
-}
+type RawConsequence =
+  | {
+      readonly kind: 'update_description';
+      readonly targetKind: 'location' | 'item' | 'agent';
+      readonly targetRef: string;
+      readonly shortDescription: string | null;
+      readonly longDescription: string | null;
+      readonly mood: string | null;
+      readonly shortTermIntent: string | null;
+    }
+  | {
+      readonly kind: 'reveal_item';
+      readonly targetRef: string;
+    };
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -133,6 +144,12 @@ function parseResponse(parsed: unknown): readonly RawConsequence[] {
   const out: RawConsequence[] = [];
   for (const entry of list) {
     if (!isRecord(entry)) continue;
+    if (entry.kind === ActionKind.RevealItem) {
+      const targetRef = entry.targetRef;
+      if (typeof targetRef !== 'string' || targetRef.length === 0) continue;
+      out.push({ kind: ActionKind.RevealItem, targetRef });
+      continue;
+    }
     if (entry.kind !== ActionKind.UpdateDescription) continue;
     const targetKind = entry.targetKind;
     if (
@@ -271,6 +288,14 @@ async function summarise(event: DomainEvent, repo: Repository): Promise<string> 
         return `${actor} unequipped an item`;
       }
     }
+    case EventKind.Reveal: {
+      try {
+        const item = await repo.getItem(event.itemId);
+        return `${item.label} became visible`;
+      } catch {
+        return 'a hidden item became visible';
+      }
+    }
   }
 }
 
@@ -401,7 +426,7 @@ async function buildUserPrompt(events: readonly DomainEvent[], repo: Repository)
 }
 
 async function resolveTarget(
-  raw: RawConsequence,
+  raw: Extract<RawConsequence, { kind: 'update_description' }>,
   events: readonly DomainEvent[],
   repo: Repository,
 ): Promise<DescriptionTarget | null> {
@@ -481,6 +506,12 @@ export async function consequencesFor(
   const raws = parseResponse(parsed).slice(0, MAX_CONSEQUENCES_PER_PASS);
   const actions: Action[] = [];
   for (const raw of raws) {
+    if (raw.kind === ActionKind.RevealItem) {
+      const item = await resolveHiddenItem(raw.targetRef, events, repo);
+      if (!item) continue;
+      actions.push({ kind: ActionKind.RevealItem, actorId: SYSTEM_AGENT_ID, itemId: item.id });
+      continue;
+    }
     const target = await resolveTarget(raw, events, repo);
     if (!target) continue;
     actions.push({
@@ -494,4 +525,28 @@ export async function consequencesFor(
     });
   }
   return actions;
+}
+
+/**
+ * Look up a hidden item the consequence engine asked to reveal. Searches
+ * the *locations involved* in the event batch — typically the rooms where
+ * something happened — and matches by label. Returns the first hidden
+ * item whose label is plausibly the target. Visible items are excluded
+ * (reveal is a no-op for them; the registry handler will Err if asked).
+ */
+async function resolveHiddenItem(
+  targetRef: string,
+  events: readonly DomainEvent[],
+  repo: Repository,
+): Promise<Item | null> {
+  const locs = await locationsInvolved(events, repo);
+  const candidates: Item[] = [];
+  for (const loc of locs) {
+    const at = await repo.itemsOwnedBy({ kind: OwnerKind.Location, id: loc.id });
+    for (const it of at) {
+      if (it.hidden) candidates.push(it);
+    }
+  }
+  const r = resolveItem(targetRef, candidates);
+  return r.ok ? r.item : null;
 }

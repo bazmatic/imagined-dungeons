@@ -13,6 +13,7 @@ import { handleGive } from './give';
 import { handleInventory } from './inventory';
 import { handleLook } from './look';
 import { handleMove } from './move';
+import { handleRevealItem } from './reveal-item';
 import { handleSearch } from './search';
 import { handleSpeak } from './speak';
 import { handleTake } from './take';
@@ -72,5 +73,7 @@ export async function dispatch(
       return handleEquip(action, repo);
     case ActionKind.Unequip:
       return handleUnequip(action, repo);
+    case ActionKind.RevealItem:
+      return handleRevealItem(action, repo);
   }
 }

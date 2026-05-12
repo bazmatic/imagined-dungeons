@@ -102,6 +102,10 @@ export function renderUnequipObserved(actor: Agent, item: Item, manner: string):
   return `${actor.label} ${manner}s the ${item.label}.`;
 }
 
+export function renderRevealObserved(item: Item): string {
+  return `You spot ${item.label} you hadn't noticed before.`;
+}
+
 export function renderInventory(items: readonly Item[]): string {
   if (items.length === 0) return 'You are carrying nothing.';
   const equipped = items.filter((i) => i.equipped);

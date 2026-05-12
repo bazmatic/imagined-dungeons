@@ -128,6 +128,14 @@ export interface DiscoveryRequest {
   readonly loreContext: LoreContext;
   readonly visibleItems: readonly Item[];
   readonly visibleAgents: readonly Agent[];
+  /**
+   * Items at this location with `hidden: true`. The player can't see them
+   * via perception, but a careful search may turn them up. The discovery
+   * LLM can match these via `matchedItemId` when the query indicates the
+   * player is specifically searching for one; the search handler then
+   * flips the hidden flag and routes through the normal look path.
+   */
+  readonly undiscoveredItems: readonly Item[];
 }
 
 export interface DiscoveryResponse {

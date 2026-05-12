@@ -145,6 +145,8 @@ function summariseEvent(event: DomainEvent): string {
       return `${event.actorId} ${event.manner} ${event.itemId}`;
     case EventKind.Unequip:
       return `${event.actorId} ${event.manner} ${event.itemId}`;
+    case EventKind.Reveal:
+      return `${event.itemId} revealed at ${event.locationId}`;
   }
 }
 

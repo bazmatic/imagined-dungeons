@@ -24,6 +24,12 @@ export const ActionKind = {
   Search: 'search',
   Equip: 'equip',
   Unequip: 'unequip',
+  /**
+   * System-only: the consequence engine emits this to flip an item's
+   * `hidden` flag from true to false, making it visible to perceive().
+   * Never produced by player or NPC parsing.
+   */
+  RevealItem: 'reveal_item',
 } as const;
 export type ActionKind = (typeof ActionKind)[keyof typeof ActionKind];
 
@@ -61,6 +67,7 @@ export const EventKind = {
   AgentSpawned: 'agent_spawned',
   Equip: 'equip',
   Unequip: 'unequip',
+  Reveal: 'reveal',
 } as const;
 export type EventKind = (typeof EventKind)[keyof typeof EventKind];
 

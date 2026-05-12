@@ -30,7 +30,7 @@ const SYSTEM_PROMPT_LINES: readonly string[] = [
   '',
   'The player has issued a look or search query that did not match anything obvious. Your job is to decide what they perceive, choosing ONE of four valid outcomes:',
   '',
-  '1. MATCH — if their query clearly refers to one of the visible items or agents listed below, return its id in `matchedItemId` or `matchedAgentId`. Leave `narration` empty and the other fields null. The engine will then route through the normal `look <entity>` path and show the authored description.',
+  '1. MATCH — if their query clearly refers to one of the visible items or agents listed below, OR to one of the HIDDEN items at the location (only if the query specifically describes that hidden item), return its id in `matchedItemId` or `matchedAgentId`. Leave `narration` empty and the other fields null. The engine will then route through the normal `look <entity>` path; if a hidden item was matched, it is revealed for future turns.',
   '2. NARRATE — pure flavour. Describe what the player perceives but do not introduce any new persistent entity. Set `narration` to a short, grounded sentence or two. Leave all other fields null.',
   '3. SPAWN ITEM — invent a small, plausible new item that fits the location and the world. Populate `spawnedItem` with a complete UpsertItemInput-shaped object and write narration that introduces it.',
   '4. SPAWN AGENT — invent a small, plausible new agent (a creature, a passer-by, a member of the staff or faction the location is known for) that fits the location and world. Populate `spawnedAgent` with a complete UpsertAgentInput-shaped object and write narration that introduces them.',
@@ -189,6 +189,16 @@ function buildUserPrompt(req: DiscoveryRequest): string {
   } else {
     for (const a of req.visibleAgents) {
       lines.push(`- ${a.id} | ${a.label} — ${a.shortDescription}`);
+    }
+  }
+
+  if (req.undiscoveredItems.length > 0) {
+    lines.push('');
+    lines.push(
+      "Hidden items at this location (the player cannot see these unless they search for them — match one via matchedItemId ONLY if the player's query specifically describes or asks for it; do NOT spawn a duplicate):",
+    );
+    for (const it of req.undiscoveredItems) {
+      lines.push(`- ${it.id} | ${it.label} — ${it.shortDescription}`);
     }
   }
 

@@ -22,6 +22,14 @@ export interface Repository {
    * may be equipped.
    */
   setItemEquipped(item: ItemId, equipped: boolean): Promise<void>;
+  /**
+   * Runtime visibility toggle. Authors mark some items `hidden: true` so the
+   * player doesn't see them in perceive() — the player has to search,
+   * disturb something, or otherwise be made aware. This flag is flipped by
+   * the search handler when discovery matches a hidden item, and by the
+   * consequence engine's `reveal_item` action.
+   */
+  setItemHidden(item: ItemId, hidden: boolean): Promise<void>;
   setAgentHp(id: AgentId, hp: number): Promise<void>;
   /**
    * Toggle the runtime "in the scene" flag. The scheduler ticks any agent

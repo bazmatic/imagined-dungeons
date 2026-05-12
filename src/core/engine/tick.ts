@@ -26,6 +26,7 @@ import {
   renderLook,
   renderLookObserved,
   renderMoveObserved,
+  renderRevealObserved,
   renderTakeObserved,
   renderUnequipObserved,
 } from './templates';
@@ -204,6 +205,14 @@ async function renderWitnessForPlayer(
       try {
         const item = await repo.getItem(event.itemId);
         return renderUnequipObserved(actor, item, event.manner);
+      } catch {
+        return null;
+      }
+    }
+    case EventKind.Reveal: {
+      try {
+        const item = await repo.getItem(event.itemId);
+        return renderRevealObserved(item);
       } catch {
         return null;
       }

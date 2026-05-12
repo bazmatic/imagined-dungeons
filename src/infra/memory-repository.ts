@@ -90,6 +90,11 @@ export class MemoryRepository implements Repository {
     this.items.set(id, { ...i, equipped });
   }
 
+  async setItemHidden(id: ItemId, hidden: boolean): Promise<void> {
+    const i = await this.getItem(id);
+    this.items.set(id, { ...i, hidden });
+  }
+
   async setAgentHp(id: AgentId, hp: number): Promise<void> {
     const a = await this.getAgent(id);
     this.agents.set(id, { ...a, hp });

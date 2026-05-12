@@ -276,6 +276,14 @@ async function summariseEvent(
         return `${actorLabel} ${event.manner} something`;
       }
     }
+    case EventKind.Reveal: {
+      try {
+        const item = await repo.getItem(event.itemId);
+        return `${item.label} became visible nearby`;
+      } catch {
+        return 'something previously hidden became visible nearby';
+      }
+    }
   }
 }
 
