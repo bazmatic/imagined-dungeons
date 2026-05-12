@@ -3,13 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22.0.0 <23"
+  },
   "pnpm": {
     "onlyBuiltDependencies": ["better-sqlite3", "esbuild", "@biomejs/biome"]
   },
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
-    "start": "node .output/server/index.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
