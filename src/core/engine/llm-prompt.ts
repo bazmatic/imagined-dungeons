@@ -75,9 +75,10 @@ Available actions:
   Example "bribe the guard with a gold coin" -> { "kind":"speak", "targetAgentRef":"guard", "utterance":"Would a gold coin help speed things along?" }.
   Example "order a drink" (a bartender is present) -> { "kind":"speak", "targetAgentRef":"bartender", "utterance":"I'd like a drink, please." }.
 
-- emote: a physical action the actor performs. This is the catch-all for any bodily action that doesn't have a dedicated verb above — gestures and expressions (wave, grin, shrug, shake their head), but ALSO actions that involve interacting with objects, parts of the environment, or oneself in ways the engine doesn't model as a state change ("drink some spirit", "take a swig of the bottle", "kick the door", "stretch", "rub their eyes", "pour a glass", "tap on the table", "draw a sword", "sigh deeply", "sit down on the stool"). The renderer turns the emoteDescription into prose; no other entity state changes.
-  Use emote whenever the input describes a physical thing the actor does that isn't covered by move/look/search/take/drop/give/inventory/speak/attack. Prefer emote over unknown for any phrasing that names an action — even ambitious ones like "drink the spirit" or "swing from the chandelier".
-  Set: kind="emote", emoteDescription as a short verb phrase in the BASE form, third-person infinitive (no trailing 's'): "wave", "drink some spirit", "take a swig of the bottle", "shake their head", "draw a sword" — NOT "waves"/"drinks"/"shakes". The renderer conjugates for third-person observers.
+- emote: a physical action the actor performs. This is the catch-all for any bodily action that doesn't have a dedicated verb above — gestures and expressions (wave, grin, shrug, shake their head), but ALSO actions involving objects the actor can plausibly access: drinking, eating, putting on / taking off clothing or gear, sitting, drawing weapons, opening doors that aren't locked, kicking, pouring, lighting, breaking, reading, writing, kissing, hugging, dancing, etc. The renderer turns the emoteDescription into prose; the engine doesn't track separate "worn" or "wielded" or "seated" states, so these are narrated, not mechanical.
+  Use emote whenever the input describes a physical thing the actor does that isn't covered by move/look/search/take/drop/give/inventory/speak/attack. Prefer emote over impossible for any phrasing where the action is plausible for the actor's body and the materials at hand — and over unknown for any action attempt at all.
+  Crucially: actions involving items the actor is HOLDING (in inventory) are emote, not impossible. Holding a thing is how you wear it, read it, drink from it, use it, put it on. Do not reject "wear/put on/equip/read/use/light/pour from <item the actor holds>" as impossible — these are emotes.
+  Set: kind="emote", emoteDescription as a short verb phrase in the BASE form, third-person infinitive (no trailing 's'): "wave", "drink some spirit", "put on the fireproof cloak", "shake their head", "draw a sword", "light the lantern" — NOT "waves"/"drinks"/"puts". The renderer conjugates for third-person observers.
   Optionally set targetAgentRef to direct the emote at someone in the room (e.g. "wave at Spark"). Otherwise targetAgentRef=null.
   All other fields null.
   Example "wave at Spark" -> { "kind":"emote", "targetAgentRef":"Spark", "emoteDescription":"wave" }.
@@ -86,6 +87,12 @@ Available actions:
   Example "take a swig of the bottle" -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"take a swig of the bottle" }.
   Example "I sit down on the stool" -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"sit down on the stool" }.
   Example "kick the door" -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"kick the door" }.
+  Example "wear the cloak" (actor holds the cloak) -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"put on the cloak" }.
+  Example "put on the fireproof cloak" -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"put on the fireproof cloak" }.
+  Example "equip the sword" -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"draw and ready the sword" }.
+  Example "take off the helmet" -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"take off the helmet" }.
+  Example "read the fire map" (actor holds it) -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"read the fire map" }.
+  Example "light the lantern" (actor holds it) -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"light the lantern" }.
   (Remember to fill every other field with null, per the output shape.)
 
 - attack: attack another agent in the location.
@@ -94,13 +101,18 @@ Available actions:
   Example "attack the goblin" -> { "kind":"attack", "direction":null, "targetKind":null, "targetRef":null, "itemRef":null, "targetAgentRef":"goblin", "utterance":null, "reason":null }.
   Example "kill spark" -> { "kind":"attack", "direction":null, "targetKind":null, "targetRef":null, "itemRef":null, "targetAgentRef":"spark", "utterance":null, "reason":null }.
 
-- impossible: the input describes an action the actor CANNOT perform. Use this when:
-    • the action requires capabilities the actor lacks (a non-spellcaster trying to cast a spell, a wingless humanoid trying to fly, an empty-handed actor trying to drink from a glass that isn't there);
-    • the action targets something not present in the scene (drink wine when there's no wine, give a coin you don't have);
-    • the action requires a precondition the actor hasn't met (open a locked door without the key, climb a wall too sheer to climb);
-    • the action is unfit for the actor's body or situation (a human reading the mind of an animal, a child lifting a great anvil).
-  Reason should be a short, in-fiction explanation aimed at the actor: "You have no wings — you can't fly.", "There's no glass in front of you.", "The door is locked.", "You don't know any spells.". The renderer surfaces this verbatim, so phrase it as direct narration.
-  Prefer emote when the action is unusual but PLAUSIBLE for the actor (drinking the bottle they hold, sitting on a stool, drawing a sword they carry). Prefer impossible when the action is physically or contextually unworkable.
+- impossible: the input describes an action the actor CANNOT perform. The bar for impossible is HIGH — only use it when:
+    • the action requires capabilities the actor lacks that no sensible person could improvise (a wingless humanoid trying to fly, a non-spellcaster casting a fireball, a mortal trying to teleport);
+    • the action targets something genuinely not present (drink wine when no wine exists in the location or in inventory, give a coin you don't have);
+    • the action requires a SPECIFIC precondition the actor hasn't met that the world clearly enforces (open a door the description says is locked, without the key);
+    • the action is patently absurd for the actor's body or situation (a human reading the mind of an animal, a child single-handedly lifting a great anvil).
+  Do NOT use impossible for:
+    • actions involving items the actor is carrying (wearing them, reading them, using them, drinking from them — these are emote);
+    • actions whose mechanical effect the engine doesn't model (sitting, dancing, kissing, hugging — emote, narrated);
+    • actions that are merely unusual or clever rather than physically blocked (climbing a regular crate, pushing furniture, peeking through a window — emote);
+    • social or transactional asks (buying, ordering, requesting — speak).
+  Reason should be a short, in-fiction explanation aimed at the actor: "You have no wings — you can't fly.", "There's no wine here.", "The door is locked.", "You don't know any spells.". The renderer surfaces this verbatim, so phrase it as direct narration.
+  When in doubt, prefer emote. Impossible is for clear hard blocks, not for "the engine doesn't have a verb for that".
   Example "fly to the moon" -> { "kind":"impossible", "reason":"You have no way to fly — your feet stay on the ground." }.
   Example "drink the wine" when no wine is present -> { "kind":"impossible", "reason":"There's no wine here." }.
   Example "open the locked door" without a key -> { "kind":"impossible", "reason":"The door is locked. You'll need a key or another way in." }.
