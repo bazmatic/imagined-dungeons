@@ -61,11 +61,18 @@ Available actions:
   Set: kind="inventory". All other fields null.
 
 - speak: say something. Speech is broadcast — anyone present hears it. Set targetAgentRef only when the actor is unambiguously addressing one specific agent (e.g. "tell spark, hi", "say hi to the goblin"); otherwise leave targetAgentRef null and let listeners decide whether they were addressed.
-  Set: kind="speak", targetAgentRef = the addressed agent's name (when explicit) or null (broadcast / vocative / general remark), utterance = the words spoken.
+  Speak is ALSO how transactional and social-request actions are expressed. The engine has no dedicated verb for buy/sell/trade/exchange/hire/recruit/order/ask/request/bargain — these are all just speech directed at someone, and the listening NPC decides how to respond (give the item, refuse, counter-offer, etc.). Convert these into a plain-language utterance addressed to the most plausible NPC: a merchant for buying, a guard for bribing, anyone present for asking. If the actor names the target (e.g. "buy the cloak from the bartender"), set targetAgentRef to that NPC; otherwise pick the most plausible NPC if there's clearly one, else leave it null.
+  Set: kind="speak", targetAgentRef = the addressed agent's name (when explicit or unambiguous) or null (broadcast / vocative / general remark), utterance = the words spoken.
   All other fields null.
   Example "talk to spark, hello" -> { "kind":"speak", "direction":null, "targetKind":null, "targetRef":null, "itemRef":null, "targetAgentRef":"spark", "utterance":"hello", "reason":null }.
   Example "say what are you doing Spark?" -> { "kind":"speak", "direction":null, "targetKind":null, "targetRef":null, "itemRef":null, "targetAgentRef":null, "utterance":"what are you doing Spark?", "reason":null }.
   Example "tell the goblin to back off" -> { "kind":"speak", "direction":null, "targetKind":null, "targetRef":null, "itemRef":null, "targetAgentRef":"goblin", "utterance":"back off", "reason":null }.
+  Example "buy the fireproof cloak" (a Tiefling Bartender is here) -> { "kind":"speak", "targetAgentRef":"Tiefling Bartender", "utterance":"I'd like to buy the fireproof cloak, please." }.
+  Example "buy the cloak from the bartender" -> { "kind":"speak", "targetAgentRef":"bartender", "utterance":"I'd like to buy the cloak, please." }.
+  Example "haggle with the merchant for the sword" -> { "kind":"speak", "targetAgentRef":"merchant", "utterance":"What would you take for the sword?" }.
+  Example "ask Paff about the fire map" -> { "kind":"speak", "targetAgentRef":"Paff", "utterance":"What can you tell me about the fire map?" }.
+  Example "bribe the guard with a gold coin" -> { "kind":"speak", "targetAgentRef":"guard", "utterance":"Would a gold coin help speed things along?" }.
+  Example "order a drink" (a bartender is present) -> { "kind":"speak", "targetAgentRef":"bartender", "utterance":"I'd like a drink, please." }.
 
 - emote: a physical action the actor performs. This is the catch-all for any bodily action that doesn't have a dedicated verb above — gestures and expressions (wave, grin, shrug, shake their head), but ALSO actions that involve interacting with objects, parts of the environment, or oneself in ways the engine doesn't model as a state change ("drink some spirit", "take a swig of the bottle", "kick the door", "stretch", "rub their eyes", "pour a glass", "tap on the table", "draw a sword", "sigh deeply", "sit down on the stool"). The renderer turns the emoteDescription into prose; no other entity state changes.
   Use emote whenever the input describes a physical thing the actor does that isn't covered by move/look/search/take/drop/give/inventory/speak/attack. Prefer emote over unknown for any phrasing that names an action — even ambitious ones like "drink the spirit" or "swing from the chandelier".
