@@ -17,6 +17,7 @@ interface Line {
 interface InventoryItem {
   id: string;
   label: string;
+  equipped: boolean;
 }
 
 interface SurroundingsItem {
@@ -115,6 +116,24 @@ function Page() {
   const emptyStyle: React.CSSProperties = { opacity: 0.5, fontStyle: 'italic' };
   const listStyle: React.CSSProperties = { listStyle: 'none', margin: 0, padding: 0 };
   const itemStyle: React.CSSProperties = { padding: '3px 0' };
+  const subheadStyle: React.CSSProperties = {
+    opacity: 0.5,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    fontSize: 10,
+    margin: '6px 0 2px',
+  };
+  const equippedItemStyle: React.CSSProperties = {
+    padding: '3px 0',
+    color: '#d8c98a',
+  };
+  const equippedIconStyle: React.CSSProperties = {
+    display: 'inline-block',
+    width: 14,
+    marginRight: 6,
+    color: '#d8c98a',
+    fontSize: 12,
+  };
 
   return (
     <main style={{ display: 'flex', flexDirection: 'column', height: '100vh', padding: 16 }}>
@@ -259,13 +278,45 @@ function Page() {
             {inventory.length === 0 ? (
               <div style={emptyStyle}>(empty)</div>
             ) : (
-              <ul style={listStyle}>
-                {inventory.map((it) => (
-                  <li key={it.id} style={itemStyle}>
-                    {it.label}
-                  </li>
-                ))}
-              </ul>
+              (() => {
+                const equipped = inventory.filter((it) => it.equipped);
+                const carried = inventory.filter((it) => !it.equipped);
+                return (
+                  <>
+                    {equipped.length > 0 ? (
+                      <>
+                        <div style={subheadStyle}>Equipped</div>
+                        <ul style={listStyle}>
+                          {equipped.map((it) => (
+                            <li key={it.id} style={equippedItemStyle}>
+                              <span
+                                style={equippedIconStyle}
+                                aria-label="equipped"
+                                title="Equipped"
+                              >
+                                ⚔
+                              </span>
+                              {it.label}
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    ) : null}
+                    {carried.length > 0 ? (
+                      <>
+                        {equipped.length > 0 ? <div style={subheadStyle}>Carried</div> : null}
+                        <ul style={listStyle}>
+                          {carried.map((it) => (
+                            <li key={it.id} style={itemStyle}>
+                              {it.label}
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    ) : null}
+                  </>
+                );
+              })()
             )}
           </section>
         </aside>

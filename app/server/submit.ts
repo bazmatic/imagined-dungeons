@@ -23,7 +23,11 @@ export const submitCommand = createServerFn({ method: 'POST' })
     return {
       render: result.render,
       witnessed: [...result.witnessed],
-      inventory: inventoryItems.map((i) => ({ id: i.id as string, label: i.label })),
+      inventory: inventoryItems.map((i) => ({
+        id: i.id as string,
+        label: i.label,
+        equipped: i.equipped,
+      })),
       surroundings,
     };
   });

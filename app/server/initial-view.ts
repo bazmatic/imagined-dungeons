@@ -13,7 +13,11 @@ export const getInitialView = createServerFn({ method: 'GET' }).handler(async ()
   return {
     render: result.render,
     displayName: DISPLAY_NAME,
-    inventory: inventoryItems.map((i) => ({ id: i.id as string, label: i.label })),
+    inventory: inventoryItems.map((i) => ({
+      id: i.id as string,
+      label: i.label,
+      equipped: i.equipped,
+    })),
     surroundings,
   };
 });
