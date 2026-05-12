@@ -7,6 +7,7 @@ import {
   asLocationId,
   asMonsterTemplateId,
   asSpawnTriggerId,
+  asTagLoreId,
   asWorldId,
 } from '@core/domain/ids';
 import { OwnerKind } from '@core/domain/kinds';
@@ -364,5 +365,88 @@ describe('validateWorld', () => {
     expect(validateWorld(dirty).map((p) => p.kind)).toContain(
       ProblemKind.LocationSpawnTriggerParamsInvalid,
     );
+  });
+
+  it('reports TagLoreTagEmpty for an empty tag', () => {
+    const t = baseTree();
+    const dirty: WorldTree = {
+      ...t,
+      tagLore: [
+        {
+          id: asTagLoreId('tlr_a'),
+          worldId: W,
+          tag: '',
+          title: 'untitled',
+          description: 'desc',
+        },
+      ],
+    };
+    expect(validateWorld(dirty).map((p) => p.kind)).toContain(ProblemKind.TagLoreTagEmpty);
+  });
+
+  it('reports TagLoreTagEmpty for a whitespace-only tag', () => {
+    const t = baseTree();
+    const dirty: WorldTree = {
+      ...t,
+      tagLore: [
+        {
+          id: asTagLoreId('tlr_a'),
+          worldId: W,
+          tag: '   ',
+          title: 'untitled',
+          description: 'desc',
+        },
+      ],
+    };
+    expect(validateWorld(dirty).map((p) => p.kind)).toContain(ProblemKind.TagLoreTagEmpty);
+  });
+
+  it('reports TagLoreDuplicate when two rows share a tag', () => {
+    const t = baseTree();
+    const dirty: WorldTree = {
+      ...t,
+      tagLore: [
+        {
+          id: asTagLoreId('tlr_a'),
+          worldId: W,
+          tag: 'cult',
+          title: 'A',
+          description: 'one',
+        },
+        {
+          id: asTagLoreId('tlr_b'),
+          worldId: W,
+          tag: 'cult',
+          title: 'B',
+          description: 'two',
+        },
+      ],
+    };
+    expect(validateWorld(dirty).map((p) => p.kind)).toContain(ProblemKind.TagLoreDuplicate);
+  });
+
+  it('does not report TagLoreDuplicate when tags are distinct', () => {
+    const t = baseTree();
+    const clean: WorldTree = {
+      ...t,
+      tagLore: [
+        {
+          id: asTagLoreId('tlr_a'),
+          worldId: W,
+          tag: 'cult',
+          title: 'Cult',
+          description: 'one',
+        },
+        {
+          id: asTagLoreId('tlr_b'),
+          worldId: W,
+          tag: 'sewer',
+          title: 'Sewer',
+          description: 'two',
+        },
+      ],
+    };
+    expect(validateWorld(clean).map((p) => p.kind)).not.toContain(ProblemKind.TagLoreDuplicate);
+    expect(validateWorld(clean).map((p) => p.kind)).not.toContain(ProblemKind.TagLoreTagEmpty);
   });
 });

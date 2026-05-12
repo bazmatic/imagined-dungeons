@@ -218,5 +218,30 @@ export function validateWorld(tree: WorldTree): Problem[] {
     }
   }
 
+  // Tag lore: empty tags and duplicates.
+  const tagLoreSeen = new Map<string, string>();
+  for (const row of tree.tagLore) {
+    if (row.tag.trim().length === 0) {
+      problems.push({
+        kind: ProblemKind.TagLoreTagEmpty,
+        entity: EntityKind.TagLore,
+        entityId: row.id as string,
+        message: `tag-lore row ${row.id} has an empty tag`,
+      });
+      continue; // don't also report duplicate for empty tags
+    }
+    const existingId = tagLoreSeen.get(row.tag);
+    if (existingId !== undefined) {
+      problems.push({
+        kind: ProblemKind.TagLoreDuplicate,
+        entity: EntityKind.TagLore,
+        entityId: row.id as string,
+        message: `tag-lore row ${row.id} duplicates tag ${row.tag} (also on ${existingId})`,
+      });
+    } else {
+      tagLoreSeen.set(row.tag, row.id as string);
+    }
+  }
+
   return problems;
 }
