@@ -3,12 +3,13 @@ import { useState } from 'react';
 import { deleteTagLore, upsertTagLore } from '~/server/admin/lore';
 import { EntityHeader } from './EntityHeader';
 import { FootnoteBar } from './FootnoteBar';
+import { SaveStatus, useSaveStatus } from './useSaveStatus';
 
 export interface TagLoreFormProps {
   readonly tree: WorldTree;
   readonly tag: string;
   readonly problemCount: number;
-  readonly onSaved: () => void;
+  readonly onSaved: () => Promise<void> | void;
   readonly onDeleted: () => void;
 }
 
@@ -21,12 +22,13 @@ export function TagLoreForm({ tree, tag, problemCount, onSaved, onDeleted }: Tag
   const [id] = useState<string>(existing ? (existing.id as string) : randomTagLoreId());
   const [title, setTitle] = useState(existing?.title ?? '');
   const [description, setDescription] = useState(existing?.description ?? '');
-  const [busy, setBusy] = useState(false);
+  const { status: saveStatus, label: saveLabel, run } = useSaveStatus();
+  const saving = saveStatus === SaveStatus.Saving;
+  const [deleting, setDeleting] = useState(false);
+  const busy = saving || deleting;
 
   const save = async (): Promise<void> => {
-    if (busy) return;
-    setBusy(true);
-    try {
+    await run(async () => {
       const r = await upsertTagLore({
         data: {
           worldId: tree.summary.id as string,
@@ -35,17 +37,15 @@ export function TagLoreForm({ tree, tag, problemCount, onSaved, onDeleted }: Tag
       });
       if (!r.ok) {
         alert(`Save failed: ${r.error.message}`);
-        return;
+        throw new Error(r.error.message);
       }
-      onSaved();
-    } finally {
-      setBusy(false);
-    }
+      await onSaved();
+    });
   };
 
   const remove = async (): Promise<void> => {
-    if (busy || !existing) return;
-    setBusy(true);
+    if (deleting || !existing) return;
+    setDeleting(true);
     try {
       const r = await deleteTagLore({
         data: { worldId: tree.summary.id as string, id: existing.id as string },
@@ -56,7 +56,7 @@ export function TagLoreForm({ tree, tag, problemCount, onSaved, onDeleted }: Tag
       }
       onDeleted();
     } finally {
-      setBusy(false);
+      setDeleting(false);
     }
   };
 
@@ -103,8 +103,13 @@ export function TagLoreForm({ tree, tag, problemCount, onSaved, onDeleted }: Tag
             />
           </div>
           <div style={{ display: 'flex', gap: 16 }}>
-            <button type="submit" className="btn btn--primary" disabled={busy}>
-              Save
+            <button
+              type="submit"
+              className="btn btn--primary"
+              disabled={busy}
+              data-save-status={saveStatus}
+            >
+              {saveLabel}
             </button>
           </div>
         </div>

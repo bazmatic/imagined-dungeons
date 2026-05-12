@@ -8,6 +8,7 @@ import { FootnoteBar } from './FootnoteBar';
 import { ManuscriptCard } from './ManuscriptCard';
 import { MetadataColumn } from './MetadataColumn';
 import { TagSelectorPanel } from './TagSelectorPanel';
+import { SaveStatus, useSaveStatus } from './useSaveStatus';
 
 type SimpleOwnerKind = typeof OwnerKind.Location | typeof OwnerKind.Agent;
 
@@ -15,7 +16,7 @@ export interface ItemFormProps {
   readonly tree: WorldTree;
   readonly itemId: string;
   readonly problemCount: number;
-  readonly onSaved: () => void;
+  readonly onSaved: () => Promise<void> | void;
   readonly onDeleted: () => void;
   readonly onRequestJsonFallback: () => void;
 }
@@ -47,7 +48,8 @@ export function ItemForm({
         }
       : null,
   );
-  const [saving, setSaving] = useState(false);
+  const { status, label, run } = useSaveStatus();
+  const saving = status === SaveStatus.Saving;
 
   if (!item || !v) return <p className="t-metadata">Item not found.</p>;
 
@@ -58,10 +60,8 @@ export function ItemForm({
   const charCount = v.longDescription.length;
 
   const save = async (): Promise<void> => {
-    if (saving) return;
     if (v.ownerId === '') return;
-    setSaving(true);
-    try {
+    await run(async () => {
       await saveEntity({
         data: {
           worldId: tree.summary.id as string,
@@ -79,10 +79,8 @@ export function ItemForm({
           },
         },
       });
-      onSaved();
-    } finally {
-      setSaving(false);
-    }
+      await onSaved();
+    });
   };
 
   const ownerOptions = v.ownerKind === OwnerKind.Location ? tree.locations : tree.agents;
@@ -190,8 +188,9 @@ export function ItemForm({
               type="submit"
               className="btn btn--primary"
               disabled={saving || isNested || v.ownerId === ''}
+              data-save-status={status}
             >
-              Save
+              {label}
             </button>
           </div>
         </div>

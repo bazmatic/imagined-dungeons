@@ -3,33 +3,31 @@ import { useState } from 'react';
 import { updateWorldLore } from '~/server/admin/lore';
 import { EntityHeader } from './EntityHeader';
 import { FootnoteBar } from './FootnoteBar';
+import { SaveStatus, useSaveStatus } from './useSaveStatus';
 
 export interface WorldLoreFormProps {
   readonly tree: WorldTree;
   readonly problemCount: number;
-  readonly onSaved: () => void;
+  readonly onSaved: () => Promise<void> | void;
 }
 
 export function WorldLoreForm({ tree, problemCount, onSaved }: WorldLoreFormProps) {
   const [worldOverview, setWorldOverview] = useState(tree.worldLore.worldOverview);
   const [storySoFar, setStorySoFar] = useState(tree.worldLore.storySoFar);
-  const [saving, setSaving] = useState(false);
+  const { status, label, run } = useSaveStatus();
+  const saving = status === SaveStatus.Saving;
 
   const save = async (): Promise<void> => {
-    if (saving) return;
-    setSaving(true);
-    try {
+    await run(async () => {
       const r = await updateWorldLore({
         data: { id: tree.summary.id as string, worldOverview, storySoFar },
       });
       if (!r.ok) {
         alert(`Save failed: ${r.error.message}`);
-        return;
+        throw new Error(r.error.message);
       }
-      onSaved();
-    } finally {
-      setSaving(false);
-    }
+      await onSaved();
+    });
   };
 
   const combined = `${worldOverview}\n${storySoFar}`;
@@ -75,8 +73,13 @@ export function WorldLoreForm({ tree, problemCount, onSaved }: WorldLoreFormProp
             />
           </div>
           <div style={{ display: 'flex', gap: 16 }}>
-            <button type="submit" className="btn btn--primary" disabled={saving}>
-              Save
+            <button
+              type="submit"
+              className="btn btn--primary"
+              disabled={saving}
+              data-save-status={status}
+            >
+              {label}
             </button>
           </div>
         </div>

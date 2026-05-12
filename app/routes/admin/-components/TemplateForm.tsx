@@ -7,12 +7,13 @@ import { ManuscriptCard } from './ManuscriptCard';
 import { MetadataColumn } from './MetadataColumn';
 import { StarterItemsEditor } from './StarterItemsEditor';
 import { TagSelectorPanel } from './TagSelectorPanel';
+import { SaveStatus, useSaveStatus } from './useSaveStatus';
 
 export interface TemplateFormProps {
   readonly tree: WorldTree;
   readonly templateId: string;
   readonly problemCount: number;
-  readonly onSaved: () => void;
+  readonly onSaved: () => Promise<void> | void;
   readonly onDeleted: () => void;
 }
 
@@ -39,7 +40,8 @@ export function TemplateForm({
         }
       : null,
   );
-  const [saving, setSaving] = useState(false);
+  const { status, label, run } = useSaveStatus();
+  const saving = status === SaveStatus.Saving;
 
   if (!tpl || !v) return <p className="t-metadata">Template not found.</p>;
 
@@ -50,9 +52,7 @@ export function TemplateForm({
   const charCount = v.longDescription.length;
 
   const save = async (): Promise<void> => {
-    if (saving) return;
-    setSaving(true);
-    try {
+    await run(async () => {
       await upsertTemplate({
         data: {
           worldId: tree.summary.id as string,
@@ -69,10 +69,8 @@ export function TemplateForm({
           },
         },
       });
-      onSaved();
-    } finally {
-      setSaving(false);
-    }
+      await onSaved();
+    });
   };
 
   return (
@@ -130,8 +128,13 @@ export function TemplateForm({
             />
           </div>
           <div style={{ display: 'flex', gap: 16 }}>
-            <button type="submit" className="btn btn--primary" disabled={saving}>
-              Save
+            <button
+              type="submit"
+              className="btn btn--primary"
+              disabled={saving}
+              data-save-status={status}
+            >
+              {label}
             </button>
           </div>
         </div>

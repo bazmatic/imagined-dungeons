@@ -13,12 +13,13 @@ import { MetadataColumn } from './MetadataColumn';
 import { TagSelectorPanel } from './TagSelectorPanel';
 import { TriggersEditor } from './TriggersEditor';
 import { CategoryKind } from './category-helpers';
+import { SaveStatus, useSaveStatus } from './useSaveStatus';
 
 export interface LocationFormProps {
   readonly tree: WorldTree;
   readonly locationId: string;
   readonly problemCount: number;
-  readonly onSaved: () => void;
+  readonly onSaved: () => Promise<void> | void;
   readonly onDeleted: () => void;
 }
 
@@ -41,7 +42,8 @@ export function LocationForm({
       }
     : null;
   const [v, setV] = useState(initial);
-  const [saving, setSaving] = useState(false);
+  const { status, label, run } = useSaveStatus();
+  const saving = status === SaveStatus.Saving;
 
   if (!loc || !v) return <p className="t-metadata">Location not found.</p>;
 
@@ -52,9 +54,7 @@ export function LocationForm({
   const charCount = v.longDescription.length;
 
   const save = async (): Promise<void> => {
-    if (saving) return;
-    setSaving(true);
-    try {
+    await run(async () => {
       await saveEntity({
         data: {
           worldId: tree.summary.id as string,
@@ -62,10 +62,8 @@ export function LocationForm({
           payload: v,
         },
       });
-      onSaved();
-    } finally {
-      setSaving(false);
-    }
+      await onSaved();
+    });
   };
 
   const exitsHere = tree.exits.filter((e) => (e.from as string) === locationId);
@@ -137,8 +135,13 @@ export function LocationForm({
             />
           </div>
           <div style={{ display: 'flex', gap: 16 }}>
-            <button type="submit" className="btn btn--primary" disabled={saving}>
-              Save
+            <button
+              type="submit"
+              className="btn btn--primary"
+              disabled={saving}
+              data-save-status={status}
+            >
+              {label}
             </button>
           </div>
         </div>

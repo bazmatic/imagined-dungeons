@@ -120,6 +120,15 @@
   border-bottom-color: var(--crimson-bright);
   color: var(--crimson-bright);
 }
+/* Save-status visual hints, set by data-save-status on submit buttons. */
+.admin-root .btn[data-save-status="saving"] {
+  opacity: 0.65;
+  cursor: progress;
+}
+.admin-root .btn[data-save-status="saved"] {
+  border-bottom-color: #8db98d;
+  color: #8db98d;
+}
 
 /* Inputs */
 .admin-root .input {
