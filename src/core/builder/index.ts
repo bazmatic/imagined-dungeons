@@ -540,12 +540,27 @@ export async function publish(
       : { ...liveTree.value };
     const plan = computeMergePlan(snapTree, draftTree.value, liveTree.value);
 
+    // Preserve live's `autonomous` flag on agents that already exist there.
+    // The draft is the source of authored truth for descriptions, location,
+    // stats, tags, etc., but the autonomous flag is also a *runtime* lever
+    // (the admin's "Silence" button and the per-agent toggle write directly
+    // to live). Overwriting it from the draft on every publish would mean a
+    // GM's runtime overrides keep getting clobbered. New agents (inserts)
+    // still take the draft's autonomous value.
+    const liveAutonomousById = new Map<string, boolean>();
+    for (const a of liveTree.value.agents) liveAutonomousById.set(a.id as string, a.autonomous);
+    const preserveAutonomous = (a: Agent): UpsertAgentInput => {
+      const live = liveAutonomousById.get(a.id as string);
+      if (live === undefined) return asAgentInput(a);
+      return { ...asAgentInput(a), autonomous: live };
+    };
+
     for (const l of plan.inserts.locations) await tx.upsertLocation(liveId, asLocInput(l));
     for (const a of plan.inserts.agents) await tx.upsertAgent(liveId, asAgentInput(a));
     for (const it of plan.inserts.items) await tx.upsertItem(liveId, asItemInput(it));
     for (const e of plan.inserts.exits) await tx.upsertExit(liveId, asExitInput(e));
     for (const l of plan.updates.locations) await tx.upsertLocation(liveId, asLocInput(l));
-    for (const a of plan.updates.agents) await tx.upsertAgent(liveId, asAgentInput(a));
+    for (const a of plan.updates.agents) await tx.upsertAgent(liveId, preserveAutonomous(a));
     for (const it of plan.updates.items) await tx.upsertItem(liveId, asItemInput(it));
     for (const e of plan.updates.exits) await tx.upsertExit(liveId, asExitInput(e));
     for (const ref of plan.deletes) {

@@ -29,14 +29,21 @@ Available actions:
   Example "look at Spark" -> { "kind":"look", "direction":null, "targetKind":"agent", "targetRef":"Spark", "itemRef":null, "targetAgentRef":null, "utterance":null, "reason":null }.
   Example "examine the locked door" -> { "kind":"look", "direction":null, "targetKind":"exit", "targetRef":"locked door", "itemRef":null, "targetAgentRef":null, "utterance":null, "reason":null }.
 
-- search: a careful, exploratory inspection. Use search when the player wants to look in detail, hunt for hidden objects, scan a part of the scene, or examine the surroundings for things that may not yet be listed. Triggers a discovery pass that may invent or reveal new items, characters, or flavour rooted in the world's lore.
-  Choose search over look when the input contains words like "search", "look carefully", "look closely", "look around in detail", "examine the room", "hunt for", "explore the corner", "what's behind X", "anything hidden", "any X here?". A short "look at the bar" is still look; "look around in detail" or "search for objects" is search.
+- search: a careful, exploratory inspection. Use search when the player wants to look in detail, hunt for hidden objects, scan a part of the scene, examine the surroundings for things that may not yet be listed, OR asks who/what is present in some part of the scene. Triggers a discovery pass that may invent or reveal new items, characters, or flavour rooted in the world's lore. Search is your DEFAULT for anything that is not a simple "look at <specific known thing>". If you find yourself wanting to emit kind="unknown" because the player's input mentions a category of unseen things (people, objects, parts of the room), choose search instead with that category in targetRef.
+  Choose search over look when the input contains words like "search", "look carefully", "look closely", "look around in detail", "examine the room", "hunt for", "explore the corner", "what's behind X", "anything hidden", "any X here?", or asks who/what is in a region ("who is at the bar?", "are there any guards?", "look at some of the patrons"). A short "look at the bar" is still look (target = the bar as a feature); but "look at the patrons at the bar" or "who is here?" is search.
   Set: kind="search", targetRef as a short natural-language description of what the player is searching for or where they're looking. May be empty/null for a bare exploratory search of the surroundings.
   All other fields null.
-  Example "search the dusty corner" -> { "kind":"search", "direction":null, "targetKind":null, "targetRef":"dusty corner", "itemRef":null, "targetAgentRef":null, "utterance":null, "emoteDescription":null, "reason":null }.
-  Example "look around in detail, examining the room" -> { "kind":"search", "direction":null, "targetKind":null, "targetRef":"the room in detail", "itemRef":null, "targetAgentRef":null, "utterance":null, "emoteDescription":null, "reason":null }.
-  Example "look carefully behind the bar" -> { "kind":"search", "direction":null, "targetKind":null, "targetRef":"behind the bar", "itemRef":null, "targetAgentRef":null, "utterance":null, "emoteDescription":null, "reason":null }.
-  Example "is anything hidden under the table?" -> { "kind":"search", "direction":null, "targetKind":null, "targetRef":"under the table", "itemRef":null, "targetAgentRef":null, "utterance":null, "emoteDescription":null, "reason":null }.
+
+  Generic worked examples (study the patterns, not the specific words):
+  - "search the dusty corner" -> { "kind":"search", "targetRef":"dusty corner" }.
+  - "look around in detail" -> { "kind":"search", "targetRef":"the surroundings in detail" }.
+  - "look carefully behind X" -> { "kind":"search", "targetRef":"behind X" }.
+  - "examine the room closely" -> { "kind":"search", "targetRef":"the room closely" }.
+  - "is anything hidden under X?" -> { "kind":"search", "targetRef":"under X" }.
+  - "who is here?" / "are there any people around?" -> { "kind":"search", "targetRef":"anyone present" }.
+  - "look at some of the Xs. Who is there?" (asking after a category of people/creatures that may or may not be listed) -> { "kind":"search", "targetRef":"the Xs" }.
+  - "any guards on patrol?" / "is the bartender around?" -> { "kind":"search", "targetRef":"guards on patrol" } / { "kind":"search", "targetRef":"the bartender" }.
+  (Remember to fill every other field with null, per the output shape.)
 
 - take: pick up an item visible in the location.
   Set: kind="take", itemRef as a short natural-language reference. All other fields null.
