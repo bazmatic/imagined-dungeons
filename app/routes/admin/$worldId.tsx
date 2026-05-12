@@ -12,7 +12,7 @@ import { CommandPalette } from './-components/CommandPalette';
 import { Fonts } from './-components/Fonts';
 import { ProblemsRail } from './-components/ProblemsRail';
 import { WorldSettingsForm } from './-components/WorldSettingsForm';
-import { type AdminSearch, parseSearchParams } from './-components/category-helpers';
+import { type AdminSearch, CategoryKind, parseSearchParams } from './-components/category-helpers';
 
 export const Route = createFileRoute('/admin/$worldId')({
   component: AdminWorld,
@@ -152,13 +152,13 @@ function AdminWorld() {
           <section className="master-pane">
             <div className="master-pane__header">
               <span className="t-label-caps">
-                {search.cat === 'locations'
+                {search.cat === CategoryKind.Locations
                   ? 'Locations'
-                  : search.cat === 'bestiary'
+                  : search.cat === CategoryKind.Bestiary
                     ? 'Bestiary'
-                    : search.cat === 'agents'
+                    : search.cat === CategoryKind.Agents
                       ? 'Agents'
-                      : search.cat === 'lore'
+                      : search.cat === CategoryKind.Lore
                         ? 'Lore'
                         : 'Items'}
               </span>
@@ -171,7 +171,7 @@ function AdminWorld() {
               <Breadcrumbs
                 tree={t}
                 sel={
-                  showingSettings || search.cat === 'lore'
+                  showingSettings || search.cat === CategoryKind.Lore
                     ? { kind: 'world' }
                     : search.sel !== undefined
                       ? ({ kind: categoryToEntityKind(search.cat), id: search.sel } as never)
@@ -211,16 +211,16 @@ function AdminWorld() {
 }
 
 function entityKindToCategory(kind: string): AdminSearch['cat'] | null {
-  if (kind === EntityKind.Location) return 'locations';
-  if (kind === EntityKind.Agent) return 'agents';
-  if (kind === EntityKind.Item) return 'items';
-  if (kind === EntityKind.MonsterTemplate) return 'bestiary';
+  if (kind === EntityKind.Location) return CategoryKind.Locations;
+  if (kind === EntityKind.Agent) return CategoryKind.Agents;
+  if (kind === EntityKind.Item) return CategoryKind.Items;
+  if (kind === EntityKind.MonsterTemplate) return CategoryKind.Bestiary;
   return null; // exit, trigger — they live inline on Location
 }
 
 function categoryToEntityKind(cat: AdminSearch['cat']): string {
-  if (cat === 'locations') return EntityKind.Location;
-  if (cat === 'agents') return EntityKind.Agent;
-  if (cat === 'items') return EntityKind.Item;
+  if (cat === CategoryKind.Locations) return EntityKind.Location;
+  if (cat === CategoryKind.Agents) return EntityKind.Agent;
+  if (cat === CategoryKind.Items) return EntityKind.Item;
   return EntityKind.MonsterTemplate;
 }

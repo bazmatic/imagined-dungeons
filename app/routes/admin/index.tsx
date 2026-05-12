@@ -5,6 +5,7 @@ import { AdminShell } from './-components/AdminShell';
 import { Fonts } from './-components/Fonts';
 import { HeroWorldCard } from './-components/HeroWorldCard';
 import { InscribeCard } from './-components/InscribeCard';
+import { CategoryKind } from './-components/category-helpers';
 
 export const Route = createFileRoute('/admin/')({
   component: AdminIndex,
@@ -92,7 +93,7 @@ function AdminIndex() {
                         <Link
                           to="/admin/$worldId"
                           params={{ worldId: w.id as string }}
-                          search={{ cat: 'locations' as const }}
+                          search={{ cat: CategoryKind.Locations }}
                           className="drafts-table__name"
                           style={{ textDecoration: 'none' }}
                         >
@@ -110,7 +111,7 @@ function AdminIndex() {
                         <Link
                           to="/admin/$worldId"
                           params={{ worldId: w.id as string }}
-                          search={{ cat: 'locations' as const }}
+                          search={{ cat: CategoryKind.Locations }}
                           className="btn"
                           style={{ textDecoration: 'none' }}
                         >

@@ -1,6 +1,7 @@
 import type { WorldSummaryWithStats } from '@core/domain/builder-types';
 import { Link } from '@tanstack/react-router';
 import { WorldStats } from './WorldStats';
+import { CategoryKind } from './category-helpers';
 
 export interface HeroWorldCardProps {
   readonly world: WorldSummaryWithStats;
@@ -39,7 +40,7 @@ export function HeroWorldCard({ world }: HeroWorldCardProps) {
           <Link
             to="/admin/$worldId"
             params={{ worldId: world.id as string }}
-            search={{ cat: 'locations' as const }}
+            search={{ cat: CategoryKind.Locations }}
             className="btn"
             style={{ textDecoration: 'none' }}
           >

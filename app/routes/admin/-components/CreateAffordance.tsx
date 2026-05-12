@@ -4,7 +4,7 @@ import { OwnerKind } from '@core/domain/kinds';
 import { useState } from 'react';
 import { saveEntity } from '~/server/admin/entities';
 import { upsertTemplate } from '~/server/admin/templates';
-import type { Category } from './category-helpers';
+import { type Category, CategoryKind } from './category-helpers';
 
 export interface CreateAffordanceProps {
   readonly tree: WorldTree;
@@ -42,9 +42,9 @@ export function CreateAffordance({ tree, category, onCreated }: CreateAffordance
 }
 
 function singular(c: Category): string {
-  if (c === 'locations') return 'location';
-  if (c === 'bestiary') return 'template';
-  if (c === 'agents') return 'agent';
+  if (c === CategoryKind.Locations) return 'location';
+  if (c === CategoryKind.Bestiary) return 'template';
+  if (c === CategoryKind.Agents) return 'agent';
   return 'item';
 }
 
@@ -60,11 +60,11 @@ function CreateForm({
   onCancel,
   onCreated,
 }: CreateFormProps & { readonly category: Category }) {
-  if (category === 'locations')
+  if (category === CategoryKind.Locations)
     return <CreateLocation tree={tree} onCancel={onCancel} onCreated={onCreated} />;
-  if (category === 'bestiary')
+  if (category === CategoryKind.Bestiary)
     return <CreateTemplate tree={tree} onCancel={onCancel} onCreated={onCreated} />;
-  if (category === 'agents')
+  if (category === CategoryKind.Agents)
     return <CreateAgent tree={tree} onCancel={onCancel} onCreated={onCreated} />;
   return <CreateItem tree={tree} onCancel={onCancel} onCreated={onCreated} />;
 }

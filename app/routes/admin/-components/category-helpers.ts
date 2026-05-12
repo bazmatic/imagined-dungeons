@@ -1,8 +1,15 @@
 import type { Agent, Item, Location } from '@core/domain/entities';
 import { OwnerKind } from '@core/domain/kinds';
 
-export const CATEGORIES = ['locations', 'bestiary', 'agents', 'items', 'lore'] as const;
-export type Category = (typeof CATEGORIES)[number];
+export const CategoryKind = {
+  Locations: 'locations',
+  Bestiary: 'bestiary',
+  Agents: 'agents',
+  Items: 'items',
+  Lore: 'lore',
+} as const;
+export type Category = (typeof CategoryKind)[keyof typeof CategoryKind];
+export const CATEGORIES = Object.values(CategoryKind) as readonly Category[];
 
 export function isCategory(v: unknown): v is Category {
   return typeof v === 'string' && (CATEGORIES as readonly string[]).includes(v);
@@ -18,7 +25,7 @@ export interface AdminSearch {
 }
 
 export function parseSearchParams(raw: Record<string, unknown>): AdminSearch {
-  const cat = isCategory(raw.cat) ? raw.cat : 'locations';
+  const cat = isCategory(raw.cat) ? raw.cat : CategoryKind.Locations;
   const sel = typeof raw.sel === 'string' && raw.sel.length > 0 ? raw.sel : undefined;
   const view = raw.view === 'settings' ? ('settings' as const) : undefined;
   const result: AdminSearch = {

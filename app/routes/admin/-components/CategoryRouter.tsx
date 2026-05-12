@@ -8,7 +8,7 @@ import { MasterList, type MasterListItem } from './MasterList';
 import { TagLoreForm } from './TagLoreForm';
 import { TemplateForm } from './TemplateForm';
 import { WorldLoreForm } from './WorldLoreForm';
-import { type Category, resolveOwnerSubtitle } from './category-helpers';
+import { type Category, CategoryKind, resolveOwnerSubtitle } from './category-helpers';
 import { WORLD_LORE_SEL, collectLoreTags } from './lore-helpers';
 
 export interface CategoryRouterProps {
@@ -43,7 +43,7 @@ export function useCategoryRouter({
       }}
       filterPlaceholder={`Filter ${category}…`}
       header={
-        category === 'lore' ? null : (
+        category === CategoryKind.Lore ? null : (
           <CreateAffordance
             tree={tree}
             category={category}
@@ -73,13 +73,13 @@ export function useCategoryRouter({
 }
 
 function listItemsForCategory(category: Category, tree: WorldTree): readonly MasterListItem[] {
-  if (category === 'locations') {
+  if (category === CategoryKind.Locations) {
     return tree.locations.map((l) => ({ id: l.id as string, label: l.label }));
   }
-  if (category === 'bestiary') {
+  if (category === CategoryKind.Bestiary) {
     return tree.templates.map((t) => ({ id: t.id as string, label: t.label }));
   }
-  if (category === 'agents') {
+  if (category === CategoryKind.Agents) {
     return tree.agents.map((a) => {
       const loc = tree.locations.find((l) => (l.id as string) === (a.locationId as string));
       return {
@@ -89,7 +89,7 @@ function listItemsForCategory(category: Category, tree: WorldTree): readonly Mas
       };
     });
   }
-  if (category === 'lore') {
+  if (category === CategoryKind.Lore) {
     const tags = collectLoreTags(tree);
     const authored = new Set(tree.tagLore.map((t) => t.tag));
     const worldRow: MasterListItem = { id: WORLD_LORE_SEL, label: 'World lore' };
@@ -126,7 +126,7 @@ function renderDetail(args: {
     );
   }
   const problemCount = problems.filter((p) => p.entityId === selectedId).length;
-  if (category === 'lore') {
+  if (category === CategoryKind.Lore) {
     if (selectedId === WORLD_LORE_SEL) {
       return (
         <WorldLoreForm key="world-lore" tree={tree} problemCount={problemCount} onSaved={onSaved} />
@@ -143,7 +143,7 @@ function renderDetail(args: {
       />
     );
   }
-  if (category === 'locations') {
+  if (category === CategoryKind.Locations) {
     return (
       <LocationForm
         key={selectedId}
@@ -155,7 +155,7 @@ function renderDetail(args: {
       />
     );
   }
-  if (category === 'bestiary') {
+  if (category === CategoryKind.Bestiary) {
     return (
       <TemplateForm
         key={selectedId}
@@ -167,7 +167,7 @@ function renderDetail(args: {
       />
     );
   }
-  if (category === 'agents') {
+  if (category === CategoryKind.Agents) {
     return (
       <AgentForm
         key={selectedId}
@@ -195,9 +195,9 @@ function renderDetail(args: {
 }
 
 function singular(c: Category): string {
-  if (c === 'locations') return 'location';
-  if (c === 'bestiary') return 'template';
-  if (c === 'agents') return 'agent';
-  if (c === 'lore') return 'lore entry';
+  if (c === CategoryKind.Locations) return 'location';
+  if (c === CategoryKind.Bestiary) return 'template';
+  if (c === CategoryKind.Agents) return 'agent';
+  if (c === CategoryKind.Lore) return 'lore entry';
   return 'item';
 }

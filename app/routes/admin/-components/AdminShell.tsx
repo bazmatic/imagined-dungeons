@@ -1,13 +1,14 @@
 import type { ReactNode } from 'react';
-import { SideNav, type SideNavCategory } from './SideNav';
+import { SideNav } from './SideNav';
 import { TopBar, type TopBarProps } from './TopBar';
+import type { Category } from './category-helpers';
 
 export interface AdminShellProps {
   readonly route: 'index' | 'detail';
   readonly topBar: TopBarProps;
   readonly sideNav?: {
-    readonly active: SideNavCategory;
-    readonly onSelect: (c: SideNavCategory) => void;
+    readonly active: Category;
+    readonly onSelect: (c: Category) => void;
     readonly onCreateNew?: () => void;
   };
   readonly children: ReactNode;

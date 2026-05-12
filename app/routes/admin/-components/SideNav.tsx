@@ -1,20 +1,20 @@
-export type SideNavCategory = 'locations' | 'bestiary' | 'agents' | 'items' | 'lore';
+import { type Category, CategoryKind } from './category-helpers';
 
 export interface SideNavProps {
-  readonly active: SideNavCategory;
-  readonly onSelect: (c: SideNavCategory) => void;
+  readonly active: Category;
+  readonly onSelect: (c: Category) => void;
   readonly onCreateNew?: () => void;
 }
 
 const ITEMS: ReadonlyArray<{
-  readonly key: SideNavCategory;
+  readonly key: Category;
   readonly label: string;
 }> = [
-  { key: 'locations', label: 'Locations' },
-  { key: 'bestiary', label: 'Bestiary' },
-  { key: 'agents', label: 'Agents' },
-  { key: 'items', label: 'Items' },
-  { key: 'lore', label: 'Lore' },
+  { key: CategoryKind.Locations, label: 'Locations' },
+  { key: CategoryKind.Bestiary, label: 'Bestiary' },
+  { key: CategoryKind.Agents, label: 'Agents' },
+  { key: CategoryKind.Items, label: 'Items' },
+  { key: CategoryKind.Lore, label: 'Lore' },
 ];
 
 export function SideNav({ active, onSelect, onCreateNew }: SideNavProps) {
