@@ -1,5 +1,4 @@
 import {
-  cloneLiveAsDraft,
   createDraft,
   deleteAgent,
   deleteExit,
@@ -11,7 +10,6 @@ import {
   getWorldLore,
   getWorldTree,
   listWorlds,
-  publish,
   updateWorldLore,
   upsertAgent,
   upsertExit,
@@ -42,8 +40,9 @@ import type { OwnerKind } from '@core/domain/kinds';
  * Tool input schemas are JSON Schema; outputs are the `Result<T, BuilderError>`
  * shape verbatim, so a calling AI can act on `ok: false` directly.
  *
- * NOTE: `reset_live_to_draft` is intentionally NOT exposed via MCP — it wipes
- * gameplay state. It remains available in the UI (with a confirmation modal).
+ * NOTE: Load / Save / Reset starting-state ops are intentionally NOT exposed
+ * via MCP — they're wholesale wipes of authored or gameplay state. They live
+ * only in the admin UI (with confirmation modals).
  */
 export interface ToolDef {
   name: string;
@@ -98,16 +97,6 @@ export const TOOLS: readonly ToolDef[] = [
       }),
   },
   {
-    name: 'clone_live_as_draft',
-    description: 'Clone an existing live world into a new editable draft.',
-    inputSchema: {
-      type: 'object',
-      properties: { id: stringField('live world id') },
-      required: ['id'],
-    },
-    run: (repo, a) => cloneLiveAsDraft(repo, asWorldId(a.id as string)),
-  },
-  {
     name: 'validate_world',
     description: 'Return structural problems for a world. Empty array means clean.',
     inputSchema: {
@@ -121,20 +110,6 @@ export const TOOLS: readonly ToolDef[] = [
       return { ok: true, problems: validateWorld(tree.value) };
     },
   },
-  {
-    name: 'publish_world',
-    description:
-      'Publish a draft to its live world. Validates first; structural three-way merge with skipped-change report.',
-    inputSchema: {
-      type: 'object',
-      properties: { id: stringField('draft world id') },
-      required: ['id'],
-    },
-    run: (repo, a) => publish(repo, asWorldId(a.id as string)),
-  },
-  // NOTE: reset_live_to_draft is intentionally NOT exposed via MCP — it wipes
-  // gameplay state. It remains available in the UI (with a confirmation
-  // modal) and the HTTP API.
   {
     name: 'upsert_location',
     description: 'Create or update a location.',

@@ -32,8 +32,12 @@ describe('MCP tool surface', () => {
     }
   });
 
-  it('does not expose reset_live_to_draft', () => {
+  it('does not expose publish/clone/reset starting-state ops', () => {
+    expect(TOOL_BY_NAME.publish_world).toBeUndefined();
+    expect(TOOL_BY_NAME.clone_live_as_draft).toBeUndefined();
     expect(TOOL_BY_NAME.reset_live_to_draft).toBeUndefined();
+    expect(TOOL_BY_NAME.save_starting_state).toBeUndefined();
+    expect(TOOL_BY_NAME.load_starting_state).toBeUndefined();
   });
 
   it('exposes lore tools (get/update world lore + tag lore CRUD)', () => {

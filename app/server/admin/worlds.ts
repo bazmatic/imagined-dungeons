@@ -1,8 +1,10 @@
 import {
-  cloneLiveAsDraft as cloneLiveAsDraftCore,
   createDraft as createDraftCore,
   getWorldTree,
   listWorlds as listWorldsCore,
+  loadStartingState as loadStartingStateCore,
+  resetLiveFromStartingState as resetLiveCore,
+  saveStartingState as saveStartingStateCore,
   updateWorldCover as updateWorldCoverCore,
 } from '@core/builder/index';
 import { type AgentId, asAgentId, asWorldId } from '@core/domain/ids';
@@ -27,14 +29,24 @@ export const createDraft = createServerFn({ method: 'POST' })
   })
   .handler(async ({ data }) => createDraftCore(await getBuilderRepo(), data));
 
-export const cloneLive = createServerFn({ method: 'POST' })
-  .inputValidator((d: unknown) => {
-    if (typeof d !== 'object' || d === null || typeof (d as { id?: unknown }).id !== 'string') {
-      throw new Error('Expected { id: string }');
-    }
-    return d as { id: string };
-  })
-  .handler(async ({ data }) => cloneLiveAsDraftCore(await getBuilderRepo(), asWorldId(data.id)));
+const idOnly = (d: unknown): { id: string } => {
+  if (typeof d !== 'object' || d === null || typeof (d as { id?: unknown }).id !== 'string') {
+    throw new Error('Expected { id: string }');
+  }
+  return d as { id: string };
+};
+
+export const saveStartingState = createServerFn({ method: 'POST' })
+  .inputValidator(idOnly)
+  .handler(async ({ data }) => saveStartingStateCore(await getBuilderRepo(), asWorldId(data.id)));
+
+export const loadStartingState = createServerFn({ method: 'POST' })
+  .inputValidator(idOnly)
+  .handler(async ({ data }) => loadStartingStateCore(await getBuilderRepo(), asWorldId(data.id)));
+
+export const resetLiveFromStartingState = createServerFn({ method: 'POST' })
+  .inputValidator(idOnly)
+  .handler(async ({ data }) => resetLiveCore(await getBuilderRepo(), asWorldId(data.id)));
 
 export const getWorld = createServerFn({ method: 'GET' })
   .inputValidator((d: unknown) => {
