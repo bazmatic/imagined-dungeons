@@ -46,6 +46,72 @@ const SYSTEM_PROMPT = SYSTEM_PROMPT_LINES.join('\n');
 
 export const DISCOVERY_SCHEMA_NAME = 'discovery_response';
 
+// OpenAI strict mode requires every property in `properties` to appear in
+// `required`, and every nested object (including nullable ones) to set
+// `additionalProperties: false`. Nullable fields use a tuple `type` of
+// `[<base>, 'null']` so the model can choose to emit `null`.
+const SPAWNED_ITEM_SCHEMA: JsonSchema = {
+  type: ['object', 'null'],
+  additionalProperties: false,
+  required: [
+    'id',
+    'label',
+    'shortDescription',
+    'longDescription',
+    'ownerKind',
+    'ownerId',
+    'weight',
+    'hidden',
+    'tags',
+  ],
+  properties: {
+    id: { type: 'string' },
+    label: { type: 'string' },
+    shortDescription: { type: 'string' },
+    longDescription: { type: 'string' },
+    ownerKind: { type: 'string', enum: ['location', 'agent', 'item'] },
+    ownerId: { type: 'string' },
+    weight: { type: 'number' },
+    hidden: { type: 'boolean' },
+    tags: { type: 'array', items: { type: 'string' } },
+  },
+};
+
+const SPAWNED_AGENT_SCHEMA: JsonSchema = {
+  type: ['object', 'null'],
+  additionalProperties: false,
+  required: [
+    'id',
+    'label',
+    'shortDescription',
+    'longDescription',
+    'locationId',
+    'hp',
+    'damage',
+    'defense',
+    'capacity',
+    'mood',
+    'goal',
+    'autonomous',
+    'tags',
+  ],
+  properties: {
+    id: { type: 'string' },
+    label: { type: 'string' },
+    shortDescription: { type: 'string' },
+    longDescription: { type: 'string' },
+    locationId: { type: 'string' },
+    hp: { type: 'number' },
+    damage: { type: 'number' },
+    defense: { type: 'number' },
+    capacity: { type: 'number' },
+    mood: { type: ['string', 'null'] },
+    goal: { type: ['string', 'null'] },
+    autonomous: { type: 'boolean' },
+    tags: { type: 'array', items: { type: 'string' } },
+  },
+};
+
 export const DISCOVERY_SCHEMA: JsonSchema = {
   type: 'object',
   additionalProperties: false,
@@ -54,8 +120,8 @@ export const DISCOVERY_SCHEMA: JsonSchema = {
     narration: { type: 'string' },
     matchedItemId: { type: ['string', 'null'] },
     matchedAgentId: { type: ['string', 'null'] },
-    spawnedItem: { type: ['object', 'null'], additionalProperties: true },
-    spawnedAgent: { type: ['object', 'null'], additionalProperties: true },
+    spawnedItem: SPAWNED_ITEM_SCHEMA,
+    spawnedAgent: SPAWNED_AGENT_SCHEMA,
   },
 };
 

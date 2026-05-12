@@ -219,4 +219,28 @@ describe('runDiscovery', () => {
     expect(user).toContain('iron chest');
     expect(user).toContain('cold to the touch');
   });
+
+  it('DISCOVERY_SCHEMA is OpenAI-strict-mode compliant', async () => {
+    const { DISCOVERY_SCHEMA } = await import('./discovery');
+    // Strict mode requires: every object node has additionalProperties: false,
+    // and every key in `properties` also appears in `required`.
+    const check = (node: unknown, path: string): void => {
+      if (typeof node !== 'object' || node === null) return;
+      const n = node as Record<string, unknown>;
+      const type = n.type;
+      const isObjectType =
+        type === 'object' || (Array.isArray(type) && (type as readonly unknown[]).includes('object'));
+      if (isObjectType) {
+        expect(n.additionalProperties, `${path}.additionalProperties`).toBe(false);
+        const props = (n.properties ?? {}) as Record<string, unknown>;
+        const required = (n.required ?? []) as readonly string[];
+        for (const key of Object.keys(props)) {
+          expect(required, `${path}.required missing ${key}`).toContain(key);
+          check(props[key], `${path}.properties.${key}`);
+        }
+      }
+      if (n.items !== undefined) check(n.items, `${path}.items`);
+    };
+    check(DISCOVERY_SCHEMA, '$');
+  });
 });
