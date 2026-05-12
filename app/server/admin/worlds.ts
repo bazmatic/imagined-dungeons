@@ -45,6 +45,46 @@ export const getWorld = createServerFn({ method: 'GET' })
   })
   .handler(async ({ data }) => getWorldTree(await getBuilderRepo(), asWorldId(data.id)));
 
+/**
+ * Bulk-flip every agent in the world to `autonomous = false`. Writes go
+ * through the BuilderRepository port directly so this works on live worlds
+ * as well as drafts (mirrors the runtime-bypass used by the spawn and
+ * consequence engines). Intended as a debug override during dev.
+ */
+export const disableAllAgentAutonomy = createServerFn({ method: 'POST' })
+  .inputValidator((d: unknown) => {
+    if (typeof d !== 'object' || d === null || typeof (d as { id?: unknown }).id !== 'string') {
+      throw new Error('Expected { id: string }');
+    }
+    return d as { id: string };
+  })
+  .handler(async ({ data }) => {
+    const repo = await getBuilderRepo();
+    const W = asWorldId(data.id);
+    const agents = await repo.listAgents(W);
+    let changed = 0;
+    for (const a of agents) {
+      if (!a.autonomous) continue;
+      await repo.upsertAgent(W, {
+        id: a.id,
+        label: a.label,
+        shortDescription: a.shortDescription,
+        longDescription: a.longDescription,
+        locationId: a.locationId,
+        hp: a.hp,
+        damage: a.damage,
+        defense: a.defense,
+        capacity: a.capacity,
+        mood: a.mood,
+        goal: a.goal,
+        autonomous: false,
+        tags: a.tags,
+      });
+      changed += 1;
+    }
+    return { ok: true as const, value: { changed, total: agents.length } };
+  });
+
 export const updateWorldCover = createServerFn({ method: 'POST' })
   .inputValidator((d: unknown) => {
     if (typeof d !== 'object' || d === null || typeof (d as { id?: unknown }).id !== 'string') {
