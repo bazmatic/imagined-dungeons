@@ -284,8 +284,14 @@ export function parse(
       // Strip leading "to" after the verb (it's a stop-word but we keep it
       // explicit here to also strip when prefixed e.g. "speak to spark, hi").
       const original = text.trim();
-      // Find the original-cased remainder after the first whitespace.
-      const afterVerb = original.replace(/^\S+\s*/, '').replace(/^to\s+/i, '');
+      // Find the original-cased remainder after the first whitespace. Strip
+      // an optional "to" stop-word, then an optional leading article
+      // ("the", "a", "an") so phrasings like "talk to the bartender" don't
+      // resolve the article itself as the target ref.
+      const afterVerb = original
+        .replace(/^\S+\s*/, '')
+        .replace(/^to\s+/i, '')
+        .replace(/^(the|a|an)\s+/i, '');
       if (afterVerb.length === 0) return { kind: ParseErrorKind.MissingArgument, verb: first };
 
       // Split on the first comma; everything before is target ref, after is utterance.

@@ -559,6 +559,26 @@ export async function publish(
         throw new Error(`unexpected entity kind in publish deletes: ${ref.kind}`);
       }
     }
+    // Lore is authored, not stateful. Always overwrite live's world_lore +
+    // tag_lore to match the draft so the runtime sees the authored truth.
+    // (The merge plan above only handles structural entities; without this
+    // step, the lore stays at whatever live had — empty for never-authored
+    // worlds, stale otherwise.)
+    await tx.writeWorldLore(liveId, {
+      worldOverview: draftTree.value.worldLore.worldOverview,
+      storySoFar: draftTree.value.worldLore.storySoFar,
+    });
+    const existingTagLore = await tx.listTagLore(liveId);
+    for (const row of existingTagLore) await tx.deleteTagLore(liveId, row.id);
+    for (const row of draftTree.value.tagLore) {
+      await tx.upsertTagLore(liveId, {
+        id: row.id,
+        tag: row.tag,
+        title: row.title,
+        description: row.description,
+      });
+    }
+
     const previousFireState = await tx.readTriggerFireState(liveId);
     const draftTriggerIds = new Set(draftTree.value.triggers.map((t) => t.id as string));
     const filtered: Record<string, { firedAt: number }> = {};

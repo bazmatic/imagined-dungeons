@@ -1,6 +1,6 @@
 import type { WorldTree } from '@core/domain/builder-types';
 import { useState } from 'react';
-import { silenceAllAgents, updateWorldCover } from '~/server/admin/worlds';
+import { setWorldPlayerAgent, silenceAllAgents, updateWorldCover } from '~/server/admin/worlds';
 import { EntityHeader } from './EntityHeader';
 import { KeyVisualPanel } from './KeyVisualPanel';
 import { MetadataColumn } from './MetadataColumn';
@@ -47,6 +47,41 @@ export function WorldSettingsForm({ tree, onSaved }: WorldSettingsFormProps) {
             World-level settings. Cover art appears on the campaign builder and on the world's
             key-visual panel.
           </p>
+          <div style={{ marginTop: 'var(--s-4)' }}>
+            <span className="form-grid__field-label">Player agent</span>
+            <p className="t-metadata" style={{ margin: '0 0 var(--s-2) 0' }}>
+              The agent the game treats as the player. Required before publishing a draft.
+            </p>
+            <select
+              className="manuscript-input-v2"
+              value={(tree.summary.playerAgentId as string | null) ?? ''}
+              disabled={busy}
+              onChange={async (e) => {
+                const next = e.target.value === '' ? null : e.target.value;
+                setBusy(true);
+                try {
+                  const r = await setWorldPlayerAgent({
+                    data: { id: tree.summary.id as string, playerAgentId: next },
+                  });
+                  if (!r.ok) {
+                    alert('Failed to set player agent.');
+                    return;
+                  }
+                  onSaved();
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              <option value="">(none)</option>
+              {tree.agents.map((a) => (
+                <option key={a.id as string} value={a.id as string}>
+                  {a.label} — {a.id as string}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div style={{ marginTop: 'var(--s-4)' }}>
             <span className="form-grid__field-label">Silence NPCs</span>
             <p className="t-metadata" style={{ margin: '0 0 var(--s-2) 0' }}>

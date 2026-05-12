@@ -5,7 +5,7 @@ import {
   listWorlds as listWorldsCore,
   updateWorldCover as updateWorldCoverCore,
 } from '@core/builder/index';
-import { asAgentId, asWorldId } from '@core/domain/ids';
+import { type AgentId, asAgentId, asWorldId } from '@core/domain/ids';
 import { createServerFn } from '@tanstack/react-start';
 import { getBuilderRepo } from './repo';
 
@@ -85,6 +85,33 @@ export const silenceAllAgents = createServerFn({ method: 'POST' })
     const repo = await getBuilderRepo();
     const result = await repo.silenceAllAgents(asWorldId(data.id));
     return { ok: true as const, value: result };
+  });
+
+/**
+ * Set the world's player_agent_id (the agent the game's runTick treats as
+ * the player). Writes via the BuilderRepository port's `updateWorldSummary`
+ * patch, bypassing the requireDraft gate so it works on live worlds too.
+ */
+export const setWorldPlayerAgent = createServerFn({ method: 'POST' })
+  .inputValidator((d: unknown) => {
+    if (
+      typeof d !== 'object' ||
+      d === null ||
+      typeof (d as { id?: unknown }).id !== 'string'
+    ) {
+      throw new Error('Expected { id: string, playerAgentId: string | null }');
+    }
+    const raw = (d as { playerAgentId?: unknown }).playerAgentId;
+    if (raw !== null && typeof raw !== 'string') {
+      throw new Error('playerAgentId must be string or null');
+    }
+    return d as { id: string; playerAgentId: string | null };
+  })
+  .handler(async ({ data }) => {
+    const repo = await getBuilderRepo();
+    const playerAgentId: AgentId | null = data.playerAgentId === null ? null : asAgentId(data.playerAgentId);
+    await repo.updateWorldSummary(asWorldId(data.id), { playerAgentId });
+    return { ok: true as const };
   });
 
 export const updateWorldCover = createServerFn({ method: 'POST' })

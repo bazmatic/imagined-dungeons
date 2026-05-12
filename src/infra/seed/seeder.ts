@@ -108,7 +108,14 @@ export async function seedIfEmpty(db: DB, campaign: Campaign): Promise<void> {
   }
 
   const W = campaign.worldId;
-  await db.insert(schema.worlds).values({ id: W, label: campaign.worldLabel, rngSeed: 1 });
+  await db
+    .insert(schema.worlds)
+    .values({
+      id: W,
+      label: campaign.worldLabel,
+      rngSeed: 1,
+      playerAgentId: campaign.playerId as string,
+    });
 
   await db
     .insert(schema.locations)
