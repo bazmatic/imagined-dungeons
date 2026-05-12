@@ -1,7 +1,10 @@
 import type { Agent, Exit, Item, Location } from '@core/domain/entities';
 import { asAgentId, asExitId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
+import { EventKind } from '@core/domain/kinds';
+import { MemoryBuilderRepository } from '@infra/builder-memory-repository';
 import { MemoryRepository } from '@infra/memory-repository';
 import { describe, expect, it } from 'vitest';
+import { makeFakeLanguageModel } from '../../../tests/helpers/fake-language-model';
 import type { ParseFn } from './parser/composite';
 import { runTurn } from './turn';
 
@@ -90,6 +93,44 @@ describe('runTurn', () => {
     // the mistake on their next turn (NPCs were previously dumbly retrying).
     expect(r.events).toHaveLength(1);
     expect(r.events[0]?.kind).toBe('failed');
+  });
+
+  it('failed `look <unknown>` falls through to discovery when llm + builderRepo are present', async () => {
+    const repo = new MemoryRepository(W, {
+      locations: [locA],
+      exits: [],
+      items: [],
+      agents: [paff],
+    });
+    const builderRepo = new MemoryBuilderRepository();
+    const llm = makeFakeLanguageModel({
+      responder: () => ({
+        raw: '',
+        parsed: {
+          narration: 'A faint shimmer in the air, but nothing more.',
+          matchedItemId: null,
+          matchedAgentId: null,
+          spawnedItem: null,
+          spawnedAgent: null,
+        },
+      }),
+    });
+    const r = await runTurn(paff.id, 'look ghost', repo, { llm, builderRepo });
+    expect(r.render).toBe('A faint shimmer in the air, but nothing more.');
+    expect(r.events[0]?.kind).toBe(EventKind.Look);
+    expect(llm.calls.length).toBe(1);
+  });
+
+  it('failed `look <unknown>` without builderRepo emits the standard parse-error', async () => {
+    const repo = new MemoryRepository(W, {
+      locations: [locA],
+      exits: [],
+      items: [],
+      agents: [paff],
+    });
+    const r = await runTurn(paff.id, 'look ghost', repo);
+    expect(r.events[0]?.kind).toBe(EventKind.Failed);
+    expect(r.render).toContain('ghost');
   });
 
   it('returns an action-error message when the action fails', async () => {
