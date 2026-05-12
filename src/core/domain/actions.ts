@@ -22,6 +22,7 @@ export type Action =
       targetAgentId: AgentId | null;
     }
   | { kind: 'attack'; actorId: AgentId; targetAgentId: AgentId }
+  | { kind: 'search'; actorId: AgentId; query: string }
   | {
       kind: 'update_description';
       actorId: AgentId;
@@ -43,6 +44,6 @@ export type ParseError =
   | { kind: 'unknown_verb'; verb: string }
   | { kind: 'missing_argument'; verb: string }
   | { kind: 'unknown_direction'; raw: string }
-  | { kind: 'no_such_target'; ref: string }
+  | { kind: 'no_such_target'; ref: string; verb?: string }
   | { kind: 'ambiguous_target'; ref: string; candidates: string[] }
   | { kind: 'already_carried'; ref: string; label: string };

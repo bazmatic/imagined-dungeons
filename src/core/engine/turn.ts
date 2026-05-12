@@ -1,3 +1,4 @@
+import type { BuilderRepository } from '@core/builder/repository';
 import { NARRATED_EVENT_KINDS } from '@core/domain/events';
 import type { DomainEvent } from '@core/domain/events';
 import type { AgentId } from '@core/domain/ids';
@@ -17,9 +18,23 @@ export interface TurnResult {
   readonly events: readonly DomainEvent[];
 }
 
+/**
+ * Mutable counter shared across a tick — `runTick` constructs one and passes
+ * it to each `runTurn`. `runTurn` decrements before calling the discovery
+ * LLM (either via the `search` action or the failed-look fall-through). When
+ * `remaining` hits zero, discovery is skipped and the turn falls back to the
+ * normal mechanical path (search emits a stock narration; failed-look emits
+ * the standard parse-error).
+ */
+export interface DiscoveryBudget {
+  remaining: number;
+}
+
 export interface RunTurnOptions {
   readonly parse?: ParseFn;
   readonly llm?: LanguageModel | null;
+  readonly builderRepo?: BuilderRepository;
+  readonly discoveryBudget?: DiscoveryBudget;
 }
 
 const defaultParse: ParseFn = async (text, actor, view, inventory) =>
@@ -57,7 +72,12 @@ export async function runTurn(
     return { render: reason, events: [failed] };
   }
 
-  const r = await dispatch(parsed, repo);
+  const worldId = await repo.getWorldId();
+  const r = await dispatch(
+    parsed,
+    repo,
+    opts.builderRepo ? { llm, worldId, builderRepo: opts.builderRepo } : { llm, worldId },
+  );
   if (!r.ok) {
     const reason = renderActionError(r.error);
     const failed: DomainEvent = {

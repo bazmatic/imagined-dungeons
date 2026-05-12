@@ -20,8 +20,8 @@ export function SideNav({ active, onSelect, onCreateNew }: SideNavProps) {
   return (
     <aside className="side-nav">
       <div className="side-nav__brand">
-        <div className="side-nav__brand-name">GRIMOIRE</div>
-        <div className="side-nav__brand-version">V.0.8.4-BETA</div>
+        <div className="side-nav__brand-name">Imagined Builder</div>
+        <div className="side-nav__brand-version">BETA</div>
       </div>
       <ul className="side-nav__list">
         {ITEMS.map((item) => (

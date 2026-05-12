@@ -1,6 +1,9 @@
+import type { BuilderRepository } from '@core/builder/repository';
 import type { Action } from '@core/domain/actions';
+import type { WorldId } from '@core/domain/ids';
 import { ActionKind } from '@core/domain/kinds';
-import type { Result } from '@core/domain/result';
+import { Err, type Result } from '@core/domain/result';
+import type { LanguageModel } from '../language-model';
 import type { Repository } from '../repository';
 import { handleAttack } from './attack';
 import { handleDrop } from './drop';
@@ -9,14 +12,29 @@ import { handleGive } from './give';
 import { handleInventory } from './inventory';
 import { handleLook } from './look';
 import { handleMove } from './move';
+import { handleSearch } from './search';
 import { handleSpeak } from './speak';
 import { handleTake } from './take';
 import type { ActionOutcome } from './types';
 import { handleUpdateDescription } from './update-description';
 
+/**
+ * Optional dependencies passed to handlers that need them (currently only
+ * `handleSearch`, which calls the generative-discovery LLM and persists
+ * spawned entities through the builder port). Handlers that don't need
+ * these may ignore them. Missing deps for a handler that requires them
+ * cause that handler to return an `Err` rather than crash the turn.
+ */
+export interface DispatchDeps {
+  readonly llm?: LanguageModel | null;
+  readonly builderRepo?: BuilderRepository;
+  readonly worldId?: WorldId;
+}
+
 export async function dispatch(
   action: Action,
   repo: Repository,
+  deps: DispatchDeps = {},
 ): Promise<Result<ActionOutcome, string>> {
   switch (action.kind) {
     case ActionKind.Move:
@@ -39,5 +57,15 @@ export async function dispatch(
       return handleAttack(action, repo);
     case ActionKind.UpdateDescription:
       return handleUpdateDescription(action, repo);
+    case ActionKind.Search: {
+      if (!deps.llm || !deps.builderRepo || !deps.worldId) {
+        return Err('search requires llm and builderRepo');
+      }
+      return handleSearch(action, repo, {
+        llm: deps.llm,
+        builderRepo: deps.builderRepo,
+        worldId: deps.worldId,
+      });
+    }
   }
 }
