@@ -31,13 +31,21 @@ const SYSTEM_PROMPT_LINES: readonly string[] = [
   'The player has issued a look or search query that did not match anything obvious. Your job is to decide what they perceive, choosing ONE of four valid outcomes:',
   '',
   '1. MATCH — if their query clearly refers to one of the visible items or agents listed below, return its id in `matchedItemId` or `matchedAgentId`. Leave `narration` empty and the other fields null. The engine will then route through the normal `look <entity>` path and show the authored description.',
-  '2. NARRATE — pure flavour. The world has nothing new to give them, but you can describe what they perceive. Set `narration` to a short, grounded sentence or two. Leave all other fields null.',
+  '2. NARRATE — pure flavour. Describe what the player perceives but do not introduce any new persistent entity. Set `narration` to a short, grounded sentence or two. Leave all other fields null.',
   '3. SPAWN ITEM — invent a small, plausible new item that fits the location and the world. Populate `spawnedItem` with a complete UpsertItemInput-shaped object and write narration that introduces it.',
-  '4. SPAWN AGENT — invent a small, plausible new agent (a creature, a passer-by) that fits the location and world. Populate `spawnedAgent` with a complete UpsertAgentInput-shaped object and write narration that introduces them.',
+  '4. SPAWN AGENT — invent a small, plausible new agent (a creature, a passer-by, a member of the staff or faction the location is known for) that fits the location and world. Populate `spawnedAgent` with a complete UpsertAgentInput-shaped object and write narration that introduces them.',
   '',
-  'Exactly ONE of: matchedItemId, matchedAgentId, spawnedItem, spawnedAgent may be non-null. Most queries should be NARRATE — be conservative with spawning. Never invent something that contradicts the world overview, story so far, or the tag descriptions of the current location.',
+  'Exactly ONE of: matchedItemId, matchedAgentId, spawnedItem, spawnedAgent may be non-null. All four must be set to null in the NARRATE case.',
+  '',
+  'How to choose:',
+  '- If the query is broad atmosphere ("what does the room feel like", "look around"), prefer NARRATE.',
+  '- If the query explicitly asks about PEOPLE or CREATURES ("who is here?", "any staff?", "is anyone behind the bar?", "any guards?") AND the location\'s tag-lore descriptions mention an inhabitant class (staff, patrols, faction members, vermin, etc.) that is NOT already in the visible characters list, you SHOULD SPAWN AGENT — invent one such inhabitant. Do not fall back to NARRATE in this case; the player is explicitly asking to encounter someone.',
+  '- If the query explicitly asks about OBJECTS ("what\'s on the shelves?", "anything hidden in the corner?") and the lore invites concrete props, prefer SPAWN ITEM over NARRATE.',
+  '- Spawned agents and items become permanent parts of the world; spawn them only when they fit the lore and the player\'s query genuinely invites them. Never contradict the world overview, story so far, or tag descriptions.',
   '',
   'If a SUBJECT is supplied, the player is examining that specific entity — augment its existing descriptions with additional detail or atmosphere, do NOT invent a replacement entity that occupies the same conceptual slot.',
+  '',
+  'When spawning, the `id` must be a fresh snake_case identifier (e.g. `agt_tiefling_barkeep`, `itm_brass_lantern`); the `ownerKind`/`ownerId` for items and the `locationId` for agents must reference the current location (use the location id from the user prompt context). Tags should be drawn from the tag-lore listed for this location where they fit.',
   '',
   'All five fields (`narration`, `matchedItemId`, `matchedAgentId`, `spawnedItem`, `spawnedAgent`) must be present in the response. Use null for any field you are not using.',
 ];
@@ -152,6 +160,7 @@ function buildUserPrompt(req: DiscoveryRequest): string {
 
   lines.push('');
   lines.push(`Trigger: ${req.trigger}`);
+  lines.push(`Current location id: ${req.locationId}`);
   lines.push(`Player query: ${req.query}`);
 
   if (req.subject !== null) {
@@ -163,17 +172,21 @@ function buildUserPrompt(req: DiscoveryRequest): string {
     lines.push('Augment this subject — do not invent a replacement entity for the same slot.');
   }
 
-  if (req.visibleItems.length > 0) {
-    lines.push('');
-    lines.push('Visible items in the current location:');
+  lines.push('');
+  lines.push('Visible items in the current location:');
+  if (req.visibleItems.length === 0) {
+    lines.push('  (none)');
+  } else {
     for (const it of req.visibleItems) {
       lines.push(`- ${it.id} | ${it.label} — ${it.shortDescription}`);
     }
   }
 
-  if (req.visibleAgents.length > 0) {
-    lines.push('');
-    lines.push('Visible characters in the current location:');
+  lines.push('');
+  lines.push('Visible characters in the current location:');
+  if (req.visibleAgents.length === 0) {
+    lines.push('  (none)');
+  } else {
     for (const a of req.visibleAgents) {
       lines.push(`- ${a.id} | ${a.label} — ${a.shortDescription}`);
     }
