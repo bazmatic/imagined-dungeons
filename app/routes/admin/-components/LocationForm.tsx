@@ -79,7 +79,13 @@ export function LocationForm({
   return (
     <>
       <EntityHeader kindLabel="Location" title={v.label || v.id} id={v.id} />
-      <div className="form-grid">
+      <form
+        className="form-grid"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void save();
+        }}
+      >
         <div className="form-grid__primary">
           <div>
             <label htmlFor="loc-label" className="form-grid__field-label">
@@ -131,7 +137,7 @@ export function LocationForm({
             />
           </div>
           <div style={{ display: 'flex', gap: 16 }}>
-            <button type="button" className="btn btn--primary" onClick={save} disabled={saving}>
+            <button type="submit" className="btn btn--primary" disabled={saving}>
               Save
             </button>
           </div>
@@ -151,7 +157,7 @@ export function LocationForm({
             />
           </div>
         </MetadataColumn>
-      </div>
+      </form>
 
       {(itemsHere.length > 0 || agentsHere.length > 0) && (
         <section style={{ marginTop: 'var(--s-4)' }}>

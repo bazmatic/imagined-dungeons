@@ -66,7 +66,13 @@ export function TagLoreForm({ tree, tag, problemCount, onSaved, onDeleted }: Tag
   return (
     <>
       <EntityHeader kindLabel="Tag Lore" title={tag} id={id} />
-      <div className="form-grid">
+      <form
+        className="form-grid"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void save();
+        }}
+      >
         <div className="form-grid__primary">
           <div>
             <span className="form-grid__field-label">Tag</span>
@@ -97,12 +103,12 @@ export function TagLoreForm({ tree, tag, problemCount, onSaved, onDeleted }: Tag
             />
           </div>
           <div style={{ display: 'flex', gap: 16 }}>
-            <button type="button" className="btn btn--primary" onClick={save} disabled={busy}>
+            <button type="submit" className="btn btn--primary" disabled={busy}>
               Save
             </button>
           </div>
         </div>
-      </div>
+      </form>
       <FootnoteBar
         wordCount={wordCount}
         charCount={charCount}

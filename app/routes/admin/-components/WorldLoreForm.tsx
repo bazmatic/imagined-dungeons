@@ -39,7 +39,13 @@ export function WorldLoreForm({ tree, problemCount, onSaved }: WorldLoreFormProp
   return (
     <>
       <EntityHeader kindLabel="World Lore" title="World lore" />
-      <div className="form-grid">
+      <form
+        className="form-grid"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void save();
+        }}
+      >
         <div className="form-grid__primary">
           <div>
             <label htmlFor="wl-overview" className="form-grid__field-label">
@@ -69,12 +75,12 @@ export function WorldLoreForm({ tree, problemCount, onSaved }: WorldLoreFormProp
             />
           </div>
           <div style={{ display: 'flex', gap: 16 }}>
-            <button type="button" className="btn btn--primary" onClick={save} disabled={saving}>
+            <button type="submit" className="btn btn--primary" disabled={saving}>
               Save
             </button>
           </div>
         </div>
-      </div>
+      </form>
       <FootnoteBar wordCount={wordCount} charCount={charCount} problemCount={problemCount} />
     </>
   );

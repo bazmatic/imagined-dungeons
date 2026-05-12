@@ -82,7 +82,13 @@ export function AgentForm({ tree, agentId, problemCount, onSaved, onDeleted }: A
   return (
     <>
       <EntityHeader kindLabel="Agent" title={v.label || v.id} id={v.id} />
-      <div className="form-grid">
+      <form
+        className="form-grid"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void save();
+        }}
+      >
         <div className="form-grid__primary">
           <div>
             <label htmlFor="ag-label" className="form-grid__field-label">
@@ -142,7 +148,7 @@ export function AgentForm({ tree, agentId, problemCount, onSaved, onDeleted }: A
             />
           </div>
           <div style={{ display: 'flex', gap: 16 }}>
-            <button type="button" className="btn btn--primary" onClick={save} disabled={saving}>
+            <button type="submit" className="btn btn--primary" disabled={saving}>
               Save
             </button>
           </div>
@@ -248,7 +254,7 @@ export function AgentForm({ tree, agentId, problemCount, onSaved, onDeleted }: A
             />
           </div>
         </MetadataColumn>
-      </div>
+      </form>
       <FootnoteBar
         wordCount={wordCount}
         charCount={charCount}

@@ -103,7 +103,13 @@ export function ItemForm({
           </button>
         </div>
       ) : null}
-      <div className="form-grid">
+      <form
+        className="form-grid"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void save();
+        }}
+      >
         <div className="form-grid__primary">
           <div>
             <label htmlFor="it-label" className="form-grid__field-label">
@@ -181,9 +187,8 @@ export function ItemForm({
           </div>
           <div style={{ display: 'flex', gap: 16 }}>
             <button
-              type="button"
+              type="submit"
               className="btn btn--primary"
-              onClick={save}
               disabled={saving || isNested || v.ownerId === ''}
             >
               Save
@@ -222,7 +227,7 @@ export function ItemForm({
             />
           </div>
         </MetadataColumn>
-      </div>
+      </form>
       <FootnoteBar
         wordCount={wordCount}
         charCount={charCount}
