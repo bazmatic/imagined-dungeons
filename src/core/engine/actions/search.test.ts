@@ -154,6 +154,44 @@ describe('handleSearch', () => {
     expect((await builder.listItems(W)).length).toBe(0);
   });
 
+  it('malformed spawnedItem (empty id) → silently dropped, narration still emitted, no throw', async () => {
+    const { engine, builder } = makeRepos();
+    const llm = makeFakeLanguageModel({
+      responder: () => ({
+        raw: '',
+        parsed: {
+          narration: 'A breeze whispers past — but nothing tangible.',
+          matchedItemId: null,
+          matchedAgentId: null,
+          spawnedItem: {
+            // Empty id fails coerceSpawnedItem's required-field check.
+            id: '',
+            label: 'phantom',
+            shortDescription: 's',
+            longDescription: 'l',
+            ownerKind: OwnerKind.Location,
+            ownerId: A,
+            weight: 0,
+            hidden: false,
+            tags: [],
+          },
+          spawnedAgent: null,
+        },
+      }),
+    });
+    const r = await handleSearch(
+      { kind: ActionKind.Search, actorId: paff.id, query: 'curtains' },
+      engine,
+      { llm, builderRepo: builder, worldId: W },
+    );
+    if (!r.ok) throw new Error(r.error);
+    // Narration still surfaces.
+    expect(r.value.render).toBe('A breeze whispers past — but nothing tangible.');
+    expect(r.value.event.kind).toBe(EventKind.Look);
+    // The malformed spawn was silently dropped — nothing persisted.
+    expect((await builder.listItems(W)).length).toBe(0);
+  });
+
   it('hallucinated matchedItemId (not in visible list) → silently discarded, falls through to narration', async () => {
     const { engine, builder } = makeRepos();
     const llm = makeFakeLanguageModel({
