@@ -69,7 +69,10 @@ describe('makeCompositeParser', () => {
     expect(llm.calls).toHaveLength(1);
   });
 
-  it('returns the original rule-based ParseError when the LLM returns unknown', async () => {
+  it('returns a graceful ImpossibleAction when the LLM returns unknown', async () => {
+    // The LLM giving up is treated as 'I am not sure how to do that' rather
+    // than the rule layer's verb-specific complaint. The rule parser is a
+    // perf cache; its errors are not user-facing when the LLM is available.
     const llm = makeFakeLanguageModel({
       responder: () => ({
         raw: '{"kind":"unknown","reason":"x"}',
@@ -78,7 +81,10 @@ describe('makeCompositeParser', () => {
     });
     const parse = makeCompositeParser({ llm });
     const r = await parse('frobnicate', paff, view, []);
-    expect(r).toEqual({ kind: 'unknown_verb', verb: 'frobnicate' });
+    expect(r).toEqual({
+      kind: 'impossible_action',
+      reason: "I'm not sure how to do that. Try rephrasing.",
+    });
   });
 
   it('returns the original rule-based ParseError when the LLM throws', async () => {

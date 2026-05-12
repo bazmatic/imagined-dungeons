@@ -45,8 +45,16 @@ export function makeCompositeParser(deps: CompositeParserDeps): ParseFn {
     try {
       const result = await llmInterpret(text, actor, view, inventory, deps.llm);
       if (!result) {
-        log.info(`[llm] no action for input "${text}" — using rule-based ${ruleResult.kind}`);
-        return ruleResult;
+        // The LLM couldn't classify, even with the wide vocabulary. Surface
+        // a graceful failure instead of the rule layer's verb-specific
+        // complaint ("I don't know the verb X."). The rule layer is a
+        // performance cache — its errors are not user-facing if the LLM is
+        // available.
+        log.info(`[llm] no action for input "${text}" — graceful fallback`);
+        return {
+          kind: ParseErrorKind.ImpossibleAction,
+          reason: "I'm not sure how to do that. Try rephrasing.",
+        };
       }
       log.info(`[llm] interpreted "${text}" as ${result.kind}`);
       return result;
