@@ -128,6 +128,19 @@ describe('parse', () => {
     expect(r.kind).toBe('empty');
   });
 
+  it('"search dusty corner" parses to search with the query', () => {
+    const r = parse('search dusty corner', ACTOR, view(), inv());
+    if (r.kind !== 'search') throw new Error('expected search');
+    expect(r.query).toBe('dusty corner');
+    expect(r.actorId).toBe(ACTOR.id);
+  });
+
+  it('bare "search" parses to search with an empty query', () => {
+    const r = parse('search', ACTOR, view(), inv());
+    if (r.kind !== 'search') throw new Error('expected search');
+    expect(r.query).toBe('');
+  });
+
   it('unknown verb', () => {
     const r = parse('frobnicate the widget', ACTOR, view(), inv());
     if (r.kind !== 'unknown_verb') throw new Error('expected unknown_verb');

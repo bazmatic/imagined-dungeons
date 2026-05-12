@@ -120,6 +120,12 @@ export function parse(
       }
       // None matched — return the standard no_such_target error
       // (the item resolver's error preserves the player's ref verbatim).
+      // Stamp the originating verb so the engine's discovery layer can detect
+      // failed `look <thing>` calls and route them through generative
+      // discovery instead of surfacing the parse error.
+      if (itemR.error.kind === ParseErrorKind.NoSuchTarget) {
+        return { ...itemR.error, verb: first };
+      }
       return itemR.error;
     }
 
@@ -428,6 +434,16 @@ export function parse(
         description,
         targetAgentId,
       };
+    }
+
+    case 'search': {
+      // Generative-discovery verb. We do NOT resolve the query against the
+      // visible world here — that's the discovery LLM's job. The parser just
+      // captures the player's original-cased query (preserving casing for
+      // narration). A bare `search` is a valid query.
+      const original = text.trim();
+      const afterVerb = original.replace(/^search\b\s*/i, '').trim();
+      return { kind: ActionKind.Search, actorId: actor.id, query: afterVerb };
     }
 
     case 'attack':
