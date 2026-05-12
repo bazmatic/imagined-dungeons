@@ -1,0 +1,180 @@
+import type { Agent, Item, Location } from '@core/domain/entities';
+import { asAgentId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
+import { ActionKind, EventKind, ExaminableKind, OwnerKind } from '@core/domain/kinds';
+import { MemoryBuilderRepository } from '@infra/builder-memory-repository';
+import { MemoryRepository } from '@infra/memory-repository';
+import { describe, expect, it } from 'vitest';
+import { makeFakeLanguageModel } from '../../../../tests/helpers/fake-language-model';
+import { handleSearch } from './search';
+
+const W = asWorldId('w');
+const A = asLocationId('loc_a');
+
+const loc: Location = {
+  id: A,
+  worldId: W,
+  label: 'The Goblet',
+  shortDescription: 'a tavern',
+  longDescription: 'A dim tavern.',
+  tags: ['tavern'],
+};
+
+const paff: Agent = {
+  id: asAgentId('char_p'),
+  worldId: W,
+  label: 'Paff',
+  shortDescription: '',
+  longDescription: '',
+  locationId: A,
+  hp: 10,
+  damage: 0,
+  defense: 0,
+  capacity: 10,
+  mood: null,
+  shortTermIntent: null,
+  goal: null,
+  autonomous: false,
+  awake: false,
+  tags: [],
+};
+
+const map: Item = {
+  id: asItemId('item_map'),
+  worldId: W,
+  label: 'fire map',
+  shortDescription: 'a glowing map',
+  longDescription: 'A real-time map of fire.',
+  owner: { kind: OwnerKind.Location, id: A },
+  weight: 1,
+  hidden: false,
+  tags: [],
+};
+
+const makeRepos = (items: Item[] = [], agents: Agent[] = [paff]) => {
+  const engine = new MemoryRepository(W, {
+    locations: [loc],
+    exits: [],
+    items,
+    agents,
+  });
+  const builder = new MemoryBuilderRepository();
+  return { engine, builder };
+};
+
+describe('handleSearch', () => {
+  it('flavour-only narration → emits a Look event with the narration and no spawns', async () => {
+    const { engine, builder } = makeRepos();
+    const llm = makeFakeLanguageModel({
+      responder: () => ({
+        raw: '',
+        parsed: {
+          narration: 'A spider scuttles into a crack.',
+          matchedItemId: null,
+          matchedAgentId: null,
+          spawnedItem: null,
+          spawnedAgent: null,
+        },
+      }),
+    });
+    const r = await handleSearch(
+      { kind: ActionKind.Search, actorId: paff.id, query: 'dusty corner' },
+      engine,
+      { llm, builderRepo: builder, worldId: W },
+    );
+    if (!r.ok) throw new Error(r.error);
+    expect(r.value.render).toBe('A spider scuttles into a crack.');
+    expect(r.value.event.kind).toBe(EventKind.Look);
+    expect((await builder.listItems(W)).length).toBe(0);
+    expect((await builder.listAgents(W)).length).toBe(0);
+  });
+
+  it('spawnedItem in response → persists via builderRepo.upsertItem', async () => {
+    const { engine, builder } = makeRepos();
+    const llm = makeFakeLanguageModel({
+      responder: () => ({
+        raw: '',
+        parsed: {
+          narration: 'You find a tarnished coin under the bench.',
+          matchedItemId: null,
+          matchedAgentId: null,
+          spawnedItem: {
+            id: 'item_coin',
+            label: 'tarnished coin',
+            shortDescription: 'a tarnished coin',
+            longDescription: 'A small, tarnished copper coin.',
+            ownerKind: OwnerKind.Location,
+            ownerId: A,
+            weight: 1,
+            hidden: false,
+            tags: ['treasure'],
+          },
+          spawnedAgent: null,
+        },
+      }),
+    });
+    const r = await handleSearch(
+      { kind: ActionKind.Search, actorId: paff.id, query: 'under the bench' },
+      engine,
+      { llm, builderRepo: builder, worldId: W },
+    );
+    if (!r.ok) throw new Error(r.error);
+    const items = await builder.listItems(W);
+    expect(items.length).toBe(1);
+    expect(items[0]?.label).toBe('tarnished coin');
+    expect(r.value.render).toContain('tarnished coin');
+  });
+
+  it('matchedItemId for a visible authored item → narration includes the authored description', async () => {
+    const { engine, builder } = makeRepos([map]);
+    const llm = makeFakeLanguageModel({
+      responder: () => ({
+        raw: '',
+        parsed: {
+          narration: 'IGNORED',
+          matchedItemId: map.id,
+          matchedAgentId: null,
+          spawnedItem: null,
+          spawnedAgent: null,
+        },
+      }),
+    });
+    const r = await handleSearch(
+      { kind: ActionKind.Search, actorId: paff.id, query: 'glowing map' },
+      engine,
+      { llm, builderRepo: builder, worldId: W },
+    );
+    if (!r.ok) throw new Error(r.error);
+    expect(r.value.render).toContain('A real-time map of fire.');
+    expect(r.value.event.kind).toBe(EventKind.Look);
+    // Event target is the matched item.
+    if (r.value.event.kind === EventKind.Look) {
+      expect(r.value.event.target.kind).toBe(ExaminableKind.Item);
+    }
+    // No spawn occurred.
+    expect((await builder.listItems(W)).length).toBe(0);
+  });
+
+  it('hallucinated matchedItemId (not in visible list) → silently discarded, falls through to narration', async () => {
+    const { engine, builder } = makeRepos();
+    const llm = makeFakeLanguageModel({
+      responder: () => ({
+        raw: '',
+        parsed: {
+          narration: 'You see nothing of consequence.',
+          matchedItemId: 'item_nonexistent',
+          matchedAgentId: null,
+          spawnedItem: null,
+          spawnedAgent: null,
+        },
+      }),
+    });
+    const r = await handleSearch(
+      { kind: ActionKind.Search, actorId: paff.id, query: 'whatever' },
+      engine,
+      { llm, builderRepo: builder, worldId: W },
+    );
+    if (!r.ok) throw new Error(r.error);
+    expect(r.value.render).toBe('You see nothing of consequence.');
+    expect((await builder.listItems(W)).length).toBe(0);
+  });
+});
