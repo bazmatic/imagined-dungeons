@@ -73,7 +73,7 @@ describe('decideNpcIntent', () => {
     });
     const repo = makeRepo();
     const intent = await decideNpcIntent(SPARK_ID, repo, llm);
-    expect(intent).toBe('I want to head north and scout the street.');
+    expect(intent).toEqual(['I want to head north and scout the street.']);
     expect(llm.textCalls).toHaveLength(1);
     const call = llm.textCalls[0];
     if (!call) throw new Error('expected textCall');
@@ -87,8 +87,8 @@ describe('decideNpcIntent', () => {
   it('returns the fallback intent "wait" when llm is null', async () => {
     const repo = makeRepo();
     const intent = await decideNpcIntent(SPARK_ID, repo, null);
-    expect(intent).toBe(NpcFallbackIntent);
-    expect(intent).toBe('wait');
+    expect(intent).toEqual([NpcFallbackIntent]);
+    expect(intent).toEqual(['wait']);
   });
 
   it('falls back to "wait" and warns when the LLM throws', async () => {
@@ -101,7 +101,7 @@ describe('decideNpcIntent', () => {
     const warnSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     try {
       const intent = await decideNpcIntent(SPARK_ID, repo, llm);
-      expect(intent).toBe(NpcFallbackIntent);
+      expect(intent).toEqual([NpcFallbackIntent]);
       expect(warnSpy).toHaveBeenCalled();
     } finally {
       warnSpy.mockRestore();
@@ -114,7 +114,7 @@ describe('decideNpcIntent', () => {
     const warnSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     try {
       const intent = await decideNpcIntent(SPARK_ID, repo, llm);
-      expect(intent).toBe(NpcFallbackIntent);
+      expect(intent).toEqual([NpcFallbackIntent]);
     } finally {
       warnSpy.mockRestore();
     }
@@ -126,7 +126,7 @@ describe('decideNpcIntent', () => {
     });
     const repo = makeRepo();
     const intent = await decideNpcIntent(SPARK_ID, repo, llm);
-    expect(intent).toBe('I emote wave at Paff.');
+    expect(intent).toEqual(['I emote wave at Paff.']);
     // System prompt should advertise emote.
     const call = llm.textCalls[0];
     expect(call?.system).toContain('emote');
@@ -137,7 +137,7 @@ describe('decideNpcIntent', () => {
   it('does not call the LLM when llm is null (no model usage on fallback)', async () => {
     const repo = makeRepo();
     // Sanity: passing null skips construction of the prompt entirely.
-    await expect(decideNpcIntent(SPARK_ID, repo, null)).resolves.toBe('wait');
+    await expect(decideNpcIntent(SPARK_ID, repo, null)).resolves.toEqual(['wait']);
   });
 
   it("includes 'Current short-term intent' in the system prompt when set", async () => {
@@ -185,7 +185,7 @@ describe('decideNpcIntent', () => {
       'deliver the fire map to Captain Serena',
     );
     const intent = await decideNpcIntent(SPARK_ID, repo, llm);
-    expect(intent).toBe('I wait.');
+    expect(intent).toEqual(['I wait.']);
     expect((await repo.getAgent(SPARK_ID)).shortTermIntent).toBeNull();
   });
 
@@ -202,7 +202,7 @@ describe('decideNpcIntent', () => {
       agents: [sparkWithIntent, paff],
     });
     const intent = await decideNpcIntent(SPARK_ID, repo, llm);
-    expect(intent).toBe(NpcFallbackIntent);
+    expect(intent).toEqual([NpcFallbackIntent]);
     expect((await repo.getAgent(SPARK_ID)).shortTermIntent).toBeNull();
   });
 
@@ -234,7 +234,7 @@ describe('decideNpcIntent', () => {
     const repo = makeRepo();
     expect((await repo.getAgent(SPARK_ID)).shortTermIntent).toBeNull();
     const intent = await decideNpcIntent(SPARK_ID, repo, llm);
-    expect(intent).toBe('I take the fire map.');
+    expect(intent).toEqual(['I take the fire map.']);
     expect((await repo.getAgent(SPARK_ID)).shortTermIntent).toBe(
       'deliver the fire map to Captain Serena',
     );
@@ -252,7 +252,36 @@ describe('decideNpcIntent', () => {
       agents: [sparkWithIntent, paff],
     });
     const intent = await decideNpcIntent(SPARK_ID, repo, llm);
-    expect(intent).toBe('I move north.');
+    expect(intent).toEqual(['I move north.']);
     expect((await repo.getAgent(SPARK_ID)).shortTermIntent).toBe('head back to the tavern');
+  });
+
+  it('returns speech AND a non-speech action when the reply has both — speech first', async () => {
+    const llm = makeFakeLanguageModel({
+      textResponder: () =>
+        'THOUGHT: I should say goodbye and head out.\nI say "Be right back!" to Paff.\nI move north.',
+    });
+    const repo = new MemoryRepository(W, {
+      locations: [loc],
+      exits: [],
+      items: [],
+      agents: [spark, paff],
+    });
+    const intents = await decideNpcIntent(SPARK_ID, repo, llm);
+    expect(intents).toEqual(['I say "Be right back!" to Paff.', 'I move north.']);
+  });
+
+  it('drops a second physical-action line and keeps only the first when no speech is present', async () => {
+    const llm = makeFakeLanguageModel({
+      textResponder: () => 'I move north.\nI take the lantern.',
+    });
+    const repo = new MemoryRepository(W, {
+      locations: [loc],
+      exits: [],
+      items: [],
+      agents: [spark, paff],
+    });
+    const intents = await decideNpcIntent(SPARK_ID, repo, llm);
+    expect(intents).toEqual(['I move north.']);
   });
 });

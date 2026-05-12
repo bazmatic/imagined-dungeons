@@ -451,36 +451,42 @@ export async function runTick(
     if ((!npc.autonomous && !npc.awake) || npc.hp <= 0) continue;
     tickedIds.add(npcId);
 
-    const intent = await decideNpcIntent(npcId, repo, llm);
-    log.info(`[npc] ${npc.label} intent: "${intent}"`);
+    // Speech is a free action. decideNpcIntent returns up to two intent
+    // lines for the same NPC this tick (typically: a speech line + a
+    // non-speech action line). Dispatch them in order so the NPC can
+    // both talk and do something.
+    const intents = await decideNpcIntent(npcId, repo, llm);
+    for (const intent of intents) {
+      log.info(`[npc] ${npc.label} intent: "${intent}"`);
 
-    if (isWaitIntent(intent)) {
-      // Benign no-op — don't bother the parser, don't pollute the player's
-      // transcript with "Spark waits."-style filler.
-      continue;
-    }
-
-    const npcResult = await runTurn(npcId, intent, repo, {
-      parse,
-      llm,
-      discoveryBudget,
-      ...(opts.builderRepo ? { builderRepo: opts.builderRepo } : {}),
-    });
-    if (npcResult.events.length === 0) {
-      // Intent didn't parse or dispatch failed. The reason is in npcResult.render
-      // (a parse-error or action-error message). Surface it so the dev terminal
-      // shows why the NPC produced nothing visible to the player.
-      log.info(`[npc] ${npc.label} produced no event: ${npcResult.render}`);
-    } else {
-      for (const ev of npcResult.events) {
-        log.info(`[npc] ${npc.label} -> ${ev.kind}`);
+      if (isWaitIntent(intent)) {
+        // Benign no-op — don't bother the parser, don't pollute the player's
+        // transcript with "Spark waits."-style filler.
+        continue;
       }
-    }
-    for (const ev of npcResult.events) {
-      events.push(ev);
-      npcEvents.push(ev);
-      const line = await renderWitnessForPlayer(ev, playerId, repo);
-      if (line !== null && line.length > 0) witnessed.push(line);
+
+      const npcResult = await runTurn(npcId, intent, repo, {
+        parse,
+        llm,
+        discoveryBudget,
+        ...(opts.builderRepo ? { builderRepo: opts.builderRepo } : {}),
+      });
+      if (npcResult.events.length === 0) {
+        // Intent didn't parse or dispatch failed. The reason is in npcResult.render
+        // (a parse-error or action-error message). Surface it so the dev terminal
+        // shows why the NPC produced nothing visible to the player.
+        log.info(`[npc] ${npc.label} produced no event: ${npcResult.render}`);
+      } else {
+        for (const ev of npcResult.events) {
+          log.info(`[npc] ${npc.label} -> ${ev.kind}`);
+        }
+      }
+      for (const ev of npcResult.events) {
+        events.push(ev);
+        npcEvents.push(ev);
+        const line = await renderWitnessForPlayer(ev, playerId, repo);
+        if (line !== null && line.length > 0) witnessed.push(line);
+      }
     }
   }
 

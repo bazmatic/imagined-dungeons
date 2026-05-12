@@ -124,6 +124,9 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
     '- Use one of the verbs above. For purely physical/expressive actions like waving, grinning, nodding, or shrugging, use `emote <description>` (e.g. "I emote wave at Paff"). For greeting someone with words, use `say "..." to <them>` plus `emote wave at <them>` if you want both.',
   );
   lines.push(
+    '- SPEECH IS A FREE ACTION. You may emit ONE speech line (`I say "..." to X`, `I tell X, ...`, `I ask X about ...`, etc.) AND ONE non-speech action line (move, look, take, drop, give, emote, attack, search, equip, unequip) in the same turn. Put each on its own line. Examples: \n  I say "Be right back!" to Paff.\n  I move south.\n  — or —\n  I tell the bartender, "I\'ll take that drink."\n  I take the bottle.\n  Limit: at most one of each kind. Two speech lines or two physical-action lines in the same turn will be reduced to one.',
+  );
+  lines.push(
     '- Refer only to characters, items, and exits you actually perceive. Inventing names will fail.',
   );
   lines.push(
@@ -385,13 +388,24 @@ export interface NpcMindOptions {
 
 const DEFAULT_MEMORY_LIMIT = 8;
 
+/**
+ * Returns up to two intent lines for the NPC to execute this turn. Speech
+ * is a "free action" — an NPC may speak AND do one other thing in the same
+ * tick. The returned array contains:
+ *   - 0 entries: a wait fallback (caller decides what to do).
+ *   - 1 entry: a single intent line (speech OR action).
+ *   - 2 entries: speech line first, then a non-speech action line.
+ *
+ * The wait sentinel `NpcFallbackIntent` is returned as a single-element
+ * array so callers can treat it uniformly.
+ */
 export async function decideNpcIntent(
   actorId: AgentId,
   repo: Repository,
   llm: LanguageModel | null,
   opts: NpcMindOptions = {},
-): Promise<string> {
-  if (!llm) return NpcFallbackIntent;
+): Promise<readonly string[]> {
+  if (!llm) return [NpcFallbackIntent];
 
   const memoryLimit = opts.memoryLimit ?? DEFAULT_MEMORY_LIMIT;
   const actor = await repo.getAgent(actorId);
@@ -423,7 +437,7 @@ export async function decideNpcIntent(
     log.info(`[npc-mind] ${actor.label} raw reply: ${JSON.stringify(prose)}`);
     if (body.length === 0) {
       log.warn(`[npc-mind] empty response for ${actor.label}; falling back to wait`);
-      return NpcFallbackIntent;
+      return [NpcFallbackIntent];
     }
     // The NPC mind owns its own shortTermIntent and reasons out loud before
     // acting. The reply format is:
@@ -464,17 +478,35 @@ export async function decideNpcIntent(
     } else {
       log.warn(`[npc-mind] ${actor.label} emitted no THOUGHT lines this turn`);
     }
-    // Body should be exactly one action line. If the LLM emitted multiple
-    // (which happens when it gets confused — e.g. `say ...` then `move ...`
-    // both as separate action lines), keep only the first non-empty one and
-    // warn so we notice. Subsequent lines are dropped on the floor.
+    // Speech is a FREE action: the NPC may emit up to one speech line plus
+    // one non-speech line in the same turn. We classify each line by its
+    // leading verb. If multiple speech lines or multiple non-speech lines
+    // are emitted, we keep only the first of each and warn about the rest.
+    const speechRegex =
+      /^i\s+(say|tell|talk|speak|shout|whisper|ask|reply|answer|cry|mutter|murmur|sing|greet|call|exclaim|respond)\b/i;
+    const isSpeech = (l: string): boolean => speechRegex.test(l.trim());
     const bodyLines = remaining;
-    if (bodyLines.length > 1) {
+    let speechLine: string | null = null;
+    let actionLine: string | null = null;
+    const dropped: string[] = [];
+    for (const line of bodyLines) {
+      if (isSpeech(line)) {
+        if (speechLine === null) speechLine = line;
+        else dropped.push(line);
+      } else {
+        if (actionLine === null) actionLine = line;
+        else dropped.push(line);
+      }
+    }
+    if (dropped.length > 0) {
       log.warn(
-        `[npc-mind] ${actor.label} emitted ${bodyLines.length} action lines; keeping only the first: ${JSON.stringify(bodyLines)}`,
+        `[npc-mind] ${actor.label} emitted extra action lines beyond speech+action; dropping: ${JSON.stringify(dropped)}`,
       );
     }
-    body = bodyLines[0] ?? '';
+    const orderedLines: string[] = [];
+    if (speechLine !== null) orderedLines.push(speechLine);
+    if (actionLine !== null) orderedLines.push(actionLine);
+    body = orderedLines.join(' && ');
     if (cleared && setTo === null && actor.shortTermIntent !== null) {
       await repo.updateAgentDescription(actorId, { shortTermIntent: null });
       log.info(`[npc-mind] ${actor.label} cleared own intent: "${actor.shortTermIntent}"`);
@@ -493,10 +525,10 @@ export async function decideNpcIntent(
         body.length === 0 ? '(wait — empty after control lines)' : JSON.stringify(body)
       }`,
     );
-    if (body.length === 0) return NpcFallbackIntent;
-    return body;
+    if (orderedLines.length === 0) return [NpcFallbackIntent];
+    return orderedLines;
   } catch (err) {
     log.warn(`[npc-mind] error deciding intent for ${actor.label}: ${String(err)}`);
-    return NpcFallbackIntent;
+    return [NpcFallbackIntent];
   }
 }
