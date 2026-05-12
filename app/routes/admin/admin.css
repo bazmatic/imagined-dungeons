@@ -767,7 +767,7 @@
 }
 .admin-root .drafts-table__head {
   display: grid;
-  grid-template-columns: 6fr 2fr 2fr 2fr;
+  grid-template-columns: 4fr 3fr 5fr;
   gap: var(--s-4);
   padding: var(--s-3) var(--s-4);
   background: var(--surface-low);
@@ -779,7 +779,7 @@
 }
 .admin-root .drafts-table__row {
   display: grid;
-  grid-template-columns: 6fr 2fr 2fr 2fr;
+  grid-template-columns: 4fr 3fr 5fr;
   gap: var(--s-4);
   padding: var(--s-4);
   border-bottom: 1px solid var(--border);

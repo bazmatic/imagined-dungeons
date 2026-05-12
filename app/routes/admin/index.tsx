@@ -1,7 +1,7 @@
 import { WorldKind } from '@core/domain/builder-kinds';
 import type { WorldSummaryWithStats } from '@core/domain/builder-types';
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router';
-import { createWorld, listWorlds } from '~/server/admin/worlds';
+import { createWorld, listWorlds, resetLiveFromStartingState } from '~/server/admin/worlds';
 import { AdminShell } from './-components/AdminShell';
 import { Fonts } from './-components/Fonts';
 import { NewWorldCard } from './-components/NewWorldCard';
@@ -64,6 +64,23 @@ function AdminIndex() {
     router.invalidate();
   };
 
+  const onReset = async (scratchId: string, name: string): Promise<void> => {
+    if (
+      !confirm(
+        `Reset live world for "${name}" to the saved starting state? This wipes gameplay progress and replaces it with the starting state.`,
+      )
+    ) {
+      return;
+    }
+    const r = await resetLiveFromStartingState({ data: { id: scratchId } });
+    if (!r.ok) {
+      alert(`Reset failed: ${r.error.message}`);
+      return;
+    }
+    alert('Live world reset to starting state.');
+    router.invalidate();
+  };
+
   return (
     <div className="admin-root">
       <Fonts />
@@ -91,10 +108,10 @@ function AdminIndex() {
             <div>
               <header className="section-heading">
                 <div>
-                  <h2 className="section-heading__title">Campaigns</h2>
+                  <h2 className="section-heading__title">Worlds</h2>
                 </div>
                 <span className="section-heading__count">
-                  {cards.length} {cards.length === 1 ? 'Realm' : 'Realms'}
+                  {cards.length} {cards.length === 1 ? 'World' : 'Worlds'}
                 </span>
               </header>
 
@@ -143,7 +160,7 @@ function AdminIndex() {
                               className="btn"
                               style={{ textDecoration: 'none' }}
                             >
-                              Edit starting state
+                              Seed
                             </Link>
                           ) : null}
                           {card.live ? (
@@ -154,8 +171,23 @@ function AdminIndex() {
                               className="btn"
                               style={{ textDecoration: 'none' }}
                             >
-                              Edit live
+                              Live
                             </Link>
+                          ) : null}
+                          {card.scratch && card.live ? (
+                            <button
+                              type="button"
+                              className="btn"
+                              onClick={() =>
+                                onReset(
+                                  card.scratch?.id as string,
+                                  primary.displayName || primary.label,
+                                )
+                              }
+                              title="Reset the live world to the saved starting state"
+                            >
+                              Reset
+                            </button>
                           ) : null}
                         </div>
                       </div>
