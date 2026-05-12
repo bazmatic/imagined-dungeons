@@ -51,9 +51,7 @@ function AdminWorld() {
   const t = tree.value;
   const isDraft = t.summary.kind === WorldKind.Draft;
 
-  const refresh = (): void => {
-    void router.invalidate();
-  };
+  const refresh = (): Promise<void> => router.invalidate();
 
   const setCategory = (cat: AdminSearch['cat']): void => {
     void navigate({ search: { cat } });

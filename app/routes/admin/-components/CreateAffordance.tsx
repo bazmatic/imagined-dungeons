@@ -9,7 +9,7 @@ import { type Category, CategoryKind } from './category-helpers';
 export interface CreateAffordanceProps {
   readonly tree: WorldTree;
   readonly category: Category;
-  readonly onCreated: (id: string) => void;
+  readonly onCreated: (id: string) => Promise<void> | void;
 }
 
 function randomId(prefix: string): string {
@@ -51,7 +51,7 @@ function singular(c: Category): string {
 interface CreateFormProps {
   readonly tree: WorldTree;
   readonly onCancel: () => void;
-  readonly onCreated: (id: string) => void;
+  readonly onCreated: (id: string) => Promise<void> | void;
 }
 
 function CreateForm({

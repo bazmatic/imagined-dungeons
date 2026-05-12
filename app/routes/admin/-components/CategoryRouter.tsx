@@ -19,7 +19,12 @@ export interface CategoryRouterProps {
   readonly selectedId?: string;
   readonly problems: readonly Problem[];
   readonly onSelect: (id: string | undefined) => void;
-  readonly onSaved: () => void;
+  /**
+   * Refresh the world tree. Awaited by flows that need the tree to include
+   * a freshly-created entity before navigating to it; otherwise the detail
+   * form renders "<entity> not found" against stale data.
+   */
+  readonly onSaved: () => Promise<void> | void;
   readonly onDeleted: () => void;
 }
 
@@ -65,10 +70,10 @@ export function useCategoryRouter({
             </div>
             <NewTagAffordance
               tree={tree}
-              onCreated={(tag) => {
+              onCreated={async (tag) => {
                 setJsonFallback(null);
+                await onSaved();
                 onSelect(tag);
-                onSaved();
               }}
             />
           </>
@@ -76,10 +81,13 @@ export function useCategoryRouter({
           <CreateAffordance
             tree={tree}
             category={category}
-            onCreated={(id) => {
+            onCreated={async (id) => {
               setJsonFallback(null);
+              // Refresh the world tree FIRST so it contains the new entity,
+              // then navigate. Otherwise the detail form renders against the
+              // stale tree and shows "<entity> not found".
+              await onSaved();
               onSelect(id);
-              onSaved();
             }}
           />
         )
@@ -225,7 +233,7 @@ function randomTagLoreId(): string {
 
 interface NewTagAffordanceProps {
   readonly tree: WorldTree;
-  readonly onCreated: (tag: string) => void;
+  readonly onCreated: (tag: string) => Promise<void> | void;
 }
 
 function NewTagAffordance({ tree, onCreated }: NewTagAffordanceProps) {
