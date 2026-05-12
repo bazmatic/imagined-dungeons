@@ -1,9 +1,9 @@
 import { WorldKind } from '@core/domain/builder-kinds';
+import type { WorldSummaryWithStats } from '@core/domain/builder-types';
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router';
-import { cloneLive, createDraft, listWorlds } from '~/server/admin/worlds';
+import { createDraft, listWorlds } from '~/server/admin/worlds';
 import { AdminShell } from './-components/AdminShell';
 import { Fonts } from './-components/Fonts';
-import { HeroWorldCard } from './-components/HeroWorldCard';
 import { InscribeCard } from './-components/InscribeCard';
 import { CategoryKind } from './-components/category-helpers';
 
@@ -12,12 +12,52 @@ export const Route = createFileRoute('/admin/')({
   loader: async () => ({ worlds: await listWorlds() }),
 });
 
+/**
+ * In the new Load/Save/Reset model, each "thing" has a scratch (Draft) world
+ * for editing the starting state and a live (Live) world for the running
+ * game. The live row's `parentDraftId` links it to its scratch.
+ *
+ * We surface one card per *thing*: prefer the scratch's metadata, and show
+ * an "Edit live" button when a paired live world exists.
+ */
+interface CampaignCard {
+  readonly scratch: WorldSummaryWithStats | null;
+  readonly live: WorldSummaryWithStats | null;
+}
+
+function groupIntoCampaigns(worlds: readonly WorldSummaryWithStats[]): readonly CampaignCard[] {
+  const byScratch = new Map<string, CampaignCard>();
+  const orphanLives: WorldSummaryWithStats[] = [];
+  const orphanScratches: WorldSummaryWithStats[] = [];
+
+  for (const w of worlds) {
+    if (w.kind === WorldKind.Draft) {
+      byScratch.set(w.id as string, { scratch: w, live: null });
+    }
+  }
+  for (const w of worlds) {
+    if (w.kind === WorldKind.Live) {
+      const link = w.parentDraftId as string | null;
+      if (link && byScratch.has(link)) {
+        const entry = byScratch.get(link);
+        if (entry) byScratch.set(link, { scratch: entry.scratch, live: w });
+      } else {
+        orphanLives.push(w);
+      }
+    }
+  }
+  for (const [, card] of byScratch) {
+    if (!card.scratch && !card.live) orphanScratches.push();
+  }
+  const cards: CampaignCard[] = Array.from(byScratch.values());
+  for (const live of orphanLives) cards.push({ scratch: null, live });
+  return cards;
+}
+
 function AdminIndex() {
   const { worlds } = Route.useLoaderData();
   const router = useRouter();
-
-  const drafts = worlds.filter((w) => w.kind === WorldKind.Draft);
-  const liveWorlds = worlds.filter((w) => w.kind === WorldKind.Live);
+  const cards = groupIntoCampaigns(worlds);
 
   const onCreate = async (input: { displayName: string; label: string }): Promise<void> => {
     await createDraft({ data: input });
@@ -40,24 +80,10 @@ function AdminIndex() {
               <div className="workspace-card__eyebrow">Workspace</div>
               <h1 className="workspace-card__title">Campaign Builder</h1>
               <p className="workspace-card__lede">
-                Organize the threads of fate across your existing realms and nascent visions.
+                Each campaign has a scratch world where you edit the starting state, and a live
+                world that runs the game. Save commits your scratch as the starting state; Reset
+                rewinds the live world back to it.
               </p>
-            </div>
-            <div className="quick-actions">
-              <div className="quick-actions__heading">Quick Actions</div>
-              <button
-                type="button"
-                className="quick-actions__item"
-                onClick={() => {
-                  // No-op for now; the palette lives on the detail route.
-                  // Future work: surface a global palette here too.
-                }}
-              >
-                ⌘K — Open Command Palette (Detail only)
-              </button>
-              <Link to="/admin" className="quick-actions__item" style={{ textDecoration: 'none' }}>
-                Refresh world list
-              </Link>
             </div>
           </aside>
 
@@ -65,11 +91,10 @@ function AdminIndex() {
             <div>
               <header className="section-heading">
                 <div>
-                  <h2 className="section-heading__title">Nascent Visions</h2>
-                  <span className="section-heading__suffix">(Drafts)</span>
+                  <h2 className="section-heading__title">Campaigns</h2>
                 </div>
                 <span className="section-heading__count">
-                  {drafts.length} Working {drafts.length === 1 ? 'Draft' : 'Drafts'}
+                  {cards.length} {cards.length === 1 ? 'Realm' : 'Realms'}
                 </span>
               </header>
 
@@ -79,95 +104,72 @@ function AdminIndex() {
                 <div className="drafts-table__head">
                   <div>Designation</div>
                   <div>ID</div>
-                  <div>Status</div>
                   <div style={{ textAlign: 'right' }}>Actions</div>
                 </div>
-                {drafts.length === 0 ? (
+                {cards.length === 0 ? (
                   <p className="t-metadata" style={{ fontStyle: 'italic', padding: 'var(--s-4)' }}>
-                    No drafts yet.
+                    No campaigns yet.
                   </p>
                 ) : (
-                  drafts.map((w) => (
-                    <div key={w.id as string} className="drafts-table__row">
-                      <div className="drafts-table__designation">
-                        <Link
-                          to="/admin/$worldId"
-                          params={{ worldId: w.id as string }}
-                          search={{ cat: CategoryKind.Locations }}
-                          className="drafts-table__name"
-                          style={{ textDecoration: 'none' }}
-                        >
-                          {w.displayName || w.label}
-                        </Link>
-                        <span className="drafts-table__label">{w.label}</span>
-                      </div>
-                      <div className="t-data-sm" style={{ color: 'var(--parchment-dim)' }}>
-                        {w.id as string}
-                      </div>
-                      <div>
-                        <span className="chip chip--gold">Draft</span>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <Link
-                          to="/admin/$worldId"
-                          params={{ worldId: w.id as string }}
-                          search={{ cat: CategoryKind.Locations }}
-                          className="btn"
-                          style={{ textDecoration: 'none' }}
-                        >
-                          Open
-                        </Link>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            <div>
-              <header className="section-heading">
-                <div>
-                  <h2 className="section-heading__title">The Manifested</h2>
-                  <span className="section-heading__suffix">(Live Worlds)</span>
-                </div>
-                <span className="section-heading__count">
-                  {liveWorlds.length} Synchronized {liveWorlds.length === 1 ? 'Realm' : 'Realms'}
-                </span>
-              </header>
-              {liveWorlds.length === 0 ? (
-                <p className="t-metadata" style={{ fontStyle: 'italic' }}>
-                  No live worlds.
-                </p>
-              ) : (
-                <div className="hero-grid">
-                  {liveWorlds.map((w) => (
-                    <div key={w.id as string}>
-                      <HeroWorldCard world={w} />
-                      {w.parentDraftId === null && (
-                        <button
-                          type="button"
-                          className="btn"
-                          style={{ marginTop: 8 }}
-                          onClick={async () => {
-                            await cloneLive({ data: { id: w.id as string } });
-                            router.invalidate();
+                  cards.map((card) => {
+                    const primary = card.scratch ?? card.live;
+                    if (!primary) return null;
+                    const key = (card.scratch?.id ?? card.live?.id) as string;
+                    return (
+                      <div key={key} className="drafts-table__row">
+                        <div className="drafts-table__designation">
+                          <span className="drafts-table__name">
+                            {primary.displayName || primary.label}
+                          </span>
+                          <span className="drafts-table__label">{primary.label}</span>
+                        </div>
+                        <div className="t-data-sm" style={{ color: 'var(--parchment-dim)' }}>
+                          {card.scratch ? (card.scratch.id as string) : '—'}
+                          {card.live ? ` / ${card.live.id as string}` : ''}
+                        </div>
+                        <div
+                          style={{
+                            textAlign: 'right',
+                            display: 'flex',
+                            gap: 8,
+                            justifyContent: 'flex-end',
                           }}
                         >
-                          Clone as draft
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
+                          {card.scratch ? (
+                            <Link
+                              to="/admin/$worldId"
+                              params={{ worldId: card.scratch.id as string }}
+                              search={{ cat: CategoryKind.Locations }}
+                              className="btn"
+                              style={{ textDecoration: 'none' }}
+                            >
+                              Edit starting state
+                            </Link>
+                          ) : null}
+                          {card.live ? (
+                            <Link
+                              to="/admin/$worldId"
+                              params={{ worldId: card.live.id as string }}
+                              search={{ cat: CategoryKind.Locations }}
+                              className="btn"
+                              style={{ textDecoration: 'none' }}
+                            >
+                              Edit live
+                            </Link>
+                          ) : null}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             </div>
 
             <aside className="directive">
               <div className="directive__heading">Scholar's Directive</div>
               <p className="directive__quote">
-                "Every world is a living document. Remember that drafts are the crucible of
-                creation; do not fear the mess of incomplete lore. The Archive rewards the
-                meticulous, but the heart of worldbuilding lies in the silence between entries."
+                "The starting state is the seed; the live world is the garden. Save what you mean to
+                plant; reset only when the season turns."
               </p>
               <div className="directive__attrib">— Archivist Malachi</div>
             </aside>

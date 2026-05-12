@@ -1,8 +1,6 @@
-import { BuilderErrorKind, EntityKind, WorldKind } from '@core/domain/builder-kinds';
-import type { BuilderError } from '@core/domain/builder-types';
+import { EntityKind, WorldKind } from '@core/domain/builder-kinds';
 import { createFileRoute, useRouter } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
-import { publish, resetLive } from '~/server/admin/publish';
 import { validate } from '~/server/admin/validate';
 import { getWorld } from '~/server/admin/worlds';
 import { AdminShell } from './-components/AdminShell';
@@ -57,36 +55,6 @@ function AdminWorld() {
     void router.invalidate();
   };
 
-  const handleBuilderError = (verb: string, error: BuilderError): void => {
-    if (
-      error.kind === BuilderErrorKind.ValidationFailed &&
-      error.problems &&
-      error.problems.length > 0
-    ) {
-      setProblemsOpen(true);
-      const lines = error.problems.map((p) => `• [${p.entity} ${p.entityId}] ${p.message}`);
-      alert(
-        `${verb} failed: draft has ${error.problems.length} validation ${error.problems.length === 1 ? 'problem' : 'problems'}.\n\n${lines.join('\n')}\n\nProblems drawer opened — click an entry to jump to the entity.`,
-      );
-      return;
-    }
-    alert(`${verb} failed: ${error.message}`);
-  };
-
-  const onPublish = async (): Promise<void> => {
-    const r = await publish({ data: { id: t.summary.id as string } });
-    refresh();
-    if (!r.ok) handleBuilderError('Publish', r.error);
-    else alert(`Published. Skipped: ${r.value.skipped.length}`);
-  };
-
-  const onReset = async (): Promise<void> => {
-    if (!confirm('Reset live world to this draft? This replaces live structural rows.')) return;
-    const r = await resetLive({ data: { id: t.summary.id as string } });
-    refresh();
-    if (!r.ok) handleBuilderError('Reset', r.error);
-  };
-
   const setCategory = (cat: AdminSearch['cat']): void => {
     void navigate({ search: { cat } });
   };
@@ -130,7 +98,6 @@ function AdminWorld() {
           onSearch: () => setPaletteOpen(true),
           onPaletteOpen: () => setPaletteOpen(true),
           onWorldSettings: openWorldSettings,
-          ...(isDraft ? { onPublish, onReset } : {}),
           extra: (
             <button
               type="button"
