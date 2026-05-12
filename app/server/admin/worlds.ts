@@ -1,5 +1,5 @@
 import {
-  createDraft as createDraftCore,
+  createWorld as createWorldCore,
   getWorldTree,
   listWorlds as listWorldsCore,
   loadStartingState as loadStartingStateCore,
@@ -15,7 +15,7 @@ export const listWorlds = createServerFn({ method: 'GET' }).handler(async () => 
   return listWorldsCore(await getBuilderRepo());
 });
 
-export const createDraft = createServerFn({ method: 'POST' })
+export const createWorld = createServerFn({ method: 'POST' })
   .inputValidator((d: unknown) => {
     if (
       typeof d !== 'object' ||
@@ -27,7 +27,7 @@ export const createDraft = createServerFn({ method: 'POST' })
     }
     return d as { displayName: string; label: string };
   })
-  .handler(async ({ data }) => createDraftCore(await getBuilderRepo(), data));
+  .handler(async ({ data }) => createWorldCore(await getBuilderRepo(), data));
 
 const idOnly = (d: unknown): { id: string } => {
   if (typeof d !== 'object' || d === null || typeof (d as { id?: unknown }).id !== 'string') {

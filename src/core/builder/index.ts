@@ -49,6 +49,7 @@ import type { BuilderRepository } from './repository';
  */
 
 const newDraftId = (): WorldId => asWorldId(`w_draft_${Math.random().toString(36).slice(2, 10)}`);
+const newLiveId = (): WorldId => asWorldId(`w_${Math.random().toString(36).slice(2, 10)}`);
 
 const err = (kind: BuilderErrorKind, message: string): BuilderError => ({ kind, message });
 
@@ -58,6 +59,11 @@ async function requireWorld(repo: BuilderRepository, id: WorldId) {
   return Ok(s);
 }
 
+/**
+ * Create a scratch-only world. Used by internal tooling and tests; the
+ * admin uses `createWorld` instead (which also mints a paired live and
+ * an empty starting-state snapshot).
+ */
 export async function createDraft(
   repo: BuilderRepository,
   input: CreateDraftInput,
@@ -73,6 +79,52 @@ export async function createDraft(
     coverImageUrl: null,
   });
   return Ok(id);
+}
+
+/**
+ * Create a new world for the admin. Mirrors the campaign seeder:
+ * produces a paired scratch (Draft kind) + live world, links them via
+ * `parentDraftId` on the live row, and captures an empty starting-state
+ * snapshot on the scratch so Load/Reset work immediately. Returns the
+ * **scratch** id — that's what the admin opens for editing.
+ */
+export async function createWorld(
+  repo: BuilderRepository,
+  input: CreateDraftInput,
+): Promise<Result<WorldId, BuilderError>> {
+  const scratchId = newDraftId();
+  const liveId = newLiveId();
+  await repo.createWorld({
+    id: scratchId,
+    kind: WorldKind.Draft,
+    label: input.label,
+    displayName: input.displayName,
+    parentDraftId: null,
+    playerAgentId: null,
+    coverImageUrl: null,
+  });
+  await repo.createWorld({
+    id: liveId,
+    kind: WorldKind.Live,
+    label: input.label,
+    displayName: input.displayName,
+    parentDraftId: scratchId,
+    playerAgentId: null,
+    coverImageUrl: null,
+  });
+  // Empty starting-state snapshot, shaped the same way snapshotJson emits.
+  const emptyBlob = JSON.stringify({
+    locations: [],
+    exits: [],
+    items: [],
+    agents: [],
+    templates: [],
+    triggers: [],
+    worldLore: { worldOverview: '', storySoFar: '' },
+    tagLore: [],
+  });
+  await repo.writeSnapshot(scratchId, emptyBlob, Date.now());
+  return Ok(scratchId);
 }
 
 export async function getWorldTree(

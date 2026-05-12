@@ -1,13 +1,19 @@
 import { useState } from 'react';
 
-export interface InscribeCardProps {
+export interface NewWorldCardProps {
   readonly onCreate: (input: {
     readonly displayName: string;
     readonly label: string;
   }) => Promise<void>;
 }
 
-export function InscribeCard({ onCreate }: InscribeCardProps) {
+/**
+ * Create-a-new-world affordance on the admin index. Submits a display name
+ * and a short label; the server creates a paired scratch + live world with
+ * an empty starting-state snapshot, and the new scratch is what opens in
+ * the admin for authoring.
+ */
+export function NewWorldCard({ onCreate }: NewWorldCardProps) {
   const [displayName, setDisplayName] = useState('');
   const [label, setLabel] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -26,14 +32,14 @@ export function InscribeCard({ onCreate }: InscribeCardProps) {
 
   return (
     <div className="inscribe-card">
-      <div className="inscribe-card__heading">Inscribe New Draft</div>
+      <div className="inscribe-card__heading">Create New World</div>
       <div className="inscribe-card__grid">
         <div>
-          <label htmlFor="inscribe-name" className="form-grid__field-label">
-            Entity Display Name
+          <label htmlFor="new-world-name" className="form-grid__field-label">
+            Display Name
           </label>
           <input
-            id="inscribe-name"
+            id="new-world-name"
             type="text"
             className="manuscript-input-v2"
             placeholder="e.g. The Sunken Coast"
@@ -42,11 +48,11 @@ export function InscribeCard({ onCreate }: InscribeCardProps) {
           />
         </div>
         <div>
-          <label htmlFor="inscribe-label" className="form-grid__field-label">
-            World Label / Taxonomy
+          <label htmlFor="new-world-label" className="form-grid__field-label">
+            Short Label
           </label>
           <input
-            id="inscribe-label"
+            id="new-world-label"
             type="text"
             className="manuscript-input-v2"
             placeholder="e.g. dark_fantasy_01"
@@ -62,7 +68,7 @@ export function InscribeCard({ onCreate }: InscribeCardProps) {
           disabled={submitting || !displayName.trim() || !label.trim()}
           onClick={submit}
         >
-          Begin Creation
+          Create world
         </button>
       </div>
     </div>

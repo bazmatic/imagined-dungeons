@@ -1,5 +1,5 @@
 import {
-  createDraft,
+  createWorld,
   deleteAgent,
   deleteExit,
   deleteItem,
@@ -80,8 +80,9 @@ export const TOOLS: readonly ToolDef[] = [
     run: (repo, a) => getWorldTree(repo, asWorldId(a.id as string)),
   },
   {
-    name: 'create_draft',
-    description: 'Create an empty draft world.',
+    name: 'create_world',
+    description:
+      'Create a new world. Produces a paired scratch (Draft) and live world with an empty starting-state snapshot. Returns the scratch id — that is what the admin opens for authoring.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -91,7 +92,7 @@ export const TOOLS: readonly ToolDef[] = [
       required: ['displayName', 'label'],
     },
     run: (repo, a) =>
-      createDraft(repo, {
+      createWorld(repo, {
         displayName: a.displayName as string,
         label: a.label as string,
       }),

@@ -1,10 +1,10 @@
 import { WorldKind } from '@core/domain/builder-kinds';
 import type { WorldSummaryWithStats } from '@core/domain/builder-types';
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router';
-import { createDraft, listWorlds } from '~/server/admin/worlds';
+import { createWorld, listWorlds } from '~/server/admin/worlds';
 import { AdminShell } from './-components/AdminShell';
 import { Fonts } from './-components/Fonts';
-import { InscribeCard } from './-components/InscribeCard';
+import { NewWorldCard } from './-components/NewWorldCard';
 import { CategoryKind } from './-components/category-helpers';
 
 export const Route = createFileRoute('/admin/')({
@@ -60,7 +60,7 @@ function AdminIndex() {
   const cards = groupIntoCampaigns(worlds);
 
   const onCreate = async (input: { displayName: string; label: string }): Promise<void> => {
-    await createDraft({ data: input });
+    await createWorld({ data: input });
     router.invalidate();
   };
 
@@ -78,9 +78,9 @@ function AdminIndex() {
           <aside className="workspace-card">
             <div>
               <div className="workspace-card__eyebrow">Workspace</div>
-              <h1 className="workspace-card__title">Campaign Builder</h1>
+              <h1 className="workspace-card__title">World Builder</h1>
               <p className="workspace-card__lede">
-                Each campaign has a scratch world where you edit the starting state, and a live
+                Each world has a scratch page where you edit the starting state, and a live
                 world that runs the game. Save commits your scratch as the starting state; Reset
                 rewinds the live world back to it.
               </p>
@@ -98,7 +98,7 @@ function AdminIndex() {
                 </span>
               </header>
 
-              <InscribeCard onCreate={onCreate} />
+              <NewWorldCard onCreate={onCreate} />
 
               <div className="drafts-table">
                 <div className="drafts-table__head">

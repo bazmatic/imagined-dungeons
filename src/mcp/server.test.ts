@@ -13,7 +13,7 @@ describe('MCP tool surface', () => {
 
   it('create_draft + get_world round-trips through tools', async () => {
     const repo = new MemoryBuilderRepository();
-    const create = TOOL_BY_NAME.create_draft;
+    const create = TOOL_BY_NAME.create_world;
     const get = TOOL_BY_NAME.get_world;
     if (!create || !get) throw new Error('tool missing');
     const created = (await create.run(repo, {
@@ -55,7 +55,7 @@ describe('MCP tool surface', () => {
 
   it('round-trips world lore and tag lore through MCP tools', async () => {
     const repo = new MemoryBuilderRepository();
-    const createDraftTool = TOOL_BY_NAME.create_draft;
+    const createDraftTool = TOOL_BY_NAME.create_world;
     const updateLoreTool = TOOL_BY_NAME.update_world_lore;
     const getLoreTool = TOOL_BY_NAME.get_world_lore;
     const upsertTagTool = TOOL_BY_NAME.upsert_tag_lore;
@@ -117,7 +117,7 @@ describe('MCP tool surface', () => {
 
   it('template and trigger tools work end-to-end', async () => {
     const repo = new MemoryBuilderRepository();
-    const createDraftTool = TOOL_BY_NAME.create_draft;
+    const createDraftTool = TOOL_BY_NAME.create_world;
     const upsertLocationTool = TOOL_BY_NAME.upsert_location;
     const upsertTemplateTool = TOOL_BY_NAME.upsert_monster_template;
     const upsertTriggerTool = TOOL_BY_NAME.upsert_location_spawn_trigger;
@@ -190,7 +190,7 @@ describe('MCP tool surface', () => {
 
   it('upsert tools persist tags on location/item/agent/monster_template', async () => {
     const repo = new MemoryBuilderRepository();
-    const createDraftTool = TOOL_BY_NAME.create_draft;
+    const createDraftTool = TOOL_BY_NAME.create_world;
     const upsertLocationTool = TOOL_BY_NAME.upsert_location;
     const upsertItemTool = TOOL_BY_NAME.upsert_item;
     const upsertAgentTool = TOOL_BY_NAME.upsert_agent;
