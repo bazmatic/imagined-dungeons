@@ -1,6 +1,7 @@
 import {
   createDraft,
-  publish,
+  createLiveForScratch,
+  saveStartingState,
   upsertAgent,
   upsertExit,
   upsertLocation,
@@ -14,6 +15,7 @@ import {
   asLocationId,
   asMonsterTemplateId,
   asSpawnTriggerId,
+  asWorldId,
 } from '@core/domain/ids';
 import { EventKind } from '@core/domain/kinds';
 import { makeCompositeParser } from '@core/engine/parser/composite';
@@ -107,10 +109,11 @@ describe('spawning end-to-end (tick pass)', () => {
       lockedByItem: null,
     });
 
-    const pub = await publish(builderRepo, W);
-    if (!pub.ok) throw new Error(pub.error.message);
-    expect(pub.value.initialSpawns).toBe(0);
-    const liveId = pub.value.liveWorldId;
+    const saved = await saveStartingState(builderRepo, W);
+    if (!saved.ok) throw new Error(saved.error.message);
+    const liveId = asWorldId('w_live_spawn1');
+    const lp = await createLiveForScratch(builderRepo, W, liveId);
+    if (!lp.ok) throw new Error(lp.error.message);
 
     const engineRepo = new SqliteRepository(handle.db, liveId);
 
@@ -211,10 +214,13 @@ describe('spawning end-to-end (tick pass)', () => {
       locked: false,
       lockedByItem: null,
     });
-    const pub = await publish(builderRepo, W);
-    if (!pub.ok) throw new Error(pub.error.message);
+    const saved = await saveStartingState(builderRepo, W);
+    if (!saved.ok) throw new Error(saved.error.message);
+    const liveId = asWorldId('w_live_spawn2');
+    const lp = await createLiveForScratch(builderRepo, W, liveId);
+    if (!lp.ok) throw new Error(lp.error.message);
 
-    const engineRepo = new SqliteRepository(handle.db, pub.value.liveWorldId);
+    const engineRepo = new SqliteRepository(handle.db, liveId);
     const parse = makeCompositeParser({ llm: null });
 
     const r1 = await runTick(PLAYER, 'south', engineRepo, { parse, llm: null, builderRepo });

@@ -1,13 +1,14 @@
 import {
   createDraft,
-  publish,
+  createLiveForScratch,
+  saveStartingState,
   updateWorldLore,
   upsertAgent,
   upsertLocation,
   upsertTagLore,
 } from '@core/builder/index';
 import type { DiscoveryResponse, UpsertItemInput } from '@core/domain/builder-types';
-import { asAgentId, asItemId, asLocationId, asTagLoreId } from '@core/domain/ids';
+import { asAgentId, asItemId, asLocationId, asTagLoreId, asWorldId } from '@core/domain/ids';
 import { OwnerKind } from '@core/domain/kinds';
 import type { LanguageModelRequest, LanguageModelResponse } from '@core/engine/language-model';
 import { makeCompositeParser } from '@core/engine/parser/composite';
@@ -79,9 +80,11 @@ describe('lore + generative discovery — end-to-end', () => {
     });
     if (!tlrSewer.ok) throw new Error(tlrSewer.error.message);
 
-    const pub = await publish(builderRepo, W);
-    if (!pub.ok) throw new Error(pub.error.message);
-    const liveId = pub.value.liveWorldId;
+    const saved = await saveStartingState(builderRepo, W);
+    if (!saved.ok) throw new Error(saved.error.message);
+    const liveId = asWorldId('w_live_noir');
+    const lp = await createLiveForScratch(builderRepo, W, liveId);
+    if (!lp.ok) throw new Error(lp.error.message);
 
     const engineRepo = new SqliteRepository(handle.db, liveId);
 

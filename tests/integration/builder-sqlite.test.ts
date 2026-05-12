@@ -1,13 +1,23 @@
 import {
-  cloneLiveAsDraft,
   createDraft,
-  publish,
+  createLiveForScratch,
+  deleteLocation,
+  loadStartingState,
+  resetLiveFromStartingState,
+  saveStartingState,
   upsertAgent,
   upsertExit,
   upsertItem,
   upsertLocation,
 } from '@core/builder/index';
-import { asAgentId, asExitId, asItemId, asLocationId, asTagLoreId } from '@core/domain/ids';
+import {
+  asAgentId,
+  asExitId,
+  asItemId,
+  asLocationId,
+  asTagLoreId,
+  asWorldId,
+} from '@core/domain/ids';
 import { Direction, OwnerKind } from '@core/domain/kinds';
 import { SqliteBuilderRepository } from '@infra/builder-sqlite-repository';
 import { type DbHandle, openDb } from '@infra/db';
@@ -23,62 +33,26 @@ beforeEach(() => {
 afterEach(() => handle.close());
 
 describe('SqliteBuilderRepository (via builder facade)', () => {
-  it('round-trips a draft → publish → clone cycle', async () => {
-    const created = await createDraft(repo, { displayName: 'D', label: 'L' });
-    if (!created.ok) throw new Error();
-    const W = created.value;
-    await upsertLocation(repo, W, {
-      id: asLocationId('loc_a'),
-      label: 'A',
-      shortDescription: '',
-      longDescription: '',
-      tags: [],
-    });
-    await upsertAgent(repo, W, {
-      id: asAgentId('char_p'),
-      label: 'P',
-      shortDescription: '',
-      longDescription: '',
-      locationId: asLocationId('loc_a'),
-      hp: 10,
-      damage: 0,
-      defense: 0,
-      capacity: 10,
-      mood: null,
-      goal: null,
-      autonomous: false,
-      tags: [],
-    });
-    await repo.updateWorldSummary(W, { playerAgentId: asAgentId('char_p') });
-    const pub = await publish(repo, W);
-    expect(pub.ok).toBe(true);
-    if (pub.ok) {
-      const cloned = await cloneLiveAsDraft(repo, pub.value.liveWorldId);
-      expect(cloned.ok).toBe(true);
-    }
-  });
-
-  it('cloneLiveAsDraft populates the new draft with copies of the live entities', async () => {
-    // 1. Seed a draft with location + second location + exit + item + agent
+  it('save → drift → load round-trips a scratch via SQLite', async () => {
     const created = await createDraft(repo, { displayName: 'Seeded', label: 'Seeded' });
     if (!created.ok) throw new Error('createDraft failed');
-    const draft = created.value;
+    const scratch = created.value;
 
-    await upsertLocation(repo, draft, {
+    await upsertLocation(repo, scratch, {
       id: asLocationId('loc_kitchen'),
       label: 'Kitchen',
       shortDescription: 'k',
       longDescription: 'kitchen',
       tags: [],
     });
-    await upsertLocation(repo, draft, {
+    await upsertLocation(repo, scratch, {
       id: asLocationId('loc_pantry'),
       label: 'Pantry',
       shortDescription: 'p',
       longDescription: 'pantry',
       tags: [],
     });
-    await upsertExit(repo, draft, {
+    await upsertExit(repo, scratch, {
       id: asExitId('exit_kitchen_pantry'),
       from: asLocationId('loc_kitchen'),
       to: asLocationId('loc_pantry'),
@@ -87,7 +61,7 @@ describe('SqliteBuilderRepository (via builder facade)', () => {
       locked: false,
       lockedByItem: null,
     });
-    await upsertItem(repo, draft, {
+    await upsertItem(repo, scratch, {
       id: asItemId('item_knife'),
       label: 'knife',
       shortDescription: 'a knife',
@@ -98,7 +72,7 @@ describe('SqliteBuilderRepository (via builder facade)', () => {
       hidden: false,
       tags: [],
     });
-    await upsertAgent(repo, draft, {
+    await upsertAgent(repo, scratch, {
       id: asAgentId('char_serena'),
       label: 'Serena',
       shortDescription: 's',
@@ -113,43 +87,69 @@ describe('SqliteBuilderRepository (via builder facade)', () => {
       autonomous: false,
       tags: [],
     });
-    await repo.updateWorldSummary(draft, { playerAgentId: asAgentId('char_serena') });
+    await repo.updateWorldSummary(scratch, { playerAgentId: asAgentId('char_serena') });
 
-    // 2. Publish creates the live world
-    const pub = await publish(repo, draft);
-    if (!pub.ok) throw new Error(`publish failed: ${JSON.stringify(pub.error)}`);
-    const live = pub.value.liveWorldId;
+    const saved = await saveStartingState(repo, scratch);
+    expect(saved.ok).toBe(true);
 
-    // Sanity-check the live world has all the rows
-    const liveLocations = await repo.listLocations(live);
-    const liveExits = await repo.listExits(live);
-    const liveItems = await repo.listItems(live);
-    const liveAgents = await repo.listAgents(live);
-    expect(liveLocations).toHaveLength(2);
-    expect(liveExits).toHaveLength(1);
-    expect(liveItems).toHaveLength(1);
-    expect(liveAgents).toHaveLength(1);
+    // Drift the scratch.
+    await deleteLocation(repo, scratch, asLocationId('loc_pantry'));
+    expect(await repo.listLocations(scratch)).toHaveLength(1);
 
-    // 3. Clone the live world as a new draft
-    const cloned = await cloneLiveAsDraft(repo, live);
-    if (!cloned.ok) throw new Error(`clone failed: ${JSON.stringify(cloned.error)}`);
-    const newDraft = cloned.value;
+    const loaded = await loadStartingState(repo, scratch);
+    expect(loaded.ok).toBe(true);
+    expect(await repo.listLocations(scratch)).toHaveLength(2);
+    expect(await repo.listExits(scratch)).toHaveLength(1);
+    expect(await repo.listItems(scratch)).toHaveLength(1);
+    expect(await repo.listAgents(scratch)).toHaveLength(1);
+  });
 
-    // 4. The cloned draft must have the same entities as the live world
-    const newDraftLocations = await repo.listLocations(newDraft);
-    const newDraftExits = await repo.listExits(newDraft);
-    const newDraftItems = await repo.listItems(newDraft);
-    const newDraftAgents = await repo.listAgents(newDraft);
-    expect(newDraftLocations).toHaveLength(liveLocations.length);
-    expect(newDraftExits).toHaveLength(liveExits.length);
-    expect(newDraftItems).toHaveLength(liveItems.length);
-    expect(newDraftAgents).toHaveLength(liveAgents.length);
+  it('resetLiveFromStartingState replaces the paired live world via SQLite', async () => {
+    const created = await createDraft(repo, { displayName: 'D', label: 'D' });
+    if (!created.ok) throw new Error('createDraft failed');
+    const scratch = created.value;
+    await upsertLocation(repo, scratch, {
+      id: asLocationId('loc_a'),
+      label: 'A',
+      shortDescription: '',
+      longDescription: '',
+      tags: [],
+    });
+    await upsertAgent(repo, scratch, {
+      id: asAgentId('char_p'),
+      label: 'P',
+      shortDescription: '',
+      longDescription: '',
+      locationId: asLocationId('loc_a'),
+      hp: 10,
+      damage: 0,
+      defense: 0,
+      capacity: 10,
+      mood: null,
+      goal: null,
+      autonomous: false,
+      tags: [],
+    });
+    await repo.updateWorldSummary(scratch, { playerAgentId: asAgentId('char_p') });
+    await saveStartingState(repo, scratch);
 
-    // 5. Live world still intact (didn't get cannibalised)
-    const liveLocationsAfter = await repo.listLocations(live);
-    const liveAgentsAfter = await repo.listAgents(live);
-    expect(liveLocationsAfter).toHaveLength(2);
-    expect(liveAgentsAfter).toHaveLength(1);
+    const liveId = asWorldId('w_live_pair');
+    const lp = await createLiveForScratch(repo, scratch, liveId);
+    expect(lp.ok).toBe(true);
+
+    // Drift live.
+    await repo.upsertLocation(liveId, {
+      id: asLocationId('loc_a'),
+      label: 'A from gameplay',
+      shortDescription: '',
+      longDescription: '',
+      tags: [],
+    });
+    const r = await resetLiveFromStartingState(repo, scratch);
+    expect(r.ok).toBe(true);
+    const [first] = await repo.listLocations(liveId);
+    if (!first) throw new Error();
+    expect(first.label).toBe('A');
   });
 });
 
