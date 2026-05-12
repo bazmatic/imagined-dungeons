@@ -67,13 +67,18 @@ Available actions:
   Example "say what are you doing Spark?" -> { "kind":"speak", "direction":null, "targetKind":null, "targetRef":null, "itemRef":null, "targetAgentRef":null, "utterance":"what are you doing Spark?", "reason":null }.
   Example "tell the goblin to back off" -> { "kind":"speak", "direction":null, "targetKind":null, "targetRef":null, "itemRef":null, "targetAgentRef":"goblin", "utterance":"back off", "reason":null }.
 
-- emote: a brief gesture, expression, or for-show action. No state change — emote is purely physical performance (waving, grinning, shrugging, shaking the head). The body language IS the action.
-  Set: kind="emote", emoteDescription as a short verb phrase in the BASE form: "wave", "grin broadly", "shake their head" — NOT "waves"/"grins"/"shakes". The renderer conjugates for third-person observers.
-  Optionally set targetAgentRef to direct the emote at someone in the room. Otherwise targetAgentRef=null.
+- emote: a physical action the actor performs. This is the catch-all for any bodily action that doesn't have a dedicated verb above — gestures and expressions (wave, grin, shrug, shake their head), but ALSO actions that involve interacting with objects, parts of the environment, or oneself in ways the engine doesn't model as a state change ("drink some spirit", "take a swig of the bottle", "kick the door", "stretch", "rub their eyes", "pour a glass", "tap on the table", "draw a sword", "sigh deeply", "sit down on the stool"). The renderer turns the emoteDescription into prose; no other entity state changes.
+  Use emote whenever the input describes a physical thing the actor does that isn't covered by move/look/search/take/drop/give/inventory/speak/attack. Prefer emote over unknown for any phrasing that names an action — even ambitious ones like "drink the spirit" or "swing from the chandelier".
+  Set: kind="emote", emoteDescription as a short verb phrase in the BASE form, third-person infinitive (no trailing 's'): "wave", "drink some spirit", "take a swig of the bottle", "shake their head", "draw a sword" — NOT "waves"/"drinks"/"shakes". The renderer conjugates for third-person observers.
+  Optionally set targetAgentRef to direct the emote at someone in the room (e.g. "wave at Spark"). Otherwise targetAgentRef=null.
   All other fields null.
-  Example "wave at Spark" -> { "kind":"emote", "direction":null, "targetKind":null, "targetRef":null, "itemRef":null, "targetAgentRef":"Spark", "utterance":null, "emoteDescription":"wave", "reason":null }.
-  Example "I shrug" -> { "kind":"emote", "direction":null, "targetKind":null, "targetRef":null, "itemRef":null, "targetAgentRef":null, "utterance":null, "emoteDescription":"shrug", "reason":null }.
-  Example "grin" -> { "kind":"emote", "direction":null, "targetKind":null, "targetRef":null, "itemRef":null, "targetAgentRef":null, "utterance":null, "emoteDescription":"grin", "reason":null }.
+  Example "wave at Spark" -> { "kind":"emote", "targetAgentRef":"Spark", "emoteDescription":"wave" }.
+  Example "I shrug" -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"shrug" }.
+  Example "drink some spirit" -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"drink some spirit" }.
+  Example "take a swig of the bottle" -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"take a swig of the bottle" }.
+  Example "I sit down on the stool" -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"sit down on the stool" }.
+  Example "kick the door" -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"kick the door" }.
+  (Remember to fill every other field with null, per the output shape.)
 
 - attack: attack another agent in the location.
   Set: kind="attack", targetAgentRef as a short natural-language reference to the agent.
@@ -81,10 +86,9 @@ Available actions:
   Example "attack the goblin" -> { "kind":"attack", "direction":null, "targetKind":null, "targetRef":null, "itemRef":null, "targetAgentRef":"goblin", "utterance":null, "reason":null }.
   Example "kill spark" -> { "kind":"attack", "direction":null, "targetKind":null, "targetRef":null, "itemRef":null, "targetAgentRef":"spark", "utterance":null, "reason":null }.
 
-- unknown: the input is a request you cannot map.
+- unknown: ONLY use this when the input is not an action at all — meta-questions to the game itself, requests for help with the interface, or completely non-actionable text. Examples that warrant unknown: "what should I do?", "how do I play?", "list commands", "??". If the input describes any physical thing the actor does — even an unusual one — use emote instead, never unknown.
   Set: kind="unknown", reason as a short string.
   All other fields null.
-  Use unknown for actions outside the listed vocabulary. Do not guess.
 
 Rules:
 - itemRef, targetRef, and targetAgentRef are short natural-language references to visible objects, never ids.
