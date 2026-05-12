@@ -9,6 +9,7 @@ import {
   asWorldId,
 } from '@core/domain/ids';
 import { EventKind, OwnerKind } from '@core/domain/kinds';
+import { MemoryBuilderRepository } from '@infra/builder-memory-repository';
 import { MemoryRepository } from '@infra/memory-repository';
 import { describe, expect, it } from 'vitest';
 import { makeFakeLanguageModel } from '../../../tests/helpers/fake-language-model';
@@ -259,6 +260,36 @@ describe('runTick', () => {
     const parse = makeCompositeParser({ llm: null });
     const r = await runTick(player.id, 'look', repo, { parse, llm: null });
     expect(r.events.some((e) => e.kind === EventKind.DescriptionUpdated)).toBe(false);
+  });
+
+  it('per-tick discovery budget caps generative LLM calls to one across player + NPC turns', async () => {
+    // Force two discovery-eligible triggers in one tick: the player issues
+    // `search`, and Spark (autonomous) is fed `search the bar` via a custom
+    // text responder. The per-tick budget should cap discovery LLM calls
+    // to exactly one — Spark's search falls back to "nothing of note".
+    const repo = makeWorld();
+    const builderRepo = new MemoryBuilderRepository();
+    const llm = makeFakeLanguageModel({
+      textResponder: () => 'search the bar',
+      responder: () => ({
+        raw: '',
+        parsed: {
+          narration: 'You catch a glimpse of something faint.',
+          matchedItemId: null,
+          matchedAgentId: null,
+          spawnedItem: null,
+          spawnedAgent: null,
+        },
+      }),
+    });
+    const parse = makeCompositeParser({ llm: null });
+    await runTick(player.id, 'search dusty corner', repo, {
+      parse,
+      llm,
+      builderRepo,
+    });
+    const discoveryCalls = llm.calls.filter((c) => c.schemaName === 'discovery_response');
+    expect(discoveryCalls.length).toBe(1);
   });
 
   it('aggregates events from player + NPCs in order', async () => {

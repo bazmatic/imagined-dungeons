@@ -27,7 +27,17 @@ import {
   renderMoveObserved,
   renderTakeObserved,
 } from './templates';
-import { runTurn } from './turn';
+import { type DiscoveryBudget, runTurn } from './turn';
+
+/**
+ * Per-tick cap on generative-discovery LLM calls. The discovery LLM is
+ * shared by the explicit `search` verb and the failed-look fall-through;
+ * a single tick can trigger at most this many calls in total (across all
+ * actors that ticked). Beyond the cap the engine falls back to its
+ * deterministic path — search emits "You find nothing of note.", failed
+ * look surfaces the normal parse error.
+ */
+export const MAX_DISCOVERY_CALLS_PER_TICK = 1;
 
 /**
  * The NPC mind's most common "I have nothing to do" output. We don't add a
@@ -325,6 +335,9 @@ export async function runTick(
 ): Promise<TickResult> {
   const { parse, llm } = opts;
   const cap = opts.npcCap ?? MAX_NPCS_PER_TICK;
+  // A single shared counter across the whole tick — search/failed-look from
+  // the player turn or any NPC turn all draw from the same pool.
+  const discoveryBudget: DiscoveryBudget = { remaining: MAX_DISCOVERY_CALLS_PER_TICK };
 
   // The consequence engine writes durable lore (storySoFar) through the
   // builder port. Only available when the caller supplied a builderRepo;
@@ -350,7 +363,12 @@ export async function runTick(
   if (isWaitIntent(text)) {
     playerRender = 'You wait.';
   } else {
-    const playerResult = await runTurn(playerId, text, repo, { parse, llm });
+    const playerResult = await runTurn(playerId, text, repo, {
+      parse,
+      llm,
+      discoveryBudget,
+      ...(opts.builderRepo ? { builderRepo: opts.builderRepo } : {}),
+    });
     playerRender = playerResult.render;
     events.push(...playerResult.events);
 
@@ -415,7 +433,12 @@ export async function runTick(
       continue;
     }
 
-    const npcResult = await runTurn(npcId, intent, repo, { parse, llm });
+    const npcResult = await runTurn(npcId, intent, repo, {
+      parse,
+      llm,
+      discoveryBudget,
+      ...(opts.builderRepo ? { builderRepo: opts.builderRepo } : {}),
+    });
     if (npcResult.events.length === 0) {
       // Intent didn't parse or dispatch failed. The reason is in npcResult.render
       // (a parse-error or action-error message). Surface it so the dev terminal
