@@ -107,6 +107,8 @@ export function renderParseError(err: ParseError): string {
       return `Which do you mean — ${err.candidates.join(' or ')}?`;
     case ParseErrorKind.AlreadyCarried:
       return `You are already carrying the ${err.label}.`;
+    case ParseErrorKind.ImpossibleAction:
+      return err.reason;
   }
 }
 
@@ -204,7 +206,7 @@ export function renderLookObserved(actor: Agent): string {
  * here; the next `look` will return the freshly stored description (§6.4).
  */
 export function renderDescriptionUpdatedObserved(): string {
-  return '(The space around you shifts. Things are no longer quite as you remember them.)';
+  return '...';
 }
 
 /**

@@ -43,13 +43,13 @@ export function makeCompositeParser(deps: CompositeParserDeps): ParseFn {
     if (!shouldFallback(ruleResult)) return ruleResult;
     if (!deps.llm) return ruleResult;
     try {
-      const action = await llmInterpret(text, actor, view, inventory, deps.llm);
-      if (!action) {
+      const result = await llmInterpret(text, actor, view, inventory, deps.llm);
+      if (!result) {
         log.info(`[llm] no action for input "${text}" — using rule-based ${ruleResult.kind}`);
         return ruleResult;
       }
-      log.info(`[llm] interpreted "${text}" as ${action.kind}`);
-      return action;
+      log.info(`[llm] interpreted "${text}" as ${result.kind}`);
+      return result;
     } catch (err) {
       log.warn(`[llm] error interpreting "${text}": ${String(err)}`);
       return ruleResult;

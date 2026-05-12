@@ -10,6 +10,7 @@ const DIRECTIONS: readonly Direction[] = ALL_DIRECTIONS;
  * wire schema.)
  */
 const UnknownKind = 'unknown' as const;
+const ImpossibleKind = 'impossible' as const;
 const InvalidKind = 'invalid' as const;
 /**
  * Kinds the player/NPC interpreter is allowed to produce. The
@@ -29,7 +30,7 @@ const INTERPRETER_KINDS = [
   ActionKind.Attack,
   ActionKind.Search,
 ] as const;
-const KINDS = [...INTERPRETER_KINDS, UnknownKind] as const;
+const KINDS = [...INTERPRETER_KINDS, UnknownKind, ImpossibleKind] as const;
 type Kind = (typeof KINDS)[number];
 
 /**
@@ -126,6 +127,7 @@ export type ValidatedPlayerAction =
   | { readonly kind: 'attack'; readonly targetAgentRef: string }
   | { readonly kind: 'search'; readonly query: string }
   | { readonly kind: 'unknown'; readonly reason: string }
+  | { readonly kind: 'impossible'; readonly reason: string }
   | { readonly kind: 'invalid' };
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>
@@ -236,6 +238,11 @@ export function validatePlayerAction(input: unknown): ValidatedPlayerAction {
       const reason = input.reason;
       if (typeof reason !== 'string') return { kind: InvalidKind };
       return { kind: UnknownKind, reason };
+    }
+    case ImpossibleKind: {
+      const reason = input.reason;
+      if (typeof reason !== 'string' || reason.length === 0) return { kind: InvalidKind };
+      return { kind: ImpossibleKind, reason };
     }
   }
 }

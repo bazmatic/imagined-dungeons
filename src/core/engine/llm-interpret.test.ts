@@ -250,4 +250,31 @@ describe('llmInterpret', () => {
     expect(sys.toLowerCase()).toContain('search');
     expect(sys.toLowerCase()).toContain('in detail');
   });
+
+  it('returns a ParseError ImpossibleAction when the model judges the action impossible', async () => {
+    const llm = makeFakeLanguageModel({
+      responder: () => respond({ kind: 'impossible', reason: 'You have no wings — you can\'t fly.' }),
+    });
+    const r = await llmInterpret('fly to the moon', paff, view, [], llm);
+    expect(r).toEqual({
+      kind: 'impossible_action',
+      reason: "You have no wings — you can't fly.",
+    });
+  });
+
+  it('returns null when impossible is emitted without a reason (invalid)', async () => {
+    const llm = makeFakeLanguageModel({
+      responder: () => respond({ kind: 'impossible', reason: '' }),
+    });
+    const r = await llmInterpret('fly', paff, view, [], llm);
+    expect(r).toBeNull();
+  });
+
+  it('system prompt teaches the interpreter to use impossible for unworkable actions', async () => {
+    const llm = makeFakeLanguageModel({ responder: () => respond({ kind: 'inventory' }) });
+    await llmInterpret('anything', paff, view, [], llm);
+    const sys = llm.calls[0]?.system ?? '';
+    expect(sys.toLowerCase()).toContain('impossible');
+    expect(sys.toLowerCase()).toContain('locked');
+  });
 });

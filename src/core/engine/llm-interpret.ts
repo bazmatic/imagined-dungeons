@@ -1,6 +1,6 @@
-import type { Action } from '@core/domain/actions';
+import type { Action, ParseError } from '@core/domain/actions';
 import type { Agent, Item } from '@core/domain/entities';
-import { ActionKind, ExaminableKind } from '@core/domain/kinds';
+import { ActionKind, ExaminableKind, ParseErrorKind } from '@core/domain/kinds';
 import type { LanguageModel } from './language-model';
 import {
   PLAYER_ACTION_SCHEMA,
@@ -11,13 +11,24 @@ import { buildSystemPrompt, buildUserPrompt } from './llm-prompt';
 import { resolveAgent, resolveExit, resolveItem } from './parser';
 import type { PerceptionView } from './perception';
 
+/**
+ * Result of the LLM intent interpreter:
+ *
+ * - `Action`         — a valid action the engine can dispatch.
+ * - `ParseError`     — the LLM judged the action impossible / inappropriate
+ *                      and carries a reason. Surfaced to the player as a
+ *                      failed event ('You can't fly without wings.').
+ * - `null`           — the LLM could not map the input at all. The caller
+ *                      (composite parser) falls back to the rule-parser's
+ *                      error.
+ */
 export async function llmInterpret(
   text: string,
   actor: Agent,
   view: PerceptionView,
   inventory: readonly Item[],
   llm: LanguageModel,
-): Promise<Action | null> {
+): Promise<Action | ParseError | null> {
   const response = await llm.complete({
     system: buildSystemPrompt(),
     user: buildUserPrompt(text, actor, view, inventory),
@@ -140,6 +151,8 @@ export async function llmInterpret(
     }
     case ActionKind.Search:
       return { kind: ActionKind.Search, actorId: actor.id, query: validated.query };
+    case 'impossible':
+      return { kind: ParseErrorKind.ImpossibleAction, reason: validated.reason };
     case 'unknown':
     case 'invalid':
       return null;

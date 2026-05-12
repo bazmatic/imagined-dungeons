@@ -33,6 +33,14 @@ export const ParseErrorKind = {
   NoSuchTarget: 'no_such_target',
   AmbiguousTarget: 'ambiguous_target',
   AlreadyCarried: 'already_carried',
+  /**
+   * The action is well-formed but the actor cannot do it: physically
+   * impossible (fly without wings), inappropriate to the situation
+   * (attack an unconscious ally), or out of scope (cast a spell as a
+   * non-spellcaster). Adjudicated by the LLM interpreter, which carries
+   * the reason. Surfaced as a failed event with the reason as render text.
+   */
+  ImpossibleAction: 'impossible_action',
 } as const;
 export type ParseErrorKind = (typeof ParseErrorKind)[keyof typeof ParseErrorKind];
 

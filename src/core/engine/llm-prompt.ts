@@ -86,7 +86,20 @@ Available actions:
   Example "attack the goblin" -> { "kind":"attack", "direction":null, "targetKind":null, "targetRef":null, "itemRef":null, "targetAgentRef":"goblin", "utterance":null, "reason":null }.
   Example "kill spark" -> { "kind":"attack", "direction":null, "targetKind":null, "targetRef":null, "itemRef":null, "targetAgentRef":"spark", "utterance":null, "reason":null }.
 
-- unknown: ONLY use this when the input is not an action at all — meta-questions to the game itself, requests for help with the interface, or completely non-actionable text. Examples that warrant unknown: "what should I do?", "how do I play?", "list commands", "??". If the input describes any physical thing the actor does — even an unusual one — use emote instead, never unknown.
+- impossible: the input describes an action the actor CANNOT perform. Use this when:
+    • the action requires capabilities the actor lacks (a non-spellcaster trying to cast a spell, a wingless humanoid trying to fly, an empty-handed actor trying to drink from a glass that isn't there);
+    • the action targets something not present in the scene (drink wine when there's no wine, give a coin you don't have);
+    • the action requires a precondition the actor hasn't met (open a locked door without the key, climb a wall too sheer to climb);
+    • the action is unfit for the actor's body or situation (a human reading the mind of an animal, a child lifting a great anvil).
+  Reason should be a short, in-fiction explanation aimed at the actor: "You have no wings — you can't fly.", "There's no glass in front of you.", "The door is locked.", "You don't know any spells.". The renderer surfaces this verbatim, so phrase it as direct narration.
+  Prefer emote when the action is unusual but PLAUSIBLE for the actor (drinking the bottle they hold, sitting on a stool, drawing a sword they carry). Prefer impossible when the action is physically or contextually unworkable.
+  Example "fly to the moon" -> { "kind":"impossible", "reason":"You have no way to fly — your feet stay on the ground." }.
+  Example "drink the wine" when no wine is present -> { "kind":"impossible", "reason":"There's no wine here." }.
+  Example "open the locked door" without a key -> { "kind":"impossible", "reason":"The door is locked. You'll need a key or another way in." }.
+  Example "cast a fireball" when the actor has no magic -> { "kind":"impossible", "reason":"You don't know any spells." }.
+  All other fields null besides kind and reason.
+
+- unknown: ONLY use this when the input is not an action at all — meta-questions to the game itself, requests for help with the interface, or completely non-actionable text. Examples that warrant unknown: "what should I do?", "how do I play?", "list commands", "??". If the input describes any physical thing the actor does — even an unusual one — use emote (if plausible) or impossible (if not) instead. Never unknown.
   Set: kind="unknown", reason as a short string.
   All other fields null.
 
