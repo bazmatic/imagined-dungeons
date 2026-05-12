@@ -151,6 +151,26 @@ export async function llmInterpret(
     }
     case ActionKind.Search:
       return { kind: ActionKind.Search, actorId: actor.id, query: validated.query };
+    case ActionKind.Equip: {
+      const r = resolveItem(validated.itemRef, inventory);
+      if (!r.ok) return null;
+      return {
+        kind: ActionKind.Equip,
+        actorId: actor.id,
+        itemId: r.item.id,
+        manner: validated.manner,
+      };
+    }
+    case ActionKind.Unequip: {
+      const r = resolveItem(validated.itemRef, inventory);
+      if (!r.ok) return null;
+      return {
+        kind: ActionKind.Unequip,
+        actorId: actor.id,
+        itemId: r.item.id,
+        manner: validated.manner,
+      };
+    }
     case 'impossible':
       return { kind: ParseErrorKind.ImpossibleAction, reason: validated.reason };
     case 'unknown':

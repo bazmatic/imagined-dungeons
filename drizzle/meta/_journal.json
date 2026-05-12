@@ -71,6 +71,13 @@
       "when": 1778543049904,
       "tag": "0009_lore",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1778565534239,
+      "tag": "0010_equipped",
+      "breakpoints": true
     }
   ]
 }

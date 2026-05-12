@@ -260,6 +260,22 @@ async function summariseEvent(
       const spawnedLabel = await labelOf(event.spawnedAgentId);
       return `${spawnedLabel} appeared`;
     }
+    case EventKind.Equip: {
+      try {
+        const item = await repo.getItem(event.itemId);
+        return `${actorLabel} ${event.manner} the ${item.label}`;
+      } catch {
+        return `${actorLabel} ${event.manner} something`;
+      }
+    }
+    case EventKind.Unequip: {
+      try {
+        const item = await repo.getItem(event.itemId);
+        return `${actorLabel} ${event.manner} the ${item.label}`;
+      } catch {
+        return `${actorLabel} ${event.manner} something`;
+      }
+    }
   }
 }
 

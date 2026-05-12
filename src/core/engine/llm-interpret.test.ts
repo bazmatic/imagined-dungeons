@@ -43,6 +43,7 @@ const map: Item = {
   weight: 1,
   hidden: false,
   tags: [],
+  equipped: false,
 };
 const spark: Agent = {
   id: asAgentId('char_spark'),
@@ -253,7 +254,8 @@ describe('llmInterpret', () => {
 
   it('returns a ParseError ImpossibleAction when the model judges the action impossible', async () => {
     const llm = makeFakeLanguageModel({
-      responder: () => respond({ kind: 'impossible', reason: 'You have no wings — you can\'t fly.' }),
+      responder: () =>
+        respond({ kind: 'impossible', reason: "You have no wings — you can't fly." }),
     });
     const r = await llmInterpret('fly to the moon', paff, view, [], llm);
     expect(r).toEqual({

@@ -51,6 +51,7 @@ const item = (
   weight: 1,
   hidden: false,
   tags: [],
+  equipped: false,
 });
 
 describe('MemoryRepository', () => {

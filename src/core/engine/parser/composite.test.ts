@@ -42,6 +42,7 @@ const map: Item = {
   weight: 1,
   hidden: false,
   tags: [],
+  equipped: false,
 };
 const view = { actor: paff, location: tavern, items: [map], agents: [], exits: [] };
 

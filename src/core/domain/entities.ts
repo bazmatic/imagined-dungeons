@@ -38,6 +38,14 @@ export interface Item {
   readonly weight: number;
   readonly hidden: boolean;
   readonly tags: readonly string[];
+  /**
+   * Runtime flag. True while the owning agent is wearing or wielding this
+   * item — narrated via equip / unequip. Engine doesn't track separate
+   * worn/wielded sub-states; both are conveyed by the emote-description
+   * the actor chose at equip time. Always false for items owned by a
+   * location or another item.
+   */
+  readonly equipped: boolean;
 }
 
 export interface Agent {

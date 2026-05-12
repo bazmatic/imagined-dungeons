@@ -15,6 +15,13 @@ export interface Repository {
   exitsFrom(loc: LocationId): Promise<readonly Exit[]>;
   moveAgent(agent: AgentId, to: LocationId): Promise<void>;
   transferItem(item: ItemId, to: Owner): Promise<void>;
+  /**
+   * Runtime equip toggle. Pure data flip — narration is the action handler's
+   * job (it emits an Equip/Unequip event with a `manner` phrase). Engine
+   * doesn't enforce slot conflicts in v1; any number of items on an agent
+   * may be equipped.
+   */
+  setItemEquipped(item: ItemId, equipped: boolean): Promise<void>;
   setAgentHp(id: AgentId, hp: number): Promise<void>;
   /**
    * Toggle the runtime "in the scene" flag. The scheduler ticks any agent

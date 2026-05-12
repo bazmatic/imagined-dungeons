@@ -86,9 +86,30 @@ export function renderGiveObserved(actor: Agent, item: Item, recipient: Agent): 
   return `${actor.label} gives ${item.label} to ${recipient.label}.`;
 }
 
+export function renderEquipSelf(item: Item, manner: string): string {
+  return `You ${manner} the ${item.label}.`;
+}
+
+export function renderEquipObserved(actor: Agent, item: Item, manner: string): string {
+  return `${actor.label} ${manner}s the ${item.label}.`;
+}
+
+export function renderUnequipSelf(item: Item, manner: string): string {
+  return `You ${manner} the ${item.label}.`;
+}
+
+export function renderUnequipObserved(actor: Agent, item: Item, manner: string): string {
+  return `${actor.label} ${manner}s the ${item.label}.`;
+}
+
 export function renderInventory(items: readonly Item[]): string {
   if (items.length === 0) return 'You are carrying nothing.';
-  return `You are carrying: ${list(items)}.`;
+  const equipped = items.filter((i) => i.equipped);
+  const carried = items.filter((i) => !i.equipped);
+  const parts: string[] = [];
+  if (carried.length > 0) parts.push(`You are carrying: ${list(carried)}.`);
+  if (equipped.length > 0) parts.push(`Equipped: ${list(equipped)}.`);
+  return parts.join(' ');
 }
 
 export function renderParseError(err: ParseError): string {

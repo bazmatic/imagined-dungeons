@@ -91,6 +91,7 @@ describe('resolveOwnerSubtitle', () => {
       weight: 1,
       hidden: false,
       tags: [],
+      equipped: false,
     },
   ];
 

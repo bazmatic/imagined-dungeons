@@ -77,7 +77,7 @@ Available actions:
 
 - emote: a physical action the actor performs. This is the catch-all for any bodily action that doesn't have a dedicated verb above — gestures and expressions (wave, grin, shrug, shake their head), but ALSO actions involving objects the actor can plausibly access: drinking, eating, putting on / taking off clothing or gear, sitting, drawing weapons, opening doors that aren't locked, kicking, pouring, lighting, breaking, reading, writing, kissing, hugging, dancing, etc. The renderer turns the emoteDescription into prose; the engine doesn't track separate "worn" or "wielded" or "seated" states, so these are narrated, not mechanical.
   Use emote whenever the input describes a physical thing the actor does that isn't covered by move/look/search/take/drop/give/inventory/speak/attack. Prefer emote over impossible for any phrasing where the action is plausible for the actor's body and the materials at hand — and over unknown for any action attempt at all.
-  Crucially: actions involving items the actor is HOLDING (in inventory) are emote, not impossible. Holding a thing is how you wear it, read it, drink from it, use it, put it on. Do not reject "wear/put on/equip/read/use/light/pour from <item the actor holds>" as impossible — these are emotes.
+  Crucially: actions involving items the actor is HOLDING (in inventory) are emote, not impossible. Holding a thing is how you read, drink from, use, light, or pour from it. Do not reject "read/use/light/pour from <item the actor holds>" as impossible. (Wearing or wielding clothes/weapons is a distinct verb: equip — see below.)
   Set: kind="emote", emoteDescription as a short verb phrase in the BASE form, third-person infinitive (no trailing 's'): "wave", "drink some spirit", "put on the fireproof cloak", "shake their head", "draw a sword", "light the lantern" — NOT "waves"/"drinks"/"puts". The renderer conjugates for third-person observers.
   Optionally set targetAgentRef to direct the emote at someone in the room (e.g. "wave at Spark"). Otherwise targetAgentRef=null.
   All other fields null.
@@ -87,13 +87,26 @@ Available actions:
   Example "take a swig of the bottle" -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"take a swig of the bottle" }.
   Example "I sit down on the stool" -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"sit down on the stool" }.
   Example "kick the door" -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"kick the door" }.
-  Example "wear the cloak" (actor holds the cloak) -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"put on the cloak" }.
-  Example "put on the fireproof cloak" -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"put on the fireproof cloak" }.
-  Example "equip the sword" -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"draw and ready the sword" }.
-  Example "take off the helmet" -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"take off the helmet" }.
   Example "read the fire map" (actor holds it) -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"read the fire map" }.
   Example "light the lantern" (actor holds it) -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"light the lantern" }.
   (Remember to fill every other field with null, per the output shape.)
+
+- equip: put on / wear / wield / draw an item the actor is carrying. The item moves into an "equipped" state — still in their inventory, but actively worn or wielded. Reserved for clothes, armour, weapons, accessories — things meant to be worn or held in a way that affects how the actor presents. NOT for consuming, breaking, opening, or merely interacting with held items (those are emote).
+  Set: kind="equip", itemRef = the item the actor wants to equip (must be in their inventory), emoteDescription = the manner verb in BASE form (no trailing 's'): "put on", "wear", "wield", "draw", "don". The renderer uses the manner to phrase narration ("Paff puts on the cloak.").
+  All other fields null.
+  Example "wear the cloak" -> { "kind":"equip", "itemRef":"cloak", "emoteDescription":"put on" }.
+  Example "put on the fireproof cloak" -> { "kind":"equip", "itemRef":"fireproof cloak", "emoteDescription":"put on" }.
+  Example "draw my sword" -> { "kind":"equip", "itemRef":"sword", "emoteDescription":"draw" }.
+  Example "equip the helmet" -> { "kind":"equip", "itemRef":"helmet", "emoteDescription":"put on" }.
+  Example "wield the dagger" -> { "kind":"equip", "itemRef":"dagger", "emoteDescription":"wield" }.
+
+- unequip: take off / remove / stop wielding an equipped item. Item stays in inventory; only the equipped flag flips off.
+  Set: kind="unequip", itemRef = the item to unequip, emoteDescription = the manner verb in BASE form: "take off", "remove", "sheathe", "stow", "doff".
+  All other fields null.
+  Example "take off the cloak" -> { "kind":"unequip", "itemRef":"cloak", "emoteDescription":"take off" }.
+  Example "remove my helmet" -> { "kind":"unequip", "itemRef":"helmet", "emoteDescription":"take off" }.
+  Example "sheathe the sword" -> { "kind":"unequip", "itemRef":"sword", "emoteDescription":"sheathe" }.
+  Example "unequip the dagger" -> { "kind":"unequip", "itemRef":"dagger", "emoteDescription":"put away" }.
 
 - attack: attack another agent in the location.
   Set: kind="attack", targetAgentRef as a short natural-language reference to the agent.

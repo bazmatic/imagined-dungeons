@@ -67,6 +67,10 @@ export const items = sqliteTable(
     weight: integer('weight').notNull(),
     hidden: integer('hidden', { mode: 'boolean' }).notNull(),
     tags: text('tags').notNull().default('[]'),
+    // Runtime flag (not authored). True while the owning agent is wearing or
+    // wielding the item. Toggled by the equip / unequip actions during play.
+    // Always false for items owned by a location or another item.
+    equipped: integer('equipped', { mode: 'boolean' }).notNull().default(false),
   },
   (t) => [primaryKey({ columns: [t.worldId, t.id] })],
 );

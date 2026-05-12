@@ -41,6 +41,7 @@ const map: Item = {
   weight: 1,
   hidden: false,
   tags: [],
+  equipped: false,
 };
 const rustyKey: Item = {
   id: asItemId('item_rusty'),
@@ -52,6 +53,7 @@ const rustyKey: Item = {
   weight: 1,
   hidden: false,
   tags: [],
+  equipped: false,
 };
 const silverKey: Item = {
   id: asItemId('item_silver'),
@@ -63,6 +65,7 @@ const silverKey: Item = {
   weight: 1,
   hidden: false,
   tags: [],
+  equipped: false,
 };
 const exitN: Exit = {
   id: asExitId('e'),

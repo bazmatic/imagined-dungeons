@@ -60,6 +60,7 @@ describe('collectLoreTags', () => {
           weight: 1,
           hidden: false,
           tags: ['cursed', 'wet'],
+          equipped: false,
         },
       ],
       agents: [

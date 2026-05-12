@@ -70,7 +70,11 @@ export const setAgentAutonomous = createServerFn({ method: 'POST' })
   })
   .handler(async ({ data }) => {
     const repo = await getBuilderRepo();
-    await repo.setAgentAutonomous(asWorldId(data.worldId), asAgentId(data.agentId), data.autonomous);
+    await repo.setAgentAutonomous(
+      asWorldId(data.worldId),
+      asAgentId(data.agentId),
+      data.autonomous,
+    );
     return { ok: true as const };
   });
 
@@ -94,11 +98,7 @@ export const silenceAllAgents = createServerFn({ method: 'POST' })
  */
 export const setWorldPlayerAgent = createServerFn({ method: 'POST' })
   .inputValidator((d: unknown) => {
-    if (
-      typeof d !== 'object' ||
-      d === null ||
-      typeof (d as { id?: unknown }).id !== 'string'
-    ) {
+    if (typeof d !== 'object' || d === null || typeof (d as { id?: unknown }).id !== 'string') {
       throw new Error('Expected { id: string, playerAgentId: string | null }');
     }
     const raw = (d as { playerAgentId?: unknown }).playerAgentId;
@@ -109,7 +109,8 @@ export const setWorldPlayerAgent = createServerFn({ method: 'POST' })
   })
   .handler(async ({ data }) => {
     const repo = await getBuilderRepo();
-    const playerAgentId: AgentId | null = data.playerAgentId === null ? null : asAgentId(data.playerAgentId);
+    const playerAgentId: AgentId | null =
+      data.playerAgentId === null ? null : asAgentId(data.playerAgentId);
     await repo.updateWorldSummary(asWorldId(data.id), { playerAgentId });
     return { ok: true as const };
   });

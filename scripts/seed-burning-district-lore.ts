@@ -133,7 +133,13 @@ interface LocationTagging {
 const LOCATION_TAGS: readonly LocationTagging[] = [
   {
     id: 'loc_flaming_goblet',
-    tags: ['burning-district-threshold', 'zone-fringe', 'faction-tieflings', 'entry-controlled', 'lullaby-resonant'],
+    tags: [
+      'burning-district-threshold',
+      'zone-fringe',
+      'faction-tieflings',
+      'entry-controlled',
+      'lullaby-resonant',
+    ],
   },
   { id: 'loc_ash_lane', tags: ['burning-district-street', 'zone-fringe', 'salvageable'] },
   { id: 'loc_burning_street', tags: ['burning-district-street', 'zone-blaze'] },
@@ -141,12 +147,18 @@ const LOCATION_TAGS: readonly LocationTagging[] = [
   { id: 'loc_inferno_alley', tags: ['burning-district-street', 'zone-inferno'] },
   { id: 'loc_phoenix_row', tags: ['burning-district-street', 'zone-blaze', 'faction-elemental'] },
   { id: 'loc_smoldering_square', tags: ['burning-district-street', 'zone-fringe', 'salvageable'] },
-  { id: 'loc_fire_salvagers', tags: ['burning-district-interior', 'zone-fringe', 'faction-salvagers'] },
+  {
+    id: 'loc_fire_salvagers',
+    tags: ['burning-district-interior', 'zone-fringe', 'faction-salvagers'],
+  },
   {
     id: 'loc_elemental_plaza',
     tags: ['burning-district-interior', 'zone-inferno', 'faction-elemental', 'lullaby-resonant'],
   },
-  { id: 'loc_zezrans_house', tags: ['burning-district-interior', 'zone-inferno', 'faction-zezran'] },
+  {
+    id: 'loc_zezrans_house',
+    tags: ['burning-district-interior', 'zone-inferno', 'faction-zezran'],
+  },
   {
     id: 'loc_workshop',
     tags: ['burning-district-interior', 'zone-inferno', 'faction-zezran', 'lullaby-resonant'],
@@ -222,10 +234,7 @@ async function main(): Promise<void> {
     env: { ...process.env, ...(process.env.DB_PATH ? { DB_PATH: process.env.DB_PATH } : {}) },
   });
 
-  const client = new Client(
-    { name: 'lore-seed-script', version: '1.0.0' },
-    { capabilities: {} },
-  );
+  const client = new Client({ name: 'lore-seed-script', version: '1.0.0' }, { capabilities: {} });
   await client.connect(transport);
   console.log('Connected to MCP server.');
 

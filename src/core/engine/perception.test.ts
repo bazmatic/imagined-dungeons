@@ -46,6 +46,7 @@ const item = (id: string, ownerLoc: string, hidden = false): Item => ({
   weight: 1,
   hidden,
   tags: [],
+  equipped: false,
 });
 
 const exit: Exit = {

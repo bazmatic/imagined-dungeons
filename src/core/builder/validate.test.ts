@@ -165,6 +165,7 @@ describe('validateWorld', () => {
           weight: 1,
           hidden: false,
           tags: [],
+          equipped: false,
         },
       ],
     };

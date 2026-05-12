@@ -253,6 +253,24 @@ async function summarise(event: DomainEvent, repo: Repository): Promise<string> 
       const spawned = await labelOf(event.spawnedAgentId);
       return `${spawned} appeared`;
     }
+    case EventKind.Equip: {
+      const actor = await labelOf(event.actorId);
+      try {
+        const item = await repo.getItem(event.itemId);
+        return `${actor} ${event.manner} the ${item.label}`;
+      } catch {
+        return `${actor} equipped an item`;
+      }
+    }
+    case EventKind.Unequip: {
+      const actor = await labelOf(event.actorId);
+      try {
+        const item = await repo.getItem(event.itemId);
+        return `${actor} ${event.manner} the ${item.label}`;
+      } catch {
+        return `${actor} unequipped an item`;
+      }
+    }
   }
 }
 

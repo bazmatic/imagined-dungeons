@@ -141,6 +141,10 @@ function summariseEvent(event: DomainEvent): string {
       return `${event.actorId} updated description (${event.target.kind})`;
     case EventKind.AgentSpawned:
       return `${event.spawnedAgentId} spawned at ${event.locationId}`;
+    case EventKind.Equip:
+      return `${event.actorId} ${event.manner} ${event.itemId}`;
+    case EventKind.Unequip:
+      return `${event.actorId} ${event.manner} ${event.itemId}`;
   }
 }
 

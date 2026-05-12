@@ -452,6 +452,41 @@ export function parse(
       return { kind: ActionKind.Search, actorId: actor.id, query: afterVerb };
     }
 
+    case 'equip':
+    case 'wear':
+    case 'don':
+    case 'wield':
+    case 'draw': {
+      // "wear the cloak", "equip sword", "draw the dagger" → resolve item
+      // from inventory; the actor's chosen verb becomes the narration manner.
+      const rest = stripStopWords(toks.slice(1));
+      if (rest.length === 0) return { kind: ParseErrorKind.MissingArgument, verb: first };
+      const ref = rest.join(' ');
+      const r = resolveItem(ref, inventory);
+      if (!r.ok) return r.error;
+      const manner = first === 'don' ? 'put on' : first;
+      return { kind: ActionKind.Equip, actorId: actor.id, itemId: r.item.id, manner };
+    }
+
+    case 'unequip':
+    case 'remove':
+    case 'sheathe':
+    case 'sheath':
+    case 'doff': {
+      const rest = stripStopWords(toks.slice(1));
+      if (rest.length === 0) return { kind: ParseErrorKind.MissingArgument, verb: first };
+      const ref = rest.join(' ');
+      const r = resolveItem(ref, inventory);
+      if (!r.ok) return r.error;
+      const manner =
+        first === 'remove' || first === 'doff'
+          ? 'take off'
+          : first === 'unequip'
+            ? 'put away'
+            : 'sheathe';
+      return { kind: ActionKind.Unequip, actorId: actor.id, itemId: r.item.id, manner };
+    }
+
     case 'attack':
     case 'kill':
     case 'fight': {

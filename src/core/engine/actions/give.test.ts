@@ -61,6 +61,7 @@ const heldByPaff: Item = {
   weight: 1,
   hidden: false,
   tags: [],
+  equipped: false,
 };
 
 describe('handleGive', () => {

@@ -59,7 +59,9 @@ export type DomainEvent =
       spawnedAgentId: AgentId;
       locationId: LocationId;
       templateId: MonsterTemplateId;
-    });
+    })
+  | (BaseEvent & { kind: 'equip'; itemId: ItemId; manner: string })
+  | (BaseEvent & { kind: 'unequip'; itemId: ItemId; manner: string });
 
 export const NARRATED_EVENT_KINDS: ReadonlySet<EventKind> = new Set<EventKind>([
   EventKind.Speak,

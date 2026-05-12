@@ -91,6 +91,7 @@ const map: Item = {
   weight: 1,
   hidden: false,
   tags: [],
+  equipped: false,
 };
 
 const hidden: Item = {
@@ -103,6 +104,7 @@ const hidden: Item = {
   weight: 1,
   hidden: true,
   tags: [],
+  equipped: false,
 };
 
 const exitN: Exit = {

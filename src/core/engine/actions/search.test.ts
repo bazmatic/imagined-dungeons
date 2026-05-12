@@ -48,6 +48,7 @@ const map: Item = {
   weight: 1,
   hidden: false,
   tags: [],
+  equipped: false,
 };
 
 const makeRepos = (items: Item[] = [], agents: Agent[] = [paff]) => {
@@ -107,6 +108,7 @@ describe('handleSearch', () => {
             weight: 1,
             hidden: false,
             tags: ['treasure'],
+            equipped: false,
           },
           spawnedAgent: null,
         },
@@ -174,6 +176,7 @@ describe('handleSearch', () => {
             weight: 0,
             hidden: false,
             tags: [],
+            equipped: false,
           },
           spawnedAgent: null,
         },

@@ -583,6 +583,7 @@ const toItem = (r: typeof schema.items.$inferSelect, w: WorldId): Item => ({
   weight: r.weight,
   hidden: r.hidden,
   tags: parseTagsJson(r.tags),
+  equipped: r.equipped,
 });
 
 const toAgent = (r: typeof schema.agents.$inferSelect, w: WorldId): Agent => ({

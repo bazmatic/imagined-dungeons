@@ -65,6 +65,7 @@ function makeTree(): WorldTree {
         weight: 1,
         hidden: false,
         tags: [],
+        equipped: false,
       },
     ],
     agents: [

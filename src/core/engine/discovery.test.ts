@@ -21,6 +21,7 @@ const lantern: Item = {
   weight: 1,
   hidden: false,
   tags: [],
+  equipped: false,
 };
 
 const guard: Agent = {
@@ -229,7 +230,8 @@ describe('runDiscovery', () => {
       const n = node as Record<string, unknown>;
       const type = n.type;
       const isObjectType =
-        type === 'object' || (Array.isArray(type) && (type as readonly unknown[]).includes('object'));
+        type === 'object' ||
+        (Array.isArray(type) && (type as readonly unknown[]).includes('object'));
       if (isObjectType) {
         expect(n.additionalProperties, `${path}.additionalProperties`).toBe(false);
         const props = (n.properties ?? {}) as Record<string, unknown>;

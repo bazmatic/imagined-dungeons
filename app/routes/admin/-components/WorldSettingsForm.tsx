@@ -95,7 +95,9 @@ export function WorldSettingsForm({ tree, onSaved }: WorldSettingsFormProps) {
               onClick={silence}
               disabled={busy || activeCount === 0}
             >
-              {busy ? 'Silencing…' : `Silence all NPCs${activeCount > 0 ? ` (${activeCount})` : ''}`}
+              {busy
+                ? 'Silencing…'
+                : `Silence all NPCs${activeCount > 0 ? ` (${activeCount})` : ''}`}
             </button>
           </div>
         </div>

@@ -70,6 +70,7 @@ const toItem = (r: typeof schema.items.$inferSelect, worldId: WorldId): Item => 
   weight: r.weight,
   hidden: r.hidden,
   tags: [],
+  equipped: r.equipped,
 });
 
 const toExit = (r: typeof schema.exits.$inferSelect, worldId: WorldId): Exit => ({
@@ -182,6 +183,13 @@ export class SqliteRepository implements Repository {
     await this.db
       .update(schema.items)
       .set({ ownerKind: to.kind, ownerId: to.id })
+      .where(and(eq(schema.items.worldId, this.worldId), eq(schema.items.id, id)));
+  }
+
+  async setItemEquipped(id: ItemId, equipped: boolean): Promise<void> {
+    await this.db
+      .update(schema.items)
+      .set({ equipped })
       .where(and(eq(schema.items.worldId, this.worldId), eq(schema.items.id, id)));
   }
 

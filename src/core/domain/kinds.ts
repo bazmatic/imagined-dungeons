@@ -22,6 +22,8 @@ export const ActionKind = {
   Attack: 'attack',
   UpdateDescription: 'update_description',
   Search: 'search',
+  Equip: 'equip',
+  Unequip: 'unequip',
 } as const;
 export type ActionKind = (typeof ActionKind)[keyof typeof ActionKind];
 
@@ -57,6 +59,8 @@ export const EventKind = {
   Attack: 'attack',
   DescriptionUpdated: 'description_updated',
   AgentSpawned: 'agent_spawned',
+  Equip: 'equip',
+  Unequip: 'unequip',
 } as const;
 export type EventKind = (typeof EventKind)[keyof typeof EventKind];
 

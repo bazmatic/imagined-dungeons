@@ -8,6 +8,7 @@ import type { Repository } from '../repository';
 import { handleAttack } from './attack';
 import { handleDrop } from './drop';
 import { handleEmote } from './emote';
+import { handleEquip, handleUnequip } from './equip';
 import { handleGive } from './give';
 import { handleInventory } from './inventory';
 import { handleLook } from './look';
@@ -67,5 +68,9 @@ export async function dispatch(
         worldId: deps.worldId,
       });
     }
+    case ActionKind.Equip:
+      return handleEquip(action, repo);
+    case ActionKind.Unequip:
+      return handleUnequip(action, repo);
   }
 }

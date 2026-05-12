@@ -136,6 +136,10 @@ export class MemoryBuilderRepository implements BuilderRepository {
         : i.ownerKind === OwnerKind.Agent
           ? { kind: OwnerKind.Agent, id: asAgentId(i.ownerId) }
           : { kind: OwnerKind.Item, id: asItemId(i.ownerId) };
+    // Preserve the runtime `equipped` flag on update; default to false on
+    // insert. Mirrors the SQLite repo, which leaves the column out of the
+    // .onConflictDoUpdate set so existing values survive authored upserts.
+    const existing = this.bucket(this.items, w).get(i.id);
     this.bucket(this.items, w).set(i.id, {
       id: asItemId(i.id),
       worldId: w,
@@ -146,6 +150,7 @@ export class MemoryBuilderRepository implements BuilderRepository {
       weight: i.weight,
       hidden: i.hidden,
       tags: [...i.tags],
+      equipped: existing?.equipped ?? false,
     });
   }
   async upsertAgent(w: WorldId, i: UpsertAgentInput) {

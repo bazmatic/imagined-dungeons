@@ -23,6 +23,8 @@ export type Action =
     }
   | { kind: 'attack'; actorId: AgentId; targetAgentId: AgentId }
   | { kind: 'search'; actorId: AgentId; query: string }
+  | { kind: 'equip'; actorId: AgentId; itemId: ItemId; manner: string }
+  | { kind: 'unequip'; actorId: AgentId; itemId: ItemId; manner: string }
   | {
       kind: 'update_description';
       actorId: AgentId;

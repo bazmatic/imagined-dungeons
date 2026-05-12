@@ -29,6 +29,8 @@ const INTERPRETER_KINDS = [
   ActionKind.Emote,
   ActionKind.Attack,
   ActionKind.Search,
+  ActionKind.Equip,
+  ActionKind.Unequip,
 ] as const;
 const KINDS = [...INTERPRETER_KINDS, UnknownKind, ImpossibleKind] as const;
 type Kind = (typeof KINDS)[number];
@@ -126,6 +128,8 @@ export type ValidatedPlayerAction =
     }
   | { readonly kind: 'attack'; readonly targetAgentRef: string }
   | { readonly kind: 'search'; readonly query: string }
+  | { readonly kind: 'equip'; readonly itemRef: string; readonly manner: string }
+  | { readonly kind: 'unequip'; readonly itemRef: string; readonly manner: string }
   | { readonly kind: 'unknown'; readonly reason: string }
   | { readonly kind: 'impossible'; readonly reason: string }
   | { readonly kind: 'invalid' };
@@ -233,6 +237,21 @@ export function validatePlayerAction(input: unknown): ValidatedPlayerAction {
       const rawQuery = input.targetRef;
       const query = typeof rawQuery === 'string' ? rawQuery : '';
       return { kind: ActionKind.Search, query };
+    }
+    case ActionKind.Equip:
+    case ActionKind.Unequip: {
+      const itemRef = input.itemRef;
+      if (typeof itemRef !== 'string' || itemRef.length === 0) return { kind: InvalidKind };
+      const rawManner = input.emoteDescription;
+      const manner =
+        typeof rawManner === 'string' && rawManner.length > 0
+          ? rawManner
+          : kind === ActionKind.Equip
+            ? 'put on'
+            : 'take off';
+      return kind === ActionKind.Equip
+        ? { kind: ActionKind.Equip, itemRef, manner }
+        : { kind: ActionKind.Unequip, itemRef, manner };
     }
     case UnknownKind: {
       const reason = input.reason;

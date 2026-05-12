@@ -41,7 +41,7 @@ const SYSTEM_PROMPT_LINES: readonly string[] = [
   '- If the query is broad atmosphere ("what does the room feel like", "look around"), prefer NARRATE.',
   '- If the query explicitly asks about PEOPLE or CREATURES ("who is here?", "any staff?", "is anyone behind the bar?", "any guards?") AND the location\'s tag-lore descriptions mention an inhabitant class (staff, patrols, faction members, vermin, etc.) that is NOT already in the visible characters list, you SHOULD SPAWN AGENT — invent one such inhabitant. Do not fall back to NARRATE in this case; the player is explicitly asking to encounter someone.',
   '- If the query explicitly asks about OBJECTS ("what\'s on the shelves?", "anything hidden in the corner?") and the lore invites concrete props, prefer SPAWN ITEM over NARRATE.',
-  '- Spawned agents and items become permanent parts of the world; spawn them only when they fit the lore and the player\'s query genuinely invites them. Never contradict the world overview, story so far, or tag descriptions.',
+  "- Spawned agents and items become permanent parts of the world; spawn them only when they fit the lore and the player's query genuinely invites them. Never contradict the world overview, story so far, or tag descriptions.",
   '',
   'If a SUBJECT is supplied, the player is examining that specific entity — augment its existing descriptions with additional detail or atmosphere, do NOT invent a replacement entity that occupies the same conceptual slot.',
   '',

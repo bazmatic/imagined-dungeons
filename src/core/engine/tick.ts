@@ -20,12 +20,14 @@ import {
   renderAgentStateUpdatedObserved,
   renderDescriptionUpdatedObserved,
   renderDropObserved,
+  renderEquipObserved,
   renderGiveByActor,
   renderGiveObserved,
   renderLook,
   renderLookObserved,
   renderMoveObserved,
   renderTakeObserved,
+  renderUnequipObserved,
 } from './templates';
 import { type DiscoveryBudget, runTurn } from './turn';
 
@@ -189,6 +191,22 @@ async function renderWitnessForPlayer(
       }
       if (intentChanged) return null;
       return null;
+    }
+    case EventKind.Equip: {
+      try {
+        const item = await repo.getItem(event.itemId);
+        return renderEquipObserved(actor, item, event.manner);
+      } catch {
+        return null;
+      }
+    }
+    case EventKind.Unequip: {
+      try {
+        const item = await repo.getItem(event.itemId);
+        return renderUnequipObserved(actor, item, event.manner);
+      } catch {
+        return null;
+      }
     }
   }
 }

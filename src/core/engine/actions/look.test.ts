@@ -24,6 +24,7 @@ const map: Item = {
   weight: 1,
   hidden: false,
   tags: [],
+  equipped: false,
 };
 const paff: Agent = {
   id: asAgentId('char_p'),

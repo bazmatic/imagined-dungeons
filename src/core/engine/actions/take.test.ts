@@ -24,6 +24,7 @@ const map: Item = {
   weight: 1,
   hidden: false,
   tags: [],
+  equipped: false,
 };
 const heavy: Item = {
   id: asItemId('item_h'),
@@ -35,6 +36,7 @@ const heavy: Item = {
   weight: 99,
   hidden: false,
   tags: [],
+  equipped: false,
 };
 const paff: Agent = {
   id: asAgentId('char_p'),

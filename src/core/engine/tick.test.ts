@@ -208,6 +208,7 @@ describe('runTick', () => {
       weight: 1,
       hidden: false,
       tags: [],
+      equipped: false,
     };
     const sys: Agent = {
       id: SYSTEM_AGENT_ID,
