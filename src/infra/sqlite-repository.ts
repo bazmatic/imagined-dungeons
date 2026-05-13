@@ -228,6 +228,20 @@ export class SqliteRepository implements Repository {
       .where(and(eq(schema.exits.worldId, this.worldId), eq(schema.exits.id, id)));
   }
 
+  async setAgentGold(id: AgentId, gold: number): Promise<void> {
+    await this.db
+      .update(schema.agents)
+      .set({ gold })
+      .where(and(eq(schema.agents.worldId, this.worldId), eq(schema.agents.id, id)));
+  }
+
+  async setItemPriceTag(id: ItemId, priceTag: number | null): Promise<void> {
+    await this.db
+      .update(schema.items)
+      .set({ priceTag })
+      .where(and(eq(schema.items.worldId, this.worldId), eq(schema.items.id, id)));
+  }
+
   async setAgentHp(id: AgentId, hp: number): Promise<void> {
     await this.db
       .update(schema.agents)

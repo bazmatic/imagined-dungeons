@@ -45,6 +45,16 @@ export interface Repository {
    * carrying the matching key item (`Exit.lockedByItem`).
    */
   setExitLocked(exit: ExitId, locked: boolean): Promise<void>;
+  /**
+   * Set an agent's gold balance. Authored via the builder; mutated at
+   * runtime inside the buy/sell trade flow.
+   */
+  setAgentGold(id: AgentId, gold: number): Promise<void>;
+  /**
+   * Clear or set an item's price tag. `offer` sets it to a positive integer;
+   * a completed Trade clears it to null.
+   */
+  setItemPriceTag(item: ItemId, priceTag: number | null): Promise<void>;
   setAgentHp(id: AgentId, hp: number): Promise<void>;
   /**
    * Toggle the runtime "in the scene" flag. The scheduler ticks any agent

@@ -110,6 +110,16 @@ export class MemoryRepository implements Repository {
     this.exits.set(id, { ...e, locked });
   }
 
+  async setAgentGold(id: AgentId, gold: number): Promise<void> {
+    const a = await this.getAgent(id);
+    this.agents.set(id, { ...a, gold });
+  }
+
+  async setItemPriceTag(id: ItemId, priceTag: number | null): Promise<void> {
+    const i = await this.getItem(id);
+    this.items.set(id, { ...i, priceTag });
+  }
+
   async setAgentHp(id: AgentId, hp: number): Promise<void> {
     const a = await this.getAgent(id);
     this.agents.set(id, { ...a, hp });
