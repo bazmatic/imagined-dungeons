@@ -1,5 +1,3 @@
-import 'dotenv/config';
-
 import { getWorldTree } from '@core/builder/index';
 import { WorldKind } from '@core/domain/builder-kinds';
 import { asWorldId } from '@core/domain/ids';
