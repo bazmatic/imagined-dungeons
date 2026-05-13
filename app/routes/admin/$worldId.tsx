@@ -1,6 +1,6 @@
 import { EntityKind, WorldKind } from '@core/domain/builder-kinds';
 import { createFileRoute, useRouter } from '@tanstack/react-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { validate } from '~/server/admin/validate';
 import { getWorld, listWorlds, saveStartingState } from '~/server/admin/worlds';
 import { AdminShell } from './-components/AdminShell';
@@ -31,6 +31,10 @@ function AdminWorld() {
   const router = useRouter();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [problemsOpen, setProblemsOpen] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const closeAssistant = useCallback((): void => {
+    setAssistantOpen(false);
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -156,6 +160,7 @@ function AdminWorld() {
           active: search.cat,
           onSelect: setCategory,
           onCreateNew: () => setPaletteOpen(true),
+          ...(isDraft ? { onOpenBuilderAssistant: () => setAssistantOpen(true) } : {}),
         }}
       >
         <div className="detail-shell-v2">
@@ -189,9 +194,6 @@ function AdminWorld() {
                 }
               />
               {showingSettings ? <WorldSettingsForm tree={t} onSaved={refresh} /> : detail}
-              {isDraft ? (
-                <BuilderAssistantPanel worldId={t.summary.id as string} onApplied={refresh} />
-              ) : null}
             </div>
           </section>
         </div>
@@ -208,6 +210,14 @@ function AdminWorld() {
           void navigate({ search: { cat, sel: s.id } });
         }}
       />
+      {isDraft ? (
+        <BuilderAssistantPanel
+          open={assistantOpen}
+          onClose={closeAssistant}
+          worldId={t.summary.id as string}
+          onApplied={refresh}
+        />
+      ) : null}
       <ProblemsRail
         problems={problems}
         open={problemsOpen}

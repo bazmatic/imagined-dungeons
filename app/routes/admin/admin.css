@@ -382,6 +382,36 @@
   font-size: 12px;
 }
 
+/* Builder assistant — native <dialog> + ::backdrop (top layer) */
+.admin-root .assistant-modal-dialog {
+  padding: 0;
+  width: min(560px, 92vw);
+  max-height: 78vh;
+  background: var(--charcoal);
+  color: var(--parchment);
+  border: 1px solid var(--border);
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+}
+.admin-root .assistant-modal-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+.admin-root .assistant-modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s-4);
+  padding: var(--s-4);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.admin-root .assistant-modal__body {
+  padding: var(--s-4);
+  overflow-y: auto;
+  min-height: 0;
+}
+
 /* Status badge */
 .admin-root .status-badge {
   display: inline-flex;
@@ -686,6 +716,15 @@
   background: var(--crimson-container);
   color: var(--crimson-bright);
   border-color: var(--crimson-container);
+}
+.admin-root .side-nav__cta--assistant {
+  border-color: var(--gold);
+  color: var(--gold-bright);
+}
+.admin-root .side-nav__cta--assistant:hover {
+  background: rgba(235, 194, 79, 0.08);
+  color: var(--gold-bright);
+  border-color: var(--gold-bright);
 }
 
 .admin-root .shell__content {

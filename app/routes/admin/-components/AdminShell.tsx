@@ -10,6 +10,7 @@ export interface AdminShellProps {
     readonly active: Category;
     readonly onSelect: (c: Category) => void;
     readonly onCreateNew?: () => void;
+    readonly onOpenBuilderAssistant?: () => void;
   };
   readonly children: ReactNode;
 }

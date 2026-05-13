@@ -4,6 +4,7 @@ export interface SideNavProps {
   readonly active: Category;
   readonly onSelect: (c: Category) => void;
   readonly onCreateNew?: () => void;
+  readonly onOpenBuilderAssistant?: () => void;
 }
 
 const ITEMS: ReadonlyArray<{
@@ -17,7 +18,7 @@ const ITEMS: ReadonlyArray<{
   { key: CategoryKind.Lore, label: 'Lore' },
 ];
 
-export function SideNav({ active, onSelect, onCreateNew }: SideNavProps) {
+export function SideNav({ active, onSelect, onCreateNew, onOpenBuilderAssistant }: SideNavProps) {
   return (
     <aside className="side-nav">
       <ul className="side-nav__list">
@@ -42,6 +43,15 @@ export function SideNav({ active, onSelect, onCreateNew }: SideNavProps) {
             title="Quick find (⌘K)"
           >
             Quick find <span className="side-nav__cta-kbd">⌘K</span>
+          </button>
+        ) : null}
+        {onOpenBuilderAssistant ? (
+          <button
+            type="button"
+            className="side-nav__cta side-nav__cta--assistant"
+            onClick={onOpenBuilderAssistant}
+          >
+            Builder assistant
           </button>
         ) : null}
       </div>
