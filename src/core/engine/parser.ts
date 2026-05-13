@@ -529,6 +529,93 @@ export function parse(
       if (!r.ok) return r.error;
       return { kind: ActionKind.Close, actorId: actor.id, itemId: r.item.id };
     }
+
+    case 'buy':
+    case 'purchase': {
+      // "buy <item> from <agent>" — split on "from" in the pre-stop-word
+      // token list (stripStopWords would discard "from" if it ran first).
+      const after = toks.slice(1);
+      const fromIdx = after.lastIndexOf('from');
+      if (fromIdx < 1 || fromIdx >= after.length - 1) {
+        return { kind: ParseErrorKind.MissingArgument, verb: first };
+      }
+      const itemTokens = stripStopWords(after.slice(0, fromIdx));
+      const sellerTokens = stripStopWords(after.slice(fromIdx + 1));
+      if (itemTokens.length === 0 || sellerTokens.length === 0) {
+        return { kind: ParseErrorKind.MissingArgument, verb: first };
+      }
+      const itemR = resolveItem(itemTokens.join(' '), [...view.items, ...inventory]);
+      if (!itemR.ok) return itemR.error;
+      const sellerR = resolveAgent(sellerTokens.join(' '), view.agents);
+      if (!sellerR.ok) return sellerR.error;
+      return {
+        kind: ActionKind.Buy,
+        actorId: actor.id,
+        sellerId: sellerR.agent.id,
+        itemId: itemR.item.id,
+      };
+    }
+
+    case 'sell': {
+      // "sell <item> to <agent>" — same anchor-split pattern as `give`.
+      const after = toks.slice(1);
+      const toIdx = after.lastIndexOf('to');
+      if (toIdx < 1 || toIdx >= after.length - 1) {
+        return { kind: ParseErrorKind.MissingArgument, verb: first };
+      }
+      const itemTokens = stripStopWords(after.slice(0, toIdx));
+      const buyerTokens = stripStopWords(after.slice(toIdx + 1));
+      if (itemTokens.length === 0 || buyerTokens.length === 0) {
+        return { kind: ParseErrorKind.MissingArgument, verb: first };
+      }
+      const itemR = resolveItem(itemTokens.join(' '), inventory);
+      if (!itemR.ok) return itemR.error;
+      const buyerR = resolveAgent(buyerTokens.join(' '), view.agents);
+      if (!buyerR.ok) return buyerR.error;
+      return {
+        kind: ActionKind.Sell,
+        actorId: actor.id,
+        buyerId: buyerR.agent.id,
+        itemId: itemR.item.id,
+      };
+    }
+
+    case 'offer':
+    case 'price': {
+      // "offer <item> for <N> [gold]" — also "price <item> at <N>".
+      // The currency suffix (gold/gp/coins) is optional and ignored.
+      const after = toks.slice(1);
+      const anchor = after.findIndex((t) => t === 'for' || t === 'at');
+      if (anchor < 1 || anchor >= after.length - 1) {
+        return { kind: ParseErrorKind.MissingArgument, verb: first };
+      }
+      const itemTokens = stripStopWords(after.slice(0, anchor));
+      const priceTokens = after
+        .slice(anchor + 1)
+        .filter((t) => t !== 'gold' && t !== 'gp' && t !== 'coins');
+      if (itemTokens.length === 0 || priceTokens.length === 0) {
+        return { kind: ParseErrorKind.MissingArgument, verb: first };
+      }
+      const priceToken = priceTokens[0];
+      if (priceToken === undefined) {
+        return { kind: ParseErrorKind.MissingArgument, verb: first };
+      }
+      const price = Number(priceToken);
+      if (!Number.isInteger(price) || price <= 0) {
+        return {
+          kind: ParseErrorKind.ImpossibleAction,
+          reason: 'Price must be a positive whole number.',
+        };
+      }
+      const itemR = resolveItem(itemTokens.join(' '), inventory);
+      if (!itemR.ok) return itemR.error;
+      return {
+        kind: ActionKind.Offer,
+        actorId: actor.id,
+        itemId: itemR.item.id,
+        price,
+      };
+    }
   }
 
   if (bareDir) {

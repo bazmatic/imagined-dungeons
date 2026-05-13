@@ -545,6 +545,89 @@ describe('resolveAgent', () => {
   });
 });
 
+const cloak: Item = {
+  id: asItemId('item_cloak'),
+  worldId: W,
+  label: 'cloak',
+  shortDescription: '',
+  longDescription: '',
+  owner: { kind: OwnerKind.Agent, id: ACTOR.id },
+  weight: 1,
+  hidden: false,
+  tags: [],
+  equipped: false,
+  container: false,
+  opened: true,
+  locked: false,
+  lockedByItem: null,
+  priceTag: null,
+};
+
+const brassKey: Item = {
+  id: asItemId('item_brass_key'),
+  worldId: W,
+  label: 'brass key',
+  shortDescription: '',
+  longDescription: '',
+  owner: { kind: OwnerKind.Agent, id: spark.id },
+  weight: 1,
+  hidden: false,
+  tags: [],
+  equipped: false,
+  container: false,
+  opened: true,
+  locked: false,
+  lockedByItem: null,
+  priceTag: 5,
+};
+
+describe('buy / sell / offer verbs', () => {
+  it('parses "buy the brass key from spark"', () => {
+    const r = parse('buy the brass key from spark', ACTOR, view([brassKey], [spark]), inv());
+    if (r.kind !== ActionKind.Buy) throw new Error('expected buy');
+    expect(r.sellerId).toBe(spark.id);
+    expect(r.itemId).toBe(brassKey.id);
+  });
+
+  it('parses "sell the cloak to spark"', () => {
+    const r = parse('sell the cloak to spark', ACTOR, view([], [spark]), inv([cloak]));
+    if (r.kind !== ActionKind.Sell) throw new Error('expected sell');
+    expect(r.buyerId).toBe(spark.id);
+    expect(r.itemId).toBe(cloak.id);
+  });
+
+  it('parses "offer the cloak for 5 gold"', () => {
+    const r = parse('offer the cloak for 5 gold', ACTOR, view([], [spark]), inv([cloak]));
+    if (r.kind !== ActionKind.Offer) throw new Error('expected offer');
+    expect(r.itemId).toBe(cloak.id);
+    expect(r.price).toBe(5);
+  });
+
+  it('parses "offer the cloak for 5" (bare number, no "gold")', () => {
+    const r = parse('offer the cloak for 5', ACTOR, view([], [spark]), inv([cloak]));
+    if (r.kind !== ActionKind.Offer) throw new Error('expected offer');
+    expect(r.price).toBe(5);
+  });
+
+  it('parses "price the cloak at 3"', () => {
+    const r = parse('price the cloak at 3', ACTOR, view([], [spark]), inv([cloak]));
+    if (r.kind !== ActionKind.Offer) throw new Error('expected offer');
+    expect(r.price).toBe(3);
+  });
+
+  it('returns MissingArgument for "buy the brass key" (no seller)', () => {
+    const r = parse('buy the brass key', ACTOR, view([brassKey], [spark]), inv());
+    if ('actorId' in r) throw new Error('expected error');
+    expect(r.kind).toBe(ParseErrorKind.MissingArgument);
+  });
+
+  it('returns ImpossibleAction for "offer the cloak for 0"', () => {
+    const r = parse('offer the cloak for 0', ACTOR, view([], [spark]), inv([cloak]));
+    if ('actorId' in r) throw new Error('expected error');
+    expect(r.kind).toBe(ParseErrorKind.ImpossibleAction);
+  });
+});
+
 describe('open / close verbs', () => {
   it('parses "open the box" to an Open action against the visible item', () => {
     const r = parse('open the box', ACTOR, view([containerBox]), inv());
