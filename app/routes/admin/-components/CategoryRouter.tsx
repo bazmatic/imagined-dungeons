@@ -221,7 +221,6 @@ function renderDetail(args: {
       problemCount={problemCount}
       onSaved={onSaved}
       onDeleted={onDeleted}
-      onRequestJsonFallback={() => onJsonFallback(selectedId)}
     />
   );
   // jsonFallback handled by $worldId.tsx itself (it opens a dedicated overlay or replaces the form)

@@ -10,7 +10,10 @@ import { MetadataColumn } from './MetadataColumn';
 import { TagSelectorPanel } from './TagSelectorPanel';
 import { SaveStatus, useSaveStatus } from './useSaveStatus';
 
-type SimpleOwnerKind = typeof OwnerKind.Location | typeof OwnerKind.Agent;
+type ItemOwnerKind =
+  | typeof OwnerKind.Location
+  | typeof OwnerKind.Agent
+  | typeof OwnerKind.Item;
 
 export interface ItemFormProps {
   readonly tree: WorldTree;
@@ -18,21 +21,10 @@ export interface ItemFormProps {
   readonly problemCount: number;
   readonly onSaved: () => Promise<void> | void;
   readonly onDeleted: () => void;
-  readonly onRequestJsonFallback: () => void;
 }
 
-export function ItemForm({
-  tree,
-  itemId,
-  problemCount,
-  onSaved,
-  onDeleted,
-  onRequestJsonFallback,
-}: ItemFormProps) {
+export function ItemForm({ tree, itemId, problemCount, onSaved, onDeleted }: ItemFormProps) {
   const item = tree.items.find((i) => (i.id as string) === itemId);
-  const isNested = item?.owner.kind === OwnerKind.Item;
-  const initialOwnerKind: SimpleOwnerKind =
-    item?.owner.kind === OwnerKind.Agent ? OwnerKind.Agent : OwnerKind.Location;
   const [v, setV] = useState(
     item
       ? {
@@ -40,11 +32,15 @@ export function ItemForm({
           label: item.label,
           shortDescription: item.shortDescription,
           longDescription: item.longDescription,
-          ownerKind: initialOwnerKind,
-          ownerId: isNested ? '' : (item.owner.id as string),
+          ownerKind: item.owner.kind as ItemOwnerKind,
+          ownerId: item.owner.id as string,
           weight: item.weight,
           hidden: item.hidden,
           tags: item.tags,
+          container: item.container,
+          opened: item.opened,
+          locked: item.locked,
+          lockedByItem: (item.lockedByItem as string | null) ?? null,
         }
       : null,
   );
@@ -76,6 +72,10 @@ export function ItemForm({
             weight: v.weight,
             hidden: v.hidden,
             tags: v.tags,
+            container: v.container,
+            opened: v.opened,
+            locked: v.locked,
+            lockedByItem: v.locked ? v.lockedByItem : null,
           },
         },
       });
@@ -83,24 +83,19 @@ export function ItemForm({
     });
   };
 
-  const ownerOptions = v.ownerKind === OwnerKind.Location ? tree.locations : tree.agents;
+  const ownerOptions =
+    v.ownerKind === OwnerKind.Location
+      ? tree.locations.map((l) => ({ id: l.id as string, label: l.label }))
+      : v.ownerKind === OwnerKind.Agent
+        ? tree.agents.map((a) => ({ id: a.id as string, label: a.label }))
+        : tree.items
+            .filter((i) => (i.id as string) !== v.id)
+            .map((i) => ({ id: i.id as string, label: i.label }));
+  const otherItems = tree.items.filter((i) => (i.id as string) !== v.id);
 
   return (
     <>
       <EntityHeader kindLabel="Item" title={v.label || v.id} id={v.id} />
-      {isNested ? (
-        <div className="nested-banner">
-          This item is nested inside another item. Edit the owner via the JSON fallback.{' '}
-          <button
-            type="button"
-            className="btn"
-            style={{ marginLeft: 8 }}
-            onClick={onRequestJsonFallback}
-          >
-            Open raw JSON editor
-          </button>
-        </div>
-      ) : null}
       <form
         className="form-grid"
         onSubmit={(e) => {
@@ -121,49 +116,56 @@ export function ItemForm({
               onChange={(e) => setV({ ...v, label: e.target.value })}
             />
           </div>
-          {isNested ? null : (
-            <div className="row-editor__grid">
-              <div className="row-editor__field" style={{ gridColumn: 'span 4' }}>
-                <span className="row-editor__field-label">Owner kind</span>
-                <label className="row-editor__checkbox">
-                  <input
-                    type="radio"
-                    name="owner-kind"
-                    checked={v.ownerKind === OwnerKind.Location}
-                    onChange={() => setV({ ...v, ownerKind: OwnerKind.Location, ownerId: '' })}
-                  />
-                  Location
-                </label>
-                <label className="row-editor__checkbox">
-                  <input
-                    type="radio"
-                    name="owner-kind"
-                    checked={v.ownerKind === OwnerKind.Agent}
-                    onChange={() => setV({ ...v, ownerKind: OwnerKind.Agent, ownerId: '' })}
-                  />
-                  Agent
-                </label>
-              </div>
-              <div className="row-editor__field" style={{ gridColumn: 'span 8' }}>
-                <label className="row-editor__field-label" htmlFor="it-owner">
-                  Owner
-                </label>
-                <select
-                  id="it-owner"
-                  className="row-editor__select"
-                  value={v.ownerId}
-                  onChange={(e) => setV({ ...v, ownerId: e.target.value })}
-                >
-                  <option value="">— pick an owner —</option>
-                  {ownerOptions.map((o) => (
-                    <option key={o.id as string} value={o.id as string}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+          <div className="row-editor__grid">
+            <div className="row-editor__field" style={{ gridColumn: 'span 4' }}>
+              <span className="row-editor__field-label">Owner kind</span>
+              <label className="row-editor__checkbox">
+                <input
+                  type="radio"
+                  name="owner-kind"
+                  checked={v.ownerKind === OwnerKind.Location}
+                  onChange={() => setV({ ...v, ownerKind: OwnerKind.Location, ownerId: '' })}
+                />
+                Location
+              </label>
+              <label className="row-editor__checkbox">
+                <input
+                  type="radio"
+                  name="owner-kind"
+                  checked={v.ownerKind === OwnerKind.Agent}
+                  onChange={() => setV({ ...v, ownerKind: OwnerKind.Agent, ownerId: '' })}
+                />
+                Agent
+              </label>
+              <label className="row-editor__checkbox">
+                <input
+                  type="radio"
+                  name="owner-kind"
+                  checked={v.ownerKind === OwnerKind.Item}
+                  onChange={() => setV({ ...v, ownerKind: OwnerKind.Item, ownerId: '' })}
+                />
+                Item (container)
+              </label>
             </div>
-          )}
+            <div className="row-editor__field" style={{ gridColumn: 'span 8' }}>
+              <label className="row-editor__field-label" htmlFor="it-owner">
+                Owner
+              </label>
+              <select
+                id="it-owner"
+                className="row-editor__select"
+                value={v.ownerId}
+                onChange={(e) => setV({ ...v, ownerId: e.target.value })}
+              >
+                <option value="">— pick an owner —</option>
+                {ownerOptions.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
           <div>
             <label htmlFor="it-short" className="form-grid__field-label">
               Short Description
@@ -187,7 +189,7 @@ export function ItemForm({
             <button
               type="submit"
               className="btn btn--primary"
-              disabled={saving || isNested || v.ownerId === ''}
+              disabled={saving || v.ownerId === ''}
               data-save-status={status}
             >
               {label}
@@ -216,6 +218,74 @@ export function ItemForm({
               />
               Hidden
             </label>
+            <label className="row-editor__checkbox" style={{ gridColumn: 'span 12' }}>
+              <input
+                type="checkbox"
+                checked={v.container}
+                onChange={(e) =>
+                  setV({
+                    ...v,
+                    container: e.target.checked,
+                    // Reset container-only state when toggling off.
+                    opened: e.target.checked ? v.opened : true,
+                    locked: e.target.checked ? v.locked : false,
+                    lockedByItem: e.target.checked ? v.lockedByItem : null,
+                  })
+                }
+              />
+              Container
+            </label>
+            {v.container ? (
+              <>
+                <label className="row-editor__checkbox" style={{ gridColumn: 'span 12' }}>
+                  <input
+                    type="checkbox"
+                    checked={v.opened}
+                    onChange={(e) => setV({ ...v, opened: e.target.checked })}
+                  />
+                  Starts opened
+                </label>
+                <label className="row-editor__checkbox" style={{ gridColumn: 'span 12' }}>
+                  <input
+                    type="checkbox"
+                    checked={v.locked}
+                    onChange={(e) =>
+                      setV({
+                        ...v,
+                        locked: e.target.checked,
+                        lockedByItem: e.target.checked ? v.lockedByItem : null,
+                      })
+                    }
+                  />
+                  Starts locked
+                </label>
+                {v.locked ? (
+                  <div className="row-editor__field" style={{ gridColumn: 'span 12' }}>
+                    <label className="row-editor__field-label" htmlFor="it-key">
+                      Unlocked by
+                    </label>
+                    <select
+                      id="it-key"
+                      className="row-editor__select"
+                      value={v.lockedByItem ?? ''}
+                      onChange={(e) =>
+                        setV({
+                          ...v,
+                          lockedByItem: e.target.value === '' ? null : e.target.value,
+                        })
+                      }
+                    >
+                      <option value="">(none)</option>
+                      {otherItems.map((i) => (
+                        <option key={i.id as string} value={i.id as string}>
+                          {i.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : null}
+              </>
+            ) : null}
           </div>
           <div>
             <span className="form-grid__field-label">Attributes &amp; Tags</span>
