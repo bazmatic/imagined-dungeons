@@ -21,6 +21,7 @@ import {
 } from '@core/builder/index';
 import type { BuilderRepository } from '@core/builder/repository';
 import { validateWorld } from '@core/builder/validate';
+import { StarterPackEntryKind } from '@core/domain/builder-kinds';
 import {
   asAgentId,
   asExitId,
@@ -59,6 +60,25 @@ const tagsField = {
   type: 'array',
   items: { type: 'string' },
   description: 'tag names — must already exist as tag_lore rows on the world',
+};
+
+/** OpenAI tool calling requires `items` on every array schema. */
+const startingItemsField = {
+  type: 'array',
+  description:
+    'Inline starter items for this template. Use kind "inline" with label, descriptions, weight, and hidden.',
+  items: {
+    type: 'object',
+    properties: {
+      kind: { type: 'string', enum: [StarterPackEntryKind.Inline] },
+      label: stringField('item label'),
+      shortDescription: stringField('short description'),
+      longDescription: stringField('long description'),
+      weight: { type: 'number', description: 'inventory weight' },
+      hidden: { type: 'boolean', description: 'whether the item starts hidden' },
+    },
+    required: ['kind', 'label', 'shortDescription', 'longDescription', 'weight', 'hidden'],
+  },
 };
 
 const readTags = (a: Record<string, unknown>): readonly string[] =>
@@ -359,7 +379,7 @@ export const TOOLS: readonly ToolDef[] = [
         longDescription: stringField('long description'),
         hp: { type: 'number' },
         mood: { type: ['string', 'null'] },
-        startingItems: { type: 'array' },
+        startingItems: startingItemsField,
         tags: tagsField,
       },
       required: [
