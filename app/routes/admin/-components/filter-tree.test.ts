@@ -68,6 +68,10 @@ function makeTree(): WorldTree {
         hidden: false,
         tags: [],
         equipped: false,
+        container: false,
+        opened: true,
+        locked: false,
+        lockedByItem: null,
       },
     ],
     agents: [

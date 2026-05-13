@@ -45,6 +45,10 @@ const hiddenBox: Item = {
   hidden: true,
   tags: [],
   equipped: false,
+  container: false,
+  opened: true,
+  locked: false,
+  lockedByItem: null,
 };
 
 describe('handleRevealItem', () => {

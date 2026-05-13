@@ -74,6 +74,14 @@ export const items = sqliteTable(
     // wielding the item. Toggled by the equip / unequip actions during play.
     // Always false for items owned by a location or another item.
     equipped: integer('equipped', { mode: 'boolean' }).notNull().default(false),
+    // Authored intent: this item is a container that can be opened/closed and may hold items.
+    container: integer('container', { mode: 'boolean' }).notNull().default(false),
+    // Runtime state. Meaningful only when container is true.
+    opened: integer('opened', { mode: 'boolean' }).notNull().default(true),
+    // Runtime state. Meaningful only when container is true.
+    locked: integer('locked', { mode: 'boolean' }).notNull().default(false),
+    // The item-id whose presence in the actor's inventory auto-unlocks this container.
+    lockedByItemId: text('locked_by_item_id'),
   },
   (t) => [primaryKey({ columns: [t.worldId, t.id] })],
 );

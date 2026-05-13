@@ -50,6 +50,10 @@ const map: Item = {
   hidden: false,
   tags: [],
   equipped: false,
+  container: false,
+  opened: true,
+  locked: false,
+  lockedByItem: null,
 };
 const paff: Agent = {
   id: asAgentId('char_p'),

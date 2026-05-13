@@ -99,6 +99,10 @@ describe('lore + generative discovery — end-to-end', () => {
       weight: 1,
       hidden: false,
       tags: [],
+      container: false,
+      opened: true,
+      locked: false,
+      lockedByItem: null,
     };
 
     const responder = (_req: LanguageModelRequest): LanguageModelResponse => {

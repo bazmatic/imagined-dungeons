@@ -55,6 +55,18 @@ export interface Item {
    * location or another item.
    */
   readonly equipped: boolean;
+  /**
+   * Authored intent. True means this item can be opened / closed and may
+   * hold other items inside it. Gates the open/close actions and the
+   * perception filter for contents.
+   */
+  readonly container: boolean;
+  /** Runtime state. Meaningful only when `container` is true. */
+  readonly opened: boolean;
+  /** Runtime state. Meaningful only when `container` is true. */
+  readonly locked: boolean;
+  /** The item-id whose presence in the actor's inventory auto-unlocks this container. */
+  readonly lockedByItem: ItemId | null;
 }
 
 export interface Agent {

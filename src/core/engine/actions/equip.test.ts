@@ -27,6 +27,10 @@ const cloak: Item = {
   hidden: false,
   tags: [],
   equipped: false,
+  container: false,
+  opened: true,
+  locked: false,
+  lockedByItem: null,
 };
 const cloakOnFloor: Item = {
   ...cloak,

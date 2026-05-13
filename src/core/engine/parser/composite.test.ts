@@ -44,6 +44,10 @@ const map: Item = {
   hidden: false,
   tags: [],
   equipped: false,
+  container: false,
+  opened: true,
+  locked: false,
+  lockedByItem: null,
 };
 const view = { actor: paff, location: tavern, items: [map], agents: [], exits: [] };
 

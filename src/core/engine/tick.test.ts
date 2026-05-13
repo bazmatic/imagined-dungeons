@@ -211,6 +211,10 @@ describe('runTick', () => {
       hidden: false,
       tags: [],
       equipped: false,
+      container: false,
+      opened: true,
+      locked: false,
+      lockedByItem: null,
     };
     const sys: Agent = {
       id: SYSTEM_AGENT_ID,

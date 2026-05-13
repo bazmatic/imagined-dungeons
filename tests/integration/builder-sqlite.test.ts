@@ -73,6 +73,10 @@ describe('SqliteBuilderRepository (via builder facade)', () => {
       weight: 1,
       hidden: false,
       tags: [],
+      container: false,
+      opened: true,
+      locked: false,
+      lockedByItem: null,
     });
     await upsertAgent(repo, scratch, {
       id: asAgentId('char_serena'),

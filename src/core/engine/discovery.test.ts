@@ -22,6 +22,10 @@ const lantern: Item = {
   hidden: false,
   tags: [],
   equipped: false,
+  container: false,
+  opened: true,
+  locked: false,
+  lockedByItem: null,
 };
 
 const guard: Agent = {

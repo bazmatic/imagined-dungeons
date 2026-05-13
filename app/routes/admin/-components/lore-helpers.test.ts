@@ -62,6 +62,10 @@ describe('collectLoreTags', () => {
           hidden: false,
           tags: ['cursed', 'wet'],
           equipped: false,
+          container: false,
+          opened: true,
+          locked: false,
+          lockedByItem: null,
         },
       ],
       agents: [

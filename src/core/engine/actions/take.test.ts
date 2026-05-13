@@ -26,6 +26,10 @@ const map: Item = {
   hidden: false,
   tags: [],
   equipped: false,
+  container: false,
+  opened: true,
+  locked: false,
+  lockedByItem: null,
 };
 const heavy: Item = {
   id: asItemId('item_h'),
@@ -38,6 +42,10 @@ const heavy: Item = {
   hidden: false,
   tags: [],
   equipped: false,
+  container: false,
+  opened: true,
+  locked: false,
+  lockedByItem: null,
 };
 const paff: Agent = {
   id: asAgentId('char_p'),

@@ -50,6 +50,10 @@ const map: Item = {
   hidden: false,
   tags: [],
   equipped: false,
+  container: false,
+  opened: true,
+  locked: false,
+  lockedByItem: null,
 };
 
 const makeRepos = (items: Item[] = [], agents: Agent[] = [paff]) => {
@@ -110,6 +114,10 @@ describe('handleSearch', () => {
             hidden: false,
             tags: ['treasure'],
             equipped: false,
+            container: false,
+            opened: true,
+            locked: false,
+            lockedByItem: null,
           },
           spawnedAgent: null,
         },
@@ -178,6 +186,10 @@ describe('handleSearch', () => {
             hidden: false,
             tags: [],
             equipped: false,
+            container: false,
+            opened: true,
+            locked: false,
+            lockedByItem: null,
           },
           spawnedAgent: null,
         },

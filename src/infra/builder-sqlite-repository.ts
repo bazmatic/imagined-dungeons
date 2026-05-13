@@ -187,6 +187,10 @@ export class SqliteBuilderRepository implements BuilderRepository {
         weight: i.weight,
         hidden: i.hidden,
         tags: tagsJson,
+        container: i.container,
+        opened: i.opened,
+        locked: i.locked,
+        lockedByItemId: i.lockedByItem,
       })
       .onConflictDoUpdate({
         target: [schema.items.worldId, schema.items.id],
@@ -199,6 +203,10 @@ export class SqliteBuilderRepository implements BuilderRepository {
           weight: i.weight,
           hidden: i.hidden,
           tags: tagsJson,
+          container: i.container,
+          opened: i.opened,
+          locked: i.locked,
+          lockedByItemId: i.lockedByItem,
         },
       });
   }
@@ -587,6 +595,10 @@ const toItem = (r: typeof schema.items.$inferSelect, w: WorldId): Item => ({
   hidden: r.hidden,
   tags: parseTagsJson(r.tags),
   equipped: r.equipped,
+  container: r.container,
+  opened: r.opened,
+  locked: r.locked,
+  lockedByItem: r.lockedByItemId === null ? null : asItemId(r.lockedByItemId),
 });
 
 const toAgent = (r: typeof schema.agents.$inferSelect, w: WorldId): Agent => ({

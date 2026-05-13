@@ -93,6 +93,10 @@ const map: Item = {
   hidden: false,
   tags: [],
   equipped: false,
+  container: false,
+  opened: true,
+  locked: false,
+  lockedByItem: null,
 };
 
 const hidden: Item = {
@@ -106,6 +110,10 @@ const hidden: Item = {
   hidden: true,
   tags: [],
   equipped: false,
+  container: false,
+  opened: true,
+  locked: false,
+  lockedByItem: null,
 };
 
 const exitN: Exit = {

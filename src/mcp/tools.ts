@@ -210,6 +210,13 @@ export const TOOLS: readonly ToolDef[] = [
         weight: Number(a.weight),
         hidden: Boolean(a.hidden),
         tags: readTags(a),
+        container: typeof a.container === 'boolean' ? a.container : false,
+        opened: typeof a.opened === 'boolean' ? a.opened : true,
+        locked: typeof a.locked === 'boolean' ? a.locked : false,
+        lockedByItem:
+          typeof a.lockedByItem === 'string' && a.lockedByItem.length > 0
+            ? asItemId(a.lockedByItem)
+            : null,
       }),
   },
   {

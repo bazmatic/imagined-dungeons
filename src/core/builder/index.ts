@@ -379,6 +379,10 @@ const asItemInput = (i: Item): UpsertItemInput => ({
   weight: i.weight,
   hidden: i.hidden,
   tags: i.tags,
+  container: i.container,
+  opened: i.opened,
+  locked: i.locked,
+  lockedByItem: i.lockedByItem,
 });
 const asAgentInput = (a: Agent): UpsertAgentInput => ({
   id: a.id,

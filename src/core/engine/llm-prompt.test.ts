@@ -48,6 +48,10 @@ const map: Item = {
   hidden: false,
   tags: [],
   equipped: false,
+  container: false,
+  opened: true,
+  locked: false,
+  lockedByItem: null,
 };
 const exitSouth: Exit = {
   id: asExitId('e_s'),

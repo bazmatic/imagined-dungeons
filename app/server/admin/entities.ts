@@ -71,6 +71,13 @@ export const saveEntity = createServerFn({ method: 'POST' })
         weight: p.weight as number,
         hidden: Boolean(p.hidden),
         tags: Array.isArray(p.tags) ? (p.tags as string[]) : [],
+        container: typeof p.container === 'boolean' ? p.container : false,
+        opened: typeof p.opened === 'boolean' ? p.opened : true,
+        locked: typeof p.locked === 'boolean' ? p.locked : false,
+        lockedByItem:
+          typeof p.lockedByItem === 'string' && p.lockedByItem.length > 0
+            ? asItemId(p.lockedByItem)
+            : null,
       });
     }
     return upsertAgentCore(repo, W, {

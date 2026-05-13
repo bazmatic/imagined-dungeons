@@ -75,6 +75,10 @@ function coerceSpawnedItem(raw: unknown): UpsertItemInput | null {
     weight: typeof raw.weight === 'number' ? raw.weight : 0,
     hidden: typeof raw.hidden === 'boolean' ? raw.hidden : false,
     tags,
+    container: typeof raw.container === 'boolean' ? raw.container : false,
+    opened: typeof raw.opened === 'boolean' ? raw.opened : true,
+    locked: typeof raw.locked === 'boolean' ? raw.locked : false,
+    lockedByItem: null,
   };
 }
 

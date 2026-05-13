@@ -48,6 +48,10 @@ const item = (id: string, ownerLoc: string, hidden = false): Item => ({
   hidden,
   tags: [],
   equipped: false,
+  container: false,
+  opened: true,
+  locked: false,
+  lockedByItem: null,
 });
 
 const exit: Exit = {

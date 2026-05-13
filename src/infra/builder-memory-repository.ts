@@ -152,6 +152,10 @@ export class MemoryBuilderRepository implements BuilderRepository {
       hidden: i.hidden,
       tags: [...i.tags],
       equipped: existing?.equipped ?? false,
+      container: i.container,
+      opened: i.opened,
+      locked: i.locked,
+      lockedByItem: i.lockedByItem,
     });
   }
   async upsertAgent(w: WorldId, i: UpsertAgentInput) {
