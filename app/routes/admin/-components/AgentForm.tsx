@@ -37,6 +37,7 @@ export function AgentForm({ tree, agentId, problemCount, onSaved, onDeleted }: A
           autonomous: ag.autonomous,
           gold: ag.gold,
           tags: ag.tags,
+          secretDescription: ag.secretDescription ?? '',
         }
       : null,
   );
@@ -72,6 +73,7 @@ export function AgentForm({ tree, agentId, problemCount, onSaved, onDeleted }: A
             autonomous: v.autonomous,
             gold: v.gold,
             tags: v.tags,
+            secretDescription: v.secretDescription,
           },
         },
       });
@@ -145,6 +147,24 @@ export function AgentForm({ tree, agentId, problemCount, onSaved, onDeleted }: A
               className="manuscript-input-v2"
               value={v.goal}
               onChange={(e) => setV({ ...v, goal: e.target.value })}
+            />
+          </div>
+          <div>
+            <label htmlFor="ag-secret" className="form-grid__field-label">
+              GM-only Notes
+            </label>
+            <p className="t-metadata" style={{ margin: '0 0 var(--s-2) 0' }}>
+              Visible only to the consequence engine — never to the player, the narrator, or NPCs.
+              Use for hidden dynamics (secret allegiances, concealed goals, information the agent
+              holds but hasn't revealed).
+            </p>
+            <textarea
+              id="ag-secret"
+              className="manuscript-input-v2"
+              rows={4}
+              placeholder="(secret)"
+              value={v.secretDescription}
+              onChange={(e) => setV({ ...v, secretDescription: e.target.value })}
             />
           </div>
           <div style={{ display: 'flex', gap: 16 }}>

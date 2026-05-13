@@ -34,6 +34,7 @@ const paff: Agent = {
   awake: false,
   gold: 0,
   tags: [],
+  secretDescription: '',
 };
 const map: Item = {
   id: asItemId('item_map'),
@@ -70,6 +71,7 @@ const spark: Agent = {
   awake: false,
   gold: 0,
   tags: [],
+  secretDescription: '',
 };
 
 const view = { actor: paff, location: tavern, items: [map], agents: [spark], exits: [] };

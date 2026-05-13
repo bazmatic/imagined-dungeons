@@ -51,6 +51,7 @@ const paff: Agent = {
   awake: false,
   gold: 0,
   tags: [],
+  secretDescription: '',
 };
 const spark: Agent = {
   id: asAgentId('char_s'),
@@ -70,6 +71,7 @@ const spark: Agent = {
   awake: true,
   gold: 0,
   tags: [],
+  secretDescription: '',
 };
 
 describe('handleUpdateDescription', () => {

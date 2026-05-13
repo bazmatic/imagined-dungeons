@@ -114,6 +114,7 @@ function coerceSpawnedAgent(raw: unknown): UpsertAgentInput | null {
     autonomous: typeof raw.autonomous === 'boolean' ? raw.autonomous : false,
     gold: typeof raw.gold === 'number' ? raw.gold : 0,
     tags,
+    secretDescription: isString(raw.secretDescription) ? raw.secretDescription : '',
   };
 }
 

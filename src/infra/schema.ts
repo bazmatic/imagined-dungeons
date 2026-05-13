@@ -111,6 +111,7 @@ export const agents = sqliteTable(
     awake: integer('awake', { mode: 'boolean' }).notNull(),
     gold: integer('gold').notNull().default(0),
     tags: text('tags').notNull().default('[]'),
+    secretDescription: text('secret_description').notNull().default(''),
   },
   (t) => [primaryKey({ columns: [t.worldId, t.id] })],
 );

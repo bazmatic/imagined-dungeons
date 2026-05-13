@@ -39,6 +39,7 @@ const spark: Agent = {
   awake: true,
   gold: 0,
   tags: [],
+  secretDescription: '',
 };
 
 const paff: Agent = {
@@ -59,6 +60,7 @@ const paff: Agent = {
   awake: false,
   gold: 0,
   tags: [],
+  secretDescription: '',
 };
 
 const makeRepo = (): MemoryRepository =>

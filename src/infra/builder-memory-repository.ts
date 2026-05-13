@@ -179,6 +179,7 @@ export class MemoryBuilderRepository implements BuilderRepository {
       awake: existing ? existing.awake : false,
       gold: i.gold ?? 0,
       tags: [...i.tags],
+      secretDescription: i.secretDescription,
     });
   }
 

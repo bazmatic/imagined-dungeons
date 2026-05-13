@@ -64,6 +64,7 @@ describe('lore + generative discovery — end-to-end', () => {
       autonomous: false,
       gold: 0,
       tags: [],
+      secretDescription: '',
     });
     if (!ag.ok) throw new Error(ag.error.message);
     await builderRepo.updateWorldSummary(W, { playerAgentId: PLAYER });

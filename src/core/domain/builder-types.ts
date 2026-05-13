@@ -283,6 +283,8 @@ export interface UpsertAgentInput {
   readonly autonomous: boolean;
   readonly gold: number;
   readonly tags: readonly string[];
+  /** GM-only secret notes; never surfaced to the player. Default ''. */
+  readonly secretDescription: string;
 }
 
 export interface UpsertMonsterTemplateInput {

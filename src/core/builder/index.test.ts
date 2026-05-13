@@ -130,6 +130,7 @@ describe('builder facade — simple ops', () => {
       autonomous: false,
       gold: 0,
       tags: [],
+      secretDescription: '',
     });
     expect(r.ok).toBe(false);
   });
@@ -185,6 +186,7 @@ const seedMinimalScratch = async (repo: MemoryBuilderRepository) => {
     autonomous: false,
     gold: 0,
     tags: [],
+    secretDescription: '',
   });
   await repo.updateWorldSummary(W, { playerAgentId: asAgentId('char_p') });
   return W;

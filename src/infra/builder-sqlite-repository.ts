@@ -236,6 +236,7 @@ export class SqliteBuilderRepository implements BuilderRepository {
         awake: false,
         gold: i.gold,
         tags: JSON.stringify(i.tags),
+        secretDescription: i.secretDescription,
       })
       .onConflictDoUpdate({
         target: [schema.agents.worldId, schema.agents.id],
@@ -250,6 +251,7 @@ export class SqliteBuilderRepository implements BuilderRepository {
           goal: i.goal,
           autonomous: i.autonomous,
           gold: i.gold,
+          secretDescription: i.secretDescription,
         },
       });
   }
@@ -624,6 +626,7 @@ const toAgent = (r: typeof schema.agents.$inferSelect, w: WorldId): Agent => ({
   awake: r.awake,
   gold: r.gold,
   tags: parseTagsJson(r.tags),
+  secretDescription: r.secretDescription,
 });
 
 function toMonsterTemplate(

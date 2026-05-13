@@ -33,6 +33,7 @@ const paff: Agent = {
   awake: false,
   gold: 0,
   tags: [],
+  secretDescription: '',
 };
 const heldMap: Item = {
   id: asItemId('item_map'),

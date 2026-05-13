@@ -17,8 +17,8 @@ const baseAgent = {
   shortTermIntent: null, goal: null, autonomous: false, awake: false, tags: [], gold: 0,
 } as const;
 
-const buyer: Agent = { ...baseAgent, id: BUYER_ID, label: 'Paff', shortDescription: 'a scrappy adventurer', gold: 50 };
-const seller: Agent = { ...baseAgent, id: SELLER_ID, label: 'Spark', shortDescription: 'a watchful keeper' };
+const buyer: Agent = { ...baseAgent, id: BUYER_ID, label: 'Paff', shortDescription: 'a scrappy adventurer', gold: 50 , secretDescription: ''};
+const seller: Agent = { ...baseAgent, id: SELLER_ID, label: 'Spark', shortDescription: 'a watchful keeper' , secretDescription: ''};
 const item: Item = {
   id: ITEM_ID, worldId: W, label: 'brass key', shortDescription: 'a worn brass key',
   longDescription: '', owner: { kind: OwnerKind.Agent, id: SELLER_ID }, weight: 0,

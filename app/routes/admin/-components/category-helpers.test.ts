@@ -80,6 +80,7 @@ describe('resolveOwnerSubtitle', () => {
       awake: false,
       gold: 0,
       tags: [],
+      secretDescription: '',
     },
   ];
   const items: readonly Item[] = [

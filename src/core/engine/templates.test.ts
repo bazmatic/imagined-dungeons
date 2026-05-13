@@ -64,6 +64,7 @@ const npc: Agent = {
   awake: false,
   gold: 0,
   tags: [],
+  secretDescription: '',
 };
 
 const exitN: Exit = {
@@ -197,6 +198,7 @@ describe('renderEmoteMechanical', () => {
     awake: false,
     gold: 0,
     tags: [],
+    secretDescription: '',
   };
   const spark: Agent = {
     id: asAgentId('char_s'),
@@ -216,6 +218,7 @@ describe('renderEmoteMechanical', () => {
     awake: false,
     gold: 0,
     tags: [],
+    secretDescription: '',
   };
   const ember: Agent = {
     id: asAgentId('char_e'),
@@ -235,6 +238,7 @@ describe('renderEmoteMechanical', () => {
     awake: false,
     gold: 0,
     tags: [],
+    secretDescription: '',
   };
   const evWith = (
     description: string,

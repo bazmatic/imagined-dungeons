@@ -70,6 +70,7 @@ const player: Agent = {
   awake: false,
   gold: 0,
   tags: [],
+  secretDescription: '',
 };
 
 const spark: Agent = {
@@ -90,6 +91,7 @@ const spark: Agent = {
   awake: true,
   gold: 0,
   tags: [],
+  secretDescription: '',
 };
 
 const ember: Agent = {
@@ -110,6 +112,7 @@ const ember: Agent = {
   awake: true,
   gold: 0,
   tags: [],
+  secretDescription: '',
 };
 
 const makeWorld = (
@@ -238,6 +241,7 @@ describe('runTick', () => {
       awake: false,
       gold: 0,
       tags: [],
+      secretDescription: '',
     };
     const repo = makeWorld([player, sys], [lantern]);
     const llm = makeFakeLanguageModel({

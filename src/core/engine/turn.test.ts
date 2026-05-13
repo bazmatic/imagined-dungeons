@@ -74,6 +74,7 @@ const paff: Agent = {
   awake: false,
   gold: 0,
   tags: [],
+  secretDescription: '',
 };
 
 describe('runTurn', () => {
@@ -187,6 +188,7 @@ describe('runTurn with narrated events', () => {
     awake: false,
     gold: 0,
     tags: [],
+    secretDescription: '',
   };
 
   it('populates per-witness narrations on a speak event (mechanical fallback)', async () => {

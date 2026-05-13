@@ -37,8 +37,8 @@ const baseAgent = {
   awake: false,
   tags: [],
 } as const;
-const player: Agent = { ...baseAgent, id: PLAYER, label: 'Paff', gold: 0 };
-const npc: Agent = { ...baseAgent, id: NPC, label: 'Spark', gold: 10 };
+const player: Agent = { ...baseAgent, id: PLAYER, label: 'Paff', gold: 0 , secretDescription: ''};
+const npc: Agent = { ...baseAgent, id: NPC, label: 'Spark', gold: 10 , secretDescription: ''};
 const baseItem = {
   worldId: W,
   shortDescription: '',

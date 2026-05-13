@@ -44,6 +44,7 @@ const paff = (overrides: Partial<Agent> = {}): Agent => ({
   gold: 0,
   tags: [],
   ...overrides,
+  secretDescription: '',
 });
 const spark = (overrides: Partial<Agent> = {}): Agent => ({
   id: asAgentId('char_spark'),
@@ -64,6 +65,7 @@ const spark = (overrides: Partial<Agent> = {}): Agent => ({
   gold: 0,
   tags: [],
   ...overrides,
+  secretDescription: '',
 });
 
 const makeRepo = (a: Agent, t: Agent, rngSeed = 1) =>

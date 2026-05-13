@@ -109,4 +109,12 @@ export interface Agent {
    */
   readonly gold: number;
   readonly tags: readonly string[];
+  /**
+   * GM-only secret notes about this agent. Visible to the consequence
+   * engine and the admin UI, but NEVER surfaced to the player, the
+   * narrator, NPC minds, or any player-visible event. Use for hidden
+   * dynamics — secret allegiances, concealed goals, information the
+   * agent holds but hasn't revealed.
+   */
+  readonly secretDescription: string;
 }

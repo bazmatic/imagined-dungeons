@@ -45,13 +45,14 @@ const baseAgent = {
   tags: [],
 } as const;
 
-const paff: Agent = { ...baseAgent, id: asAgentId('char_paff'), label: 'Paff', locationId: A };
-const spark: Agent = { ...baseAgent, id: asAgentId('char_spark'), label: 'Spark', locationId: A };
+const paff: Agent = { ...baseAgent, id: asAgentId('char_paff'), label: 'Paff', locationId: A , secretDescription: ''};
+const spark: Agent = { ...baseAgent, id: asAgentId('char_spark'), label: 'Spark', locationId: A , secretDescription: ''};
 const remote: Agent = {
   ...baseAgent,
   id: asAgentId('char_remote'),
   label: 'Remote',
   locationId: B,
+  secretDescription: '',
 };
 
 const heldByPaff: Item = {

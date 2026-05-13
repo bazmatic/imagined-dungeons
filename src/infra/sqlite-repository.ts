@@ -60,6 +60,7 @@ const toAgent = (r: typeof schema.agents.$inferSelect, worldId: WorldId): Agent 
   awake: r.awake,
   gold: r.gold,
   tags: [],
+  secretDescription: r.secretDescription,
 });
 
 const toItem = (r: typeof schema.items.$inferSelect, worldId: WorldId): Item => ({

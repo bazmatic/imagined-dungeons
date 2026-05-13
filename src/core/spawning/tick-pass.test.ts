@@ -40,6 +40,7 @@ const playerAgent: Agent = {
   awake: false,
   gold: 0,
   tags: [],
+  secretDescription: '',
 };
 
 const moveEvent = (to = LOC_A): DomainEvent => ({

@@ -38,6 +38,7 @@ const player: Agent = {
   awake: false,
   gold: 0,
   tags: [],
+  secretDescription: '',
 };
 
 const dormantSerena: Agent = {
@@ -58,6 +59,7 @@ const dormantSerena: Agent = {
   awake: false,
   gold: 0,
   tags: [],
+  secretDescription: '',
 };
 
 describe('wake-on-interaction', () => {

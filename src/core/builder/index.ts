@@ -428,6 +428,7 @@ const asAgentInput = (a: Agent): UpsertAgentInput => ({
   autonomous: a.autonomous,
   gold: typeof a.gold === 'number' ? a.gold : 0,
   tags: a.tags,
+  secretDescription: a.secretDescription,
 });
 const asTemplateInput = (t: MonsterTemplate): UpsertMonsterTemplateInput => ({
   id: t.id,

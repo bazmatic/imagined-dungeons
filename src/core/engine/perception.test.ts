@@ -37,6 +37,7 @@ const agent = (id: string, locId: string): Agent => ({
   awake: false,
   gold: 0,
   tags: [],
+  secretDescription: '',
 });
 
 const item = (id: string, ownerLoc: string, hidden = false): Item => ({
@@ -125,6 +126,7 @@ describe('perceive — container chain', () => {
     awake: false,
     gold: 0,
     tags: [],
+    secretDescription: '',
   };
   const closedBox: Item = {
     id: BOX,

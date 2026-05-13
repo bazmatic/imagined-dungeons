@@ -39,8 +39,8 @@ const baseAgent = {
   awake: false,
   tags: [],
 } as const;
-const buyer: Agent = { ...baseAgent, id: BUYER, label: 'Paff', gold: 10 };
-const seller: Agent = { ...baseAgent, id: SELLER, label: 'Spark', gold: 0 };
+const buyer: Agent = { ...baseAgent, id: BUYER, label: 'Paff', gold: 10 , secretDescription: ''};
+const seller: Agent = { ...baseAgent, id: SELLER, label: 'Spark', gold: 0 , secretDescription: ''};
 const baseItem = {
   worldId: W,
   shortDescription: '',

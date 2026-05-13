@@ -33,6 +33,7 @@ const agent = (id: string, label: string, locId: string): Agent => ({
   awake: false,
   gold: 0,
   tags: [],
+  secretDescription: '',
 });
 
 const item = (

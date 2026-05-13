@@ -47,6 +47,7 @@ const guard: Agent = {
   awake: true,
   gold: 0,
   tags: [],
+  secretDescription: '',
 };
 
 const baseReq = (): DiscoveryRequest => ({

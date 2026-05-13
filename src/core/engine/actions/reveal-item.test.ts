@@ -34,6 +34,7 @@ const paff: Agent = {
   awake: false,
   gold: 0,
   tags: [],
+  secretDescription: '',
 };
 const hiddenBox: Item = {
   id: asItemId('item_box'),

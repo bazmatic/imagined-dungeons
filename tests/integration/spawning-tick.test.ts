@@ -75,6 +75,7 @@ describe('spawning end-to-end (tick pass)', () => {
       autonomous: false,
       gold: 0,
       tags: [],
+      secretDescription: '',
     });
 
     await builderRepo.updateWorldSummary(W, { playerAgentId: PLAYER });
@@ -180,6 +181,7 @@ describe('spawning end-to-end (tick pass)', () => {
       autonomous: false,
       gold: 0,
       tags: [],
+      secretDescription: '',
     });
     await builderRepo.updateWorldSummary(W, { playerAgentId: PLAYER });
     await upsertMonsterTemplate(builderRepo, W, {

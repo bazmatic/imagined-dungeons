@@ -38,6 +38,7 @@ const actor: Agent = {
   awake: false,
   gold: 0,
   tags: [],
+  secretDescription: '',
 };
 const baseItem = {
   worldId: W,

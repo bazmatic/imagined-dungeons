@@ -295,6 +295,7 @@ export const TOOLS: readonly ToolDef[] = [
         autonomous: Boolean(a.autonomous),
         gold: typeof a.gold === 'number' ? a.gold : 0,
         tags: readTags(a),
+        secretDescription: typeof a.secretDescription === 'string' ? a.secretDescription : '',
       }),
   },
   {

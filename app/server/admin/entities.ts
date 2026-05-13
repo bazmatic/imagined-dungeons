@@ -96,6 +96,7 @@ export const saveEntity = createServerFn({ method: 'POST' })
       autonomous: Boolean(p.autonomous),
       gold: typeof p.gold === 'number' ? p.gold : 0,
       tags: Array.isArray(p.tags) ? (p.tags as string[]) : [],
+      secretDescription: typeof p.secretDescription === 'string' ? p.secretDescription : '',
     });
   });
 

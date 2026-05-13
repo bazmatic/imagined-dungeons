@@ -88,6 +88,7 @@ describe('collectLoreTags', () => {
           awake: false,
           gold: 0,
           tags: ['cult'],
+          secretDescription: '',
         },
       ],
       templates: [

@@ -67,6 +67,7 @@ const baseTree = (): WorldTree => ({
       awake: false,
       gold: 0,
       tags: [],
+      secretDescription: '',
     },
   ],
   templates: [],

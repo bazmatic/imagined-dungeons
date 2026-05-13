@@ -34,6 +34,7 @@ export function expandSpawn(args: {
       autonomous: false,
       gold: 0,
       tags: [...args.template.tags],
+      secretDescription: '',
     });
   }
   return out;

@@ -43,6 +43,7 @@ const paff: Agent = {
   awake: false,
   gold: 0,
   tags: [],
+  secretDescription: '',
 };
 const spark: Agent = {
   id: asAgentId('char_spark'),
@@ -62,6 +63,7 @@ const spark: Agent = {
   awake: false,
   gold: 0,
   tags: [],
+  secretDescription: '',
 };
 
 describe('handleSpeak', () => {

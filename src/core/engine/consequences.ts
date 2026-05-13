@@ -461,6 +461,9 @@ async function buildUserPrompt(events: readonly DomainEvent[], repo: Repository)
       lines.push(`    short: ${a.shortDescription}`);
       lines.push(`    long: ${a.longDescription}`);
       lines.push(`    mood: ${a.mood ?? '(none)'}`);
+      if (a.secretDescription && a.secretDescription.length > 0) {
+        lines.push(`    GM-only notes: ${a.secretDescription}`);
+      }
     }
   }
 

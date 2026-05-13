@@ -94,6 +94,7 @@ describe('SqliteBuilderRepository (via builder facade)', () => {
       autonomous: false,
       gold: 0,
       tags: [],
+      secretDescription: '',
     });
     await repo.updateWorldSummary(scratch, { playerAgentId: asAgentId('char_serena') });
 
@@ -139,6 +140,7 @@ describe('SqliteBuilderRepository (via builder facade)', () => {
       autonomous: false,
       gold: 0,
       tags: [],
+      secretDescription: '',
     });
     await repo.updateWorldSummary(scratch, { playerAgentId: asAgentId('char_p') });
     await saveStartingState(repo, scratch);

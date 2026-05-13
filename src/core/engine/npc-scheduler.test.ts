@@ -46,6 +46,7 @@ const mkAgent = (id: AgentId, opts: Partial<Agent>): Agent => ({
   gold: 0,
   tags: [],
   ...opts,
+  secretDescription: '',
 });
 
 const PLAYER = asAgentId('char_player');
