@@ -32,6 +32,9 @@ export const ActionKind = {
   RevealItem: 'reveal_item',
   Open: 'open',
   Close: 'close',
+  Buy: 'buy',
+  Sell: 'sell',
+  Offer: 'offer',
 } as const;
 export type ActionKind = (typeof ActionKind)[keyof typeof ActionKind];
 
@@ -72,6 +75,7 @@ export const EventKind = {
   Reveal: 'reveal',
   Open: 'open',
   Close: 'close',
+  Trade: 'trade',
 } as const;
 export type EventKind = (typeof EventKind)[keyof typeof EventKind];
 
