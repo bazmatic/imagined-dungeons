@@ -42,6 +42,11 @@ export function makeCompositeParser(deps: CompositeParserDeps): ParseFn {
     if ('actorId' in ruleResult) return ruleResult;
     if (!shouldFallback(ruleResult)) return ruleResult;
     if (!deps.llm) return ruleResult;
+    log.info(
+      `[parser] rule fallback for "${text}" (kind=${ruleResult.kind}${
+        'ref' in ruleResult ? `, ref="${ruleResult.ref}"` : ''
+      }${'verb' in ruleResult ? `, verb="${ruleResult.verb}"` : ''}); inventory=${inventory.map((i) => i.label).join('|') || '(empty)'}`,
+    );
     try {
       const result = await llmInterpret(text, actor, view, inventory, deps.llm);
       if (!result) {
