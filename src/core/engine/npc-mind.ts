@@ -103,6 +103,21 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
     '  - emote <description>             — perform a brief gesture or expression for show, no state change. Use the base verb form (e.g. "I emote wave at Paff", "I emote grin", "I emote shake my head").',
   );
   lines.push('  - attack <character>   — attack another character (e.g. "I attack the goblin")');
+  lines.push(
+    '  - open <item|exit>     — open a container in this room or in your inventory, OR walk through a door (e.g. "I open the wooden box", "I open the back door"). Auto-unlocks if you carry the matching key.',
+  );
+  lines.push(
+    '  - close <item>         — shut a container you previously opened (e.g. "I close the chest")',
+  );
+  lines.push(
+    '  - offer <item> for <N> gold   — set the price of an item in YOUR inventory so someone can buy it from you (e.g. "I offer the rusty dagger for 5 gold"). The item then shows up as "(Ngp)" in your inventory; nearby characters hear you quote the price.',
+  );
+  lines.push(
+    '  - buy <item> from <character> — buy an item another character has priced (the engine asks them to consent). You must be in the same room and have at least their asking price in gold.',
+  );
+  lines.push(
+    '  - sell <item> to <character>  — sell an item you have already `offer`-priced to another character (the engine asks them to consent). Don\'t use `give` for sales — `give` transfers without payment.',
+  );
   lines.push('  - wait                 — do nothing this turn');
   lines.push('');
   lines.push('Behavioural priorities (in order):');
@@ -124,7 +139,7 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
     '- Use one of the verbs above. For purely physical/expressive actions like waving, grinning, nodding, or shrugging, use `emote <description>` (e.g. "I emote wave at Paff"). For greeting someone with words, use `say "..." to <them>` plus `emote wave at <them>` if you want both.',
   );
   lines.push(
-    '- SPEECH IS A FREE ACTION. You may emit ONE speech line (`I say "..." to X`, `I tell X, ...`, `I ask X about ...`, etc.) AND ONE non-speech action line (move, look, take, drop, give, emote, attack, search, equip, unequip) in the same turn. Put each on its own line. Examples: \n  I say "Be right back!" to Paff.\n  I move south.\n  — or —\n  I tell the bartender, "I\'ll take that drink."\n  I take the bottle.\n  Limit: at most one of each kind. Two speech lines or two physical-action lines in the same turn will be reduced to one.',
+    '- SPEECH IS A FREE ACTION. You may emit ONE speech line (`I say "..." to X`, `I tell X, ...`, `I ask X about ...`, etc.) AND ONE non-speech action line (move, look, take, drop, give, emote, attack, search, equip, unequip, open, close, offer, buy, sell) in the same turn. Put each on its own line. Examples: \n  I say "Be right back!" to Paff.\n  I move south.\n  — or —\n  I tell the bartender, "I\'ll take that drink."\n  I take the bottle.\n  Limit: at most one of each kind. Two speech lines or two physical-action lines in the same turn will be reduced to one.',
   );
   lines.push(
     '- Refer only to characters, items, and exits you actually perceive. Inventing names will fail.',
