@@ -172,6 +172,13 @@ export async function llmInterpret(
       };
     }
     case ActionKind.Open: {
+      // "open"/"unlock" can target a container item or an exit (door). If the
+      // ref resolves to an exit, route as a Move — handleMove auto-unlocks
+      // when the actor carries the matching key.
+      const exitR = resolveExit(validated.itemRef, view.exits);
+      if (exitR.ok) {
+        return { kind: ActionKind.Move, actorId: actor.id, direction: exitR.exit.direction };
+      }
       const r = resolveItem(validated.itemRef, [...view.items, ...inventory]);
       if (!r.ok) return null;
       return { kind: ActionKind.Open, actorId: actor.id, itemId: r.item.id };

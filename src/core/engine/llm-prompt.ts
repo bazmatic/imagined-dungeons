@@ -108,10 +108,13 @@ Available actions:
   Example "sheathe the sword" -> { "kind":"unequip", "itemRef":"sword", "emoteDescription":"sheathe" }.
   Example "unequip the dagger" -> { "kind":"unequip", "itemRef":"dagger", "emoteDescription":"put away" }.
 
-- open: open a container (chest, drawer, lid, cabinet, door, etc.). Emit when the input describes opening such an object. Set kind="open", itemRef=the target. All other fields null. NEVER route opening to emote, and NEVER tell the player the target "is closed; you need to open it" — that is exactly what they just tried.
+- open: open a container OR an exit. Use this for "open <chest|drawer|lid|cabinet|box>" AND for "open <door|gate|hatch>" (i.e. an exit). The engine auto-unlocks BOTH when the actor is carrying the matching key (the engine checks Item.lockedByItem for containers and Exit.lockedByItem for doors) — never refuse with "you need a key", just emit the open. Same applies to phrasings like "unlock the X", "unlock X with the Y", "use the key on X" — all map to kind="open" with itemRef=the X. Set kind="open", itemRef=the natural-language target. All other fields null. NEVER route opening or unlocking to emote, and NEVER tell the player the target "is closed; you need to open it" — that is exactly what they just tried.
   Example "open the wooden box" -> { "kind":"open", "direction":null, "targetKind":null, "targetRef":null, "itemRef":"wooden box", "targetAgentRef":null, "utterance":null, "emoteDescription":null, "reason":null }.
+  Example "open the back door" -> { "kind":"open", "itemRef":"back door" }.
+  Example "unlock the gate" -> { "kind":"open", "itemRef":"gate" }.
+  Example "unlock the door with the rusty key" -> { "kind":"open", "itemRef":"door" }.
+  Example "use the rusty key on the door" -> { "kind":"open", "itemRef":"door" }.
   Example "lift the lid of the chest" -> { "kind":"open", "itemRef":"chest" }.
-  Example "could you open the cabinet for me" -> { "kind":"open", "itemRef":"cabinet" }.
 
 - close: shut / close a container. Set kind="close", itemRef=the target. All other fields null.
   Example "close the box" -> { "kind":"close", "itemRef":"box" }.

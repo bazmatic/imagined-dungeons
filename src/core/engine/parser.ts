@@ -498,13 +498,26 @@ export function parse(
       return { kind: ActionKind.Attack, actorId: actor.id, targetAgentId: r.agent.id };
     }
 
-    case 'open': {
-      const rest = stripStopWords(toks.slice(1));
+    case 'open':
+    case 'unlock': {
+      // "open"/"unlock" can target either an item (a container) or an exit
+      // (a door). For an exit we re-route to Move in the exit's direction —
+      // handleMove auto-unlocks when the actor holds Exit.lockedByItem.
+      // Drop any trailing "with the <key>" clause; the engine resolves the
+      // key itself from inventory, so the player's choice of key here is
+      // informational only.
+      let rest = stripStopWords(toks.slice(1));
+      const withIdx = rest.indexOf('with');
+      if (withIdx >= 0) rest = rest.slice(0, withIdx);
       if (rest.length === 0) return { kind: ParseErrorKind.MissingArgument, verb: first };
       const ref = rest.join(' ');
-      const r = resolveItem(ref, [...view.items, ...inventory]);
-      if (!r.ok) return r.error;
-      return { kind: ActionKind.Open, actorId: actor.id, itemId: r.item.id };
+      const exitR = resolveExit(ref, view.exits);
+      if (exitR.ok) {
+        return { kind: ActionKind.Move, actorId: actor.id, direction: exitR.exit.direction };
+      }
+      const itemR = resolveItem(ref, [...view.items, ...inventory]);
+      if (itemR.ok) return { kind: ActionKind.Open, actorId: actor.id, itemId: itemR.item.id };
+      return itemR.error;
     }
 
     case 'close':
