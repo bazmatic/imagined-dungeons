@@ -18,7 +18,7 @@ const STEP_CEILING = 50;
 
 const OpenAiChatModelDefault = { Value: 'gpt-4o-mini' } as const;
 
-const RunBuilderAssistantErrorCode = {
+export const RunBuilderAssistantErrorCode = {
   LlmDisabled: 'llm_disabled',
   Validation: 'validation',
   NotDraft: 'not_draft',
