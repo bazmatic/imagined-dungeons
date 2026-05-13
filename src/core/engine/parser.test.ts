@@ -1,5 +1,6 @@
 import type { Agent, Exit, Item, Location } from '@core/domain/entities';
 import { asAgentId, asExitId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
+import { ActionKind, OwnerKind, ParseErrorKind } from '@core/domain/kinds';
 import { describe, expect, it } from 'vitest';
 import { parse, resolveAgent } from './parser';
 import type { PerceptionView } from './perception';
@@ -77,6 +78,22 @@ const silverKey: Item = {
   equipped: false,
   container: false,
   opened: true,
+  locked: false,
+  lockedByItem: null,
+};
+const containerBox: Item = {
+  id: asItemId('item_box'),
+  worldId: W,
+  label: 'box',
+  shortDescription: '',
+  longDescription: '',
+  owner: { kind: OwnerKind.Location, id: LOC.id },
+  weight: 1,
+  hidden: false,
+  tags: [],
+  equipped: false,
+  container: true,
+  opened: false,
   locked: false,
   lockedByItem: null,
 };
@@ -517,5 +534,44 @@ describe('resolveAgent', () => {
     const r = resolveAgent('ghost', [spark]);
     if (r.ok) throw new Error('expected error');
     expect(r.error.kind).toBe('no_such_target');
+  });
+});
+
+describe('open / close verbs', () => {
+  it('parses "open the box" to an Open action against the visible item', () => {
+    const r = parse('open the box', ACTOR, view([containerBox]), inv());
+    if (r.kind !== ActionKind.Open) throw new Error('expected open');
+    expect(r.itemId).toBe(containerBox.id);
+  });
+
+  it('parses "close the box" to a Close action', () => {
+    const r = parse('close the box', ACTOR, view([containerBox]), inv());
+    if (r.kind !== ActionKind.Close) throw new Error('expected close');
+    expect(r.itemId).toBe(containerBox.id);
+  });
+
+  it('parses "shut the chest" to a Close action', () => {
+    const chest = { ...containerBox, id: asItemId('item_chest'), label: 'chest' };
+    const r = parse('shut the chest', ACTOR, view([chest]), inv());
+    if (r.kind !== ActionKind.Close) throw new Error('expected close');
+  });
+
+  it('returns NoSuchTarget when the item is not visible', () => {
+    const r = parse('open the box', ACTOR, view([]), inv());
+    if ('actorId' in r) throw new Error('expected error');
+    expect(r.kind).toBe(ParseErrorKind.NoSuchTarget);
+  });
+
+  it('returns MissingArgument for a bare "open"', () => {
+    const r = parse('open', ACTOR, view([]), inv());
+    if ('actorId' in r) throw new Error('expected error');
+    expect(r.kind).toBe(ParseErrorKind.MissingArgument);
+  });
+
+  it('resolves an item carried in inventory ("open the satchel" while holding it)', () => {
+    const satchel = { ...containerBox, id: asItemId('item_satchel'), label: 'satchel' };
+    const r = parse('open the satchel', ACTOR, view([]), inv([satchel]));
+    if (r.kind !== ActionKind.Open) throw new Error('expected open');
+    expect(r.itemId).toBe(satchel.id);
   });
 });

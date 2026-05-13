@@ -497,6 +497,25 @@ export function parse(
       if (!r.ok) return r.error;
       return { kind: ActionKind.Attack, actorId: actor.id, targetAgentId: r.agent.id };
     }
+
+    case 'open': {
+      const rest = stripStopWords(toks.slice(1));
+      if (rest.length === 0) return { kind: ParseErrorKind.MissingArgument, verb: first };
+      const ref = rest.join(' ');
+      const r = resolveItem(ref, [...view.items, ...inventory]);
+      if (!r.ok) return r.error;
+      return { kind: ActionKind.Open, actorId: actor.id, itemId: r.item.id };
+    }
+
+    case 'close':
+    case 'shut': {
+      const rest = stripStopWords(toks.slice(1));
+      if (rest.length === 0) return { kind: ParseErrorKind.MissingArgument, verb: first };
+      const ref = rest.join(' ');
+      const r = resolveItem(ref, [...view.items, ...inventory]);
+      if (!r.ok) return r.error;
+      return { kind: ActionKind.Close, actorId: actor.id, itemId: r.item.id };
+    }
   }
 
   if (bareDir) {
