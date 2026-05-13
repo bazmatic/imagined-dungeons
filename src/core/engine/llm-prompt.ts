@@ -89,6 +89,7 @@ Available actions:
   Example "kick the door" -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"kick the door" }.
   Example "read the fire map" (actor holds it) -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"read the fire map" }.
   Example "light the lantern" (actor holds it) -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"light the lantern" }.
+  Example "open the wooden box" -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"open the wooden box" }. (Opening a container, chest, drawer, lid, door, etc. is ALWAYS an emote — the engine has no opened/closed state, so never reject "open X" as impossible and never tell the player "it is closed; you need to open it" — that is exactly what they just tried.)
   (Remember to fill every other field with null, per the output shape.)
 
 - equip: put on / wear / wield / draw an item the actor is carrying. The item moves into an "equipped" state — still in their inventory, but actively worn or wielded. Reserved for clothes, armour, weapons, accessories — things meant to be worn or held in a way that affects how the actor presents. NOT for consuming, breaking, opening, or merely interacting with held items (those are emote).

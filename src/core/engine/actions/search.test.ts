@@ -196,6 +196,36 @@ describe('handleSearch', () => {
     expect((await builder.listItems(W)).length).toBe(0);
   });
 
+  it('matchedItemId for a hidden item → reveals it and renders a "newly revealed" message alongside the description', async () => {
+    const hiddenMap: Item = { ...map, hidden: true };
+    const { engine, builder } = makeRepos([hiddenMap]);
+    const llm = makeFakeLanguageModel({
+      responder: () => ({
+        raw: '',
+        parsed: {
+          narration: 'IGNORED',
+          matchedItemId: hiddenMap.id,
+          matchedAgentId: null,
+          spawnedItem: null,
+          spawnedAgent: null,
+        },
+      }),
+    });
+    const r = await handleSearch(
+      { kind: ActionKind.Search, actorId: paff.id, query: 'behind the bar' },
+      engine,
+      { llm, builderRepo: builder, worldId: W },
+    );
+    if (!r.ok) throw new Error(r.error);
+    // Player gets a signal that the item was just revealed, not merely examined.
+    expect(r.value.render).toContain("hadn't noticed before");
+    // The description still surfaces so the player sees what they found.
+    expect(r.value.render).toContain('A real-time map of fire.');
+    // The flag was flipped — subsequent perception will include the item.
+    const after = await engine.getItem(hiddenMap.id);
+    expect(after.hidden).toBe(false);
+  });
+
   it('hallucinated matchedItemId (not in visible list) → silently discarded, falls through to narration', async () => {
     const { engine, builder } = makeRepos();
     const llm = makeFakeLanguageModel({

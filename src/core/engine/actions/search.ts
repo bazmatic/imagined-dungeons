@@ -25,7 +25,7 @@ import { nextEventId } from '../ids-gen';
 import type { LanguageModel } from '../language-model';
 import { perceive } from '../perception';
 import type { Repository } from '../repository';
-import { renderLookAgent, renderLookTarget } from '../templates';
+import { renderLookAgent, renderLookTarget, renderRevealObserved } from '../templates';
 import type { ActionOutcome } from './types';
 
 export interface SearchDeps {
@@ -176,6 +176,20 @@ export async function handleSearch(
     createdAt: new Date(),
   };
 
+  // A search action sweeps the room. Any hidden item at this location is
+  // revealed to the actor. We do this regardless of what the discovery LLM
+  // returned — a generic "search the room" should still uncover hidden things,
+  // not require the player to describe what they suspect is there. The
+  // discovery LLM's match path (below) still wins for rendering the matched
+  // item's longDescription; the auto-reveal here covers the *other* hidden
+  // items at the location.
+  const autoRevealLines: string[] = [];
+  for (const hidden of undiscoveredItems) {
+    if (response.matchedItemId === hidden.id) continue; // handled by MATCH path below
+    await repo.setItemHidden(hidden.id, false);
+    autoRevealLines.push(renderRevealObserved({ ...hidden, hidden: false }));
+  }
+
   // 1. MATCH item — accept a match against the visible list OR against the
   // undiscovered (hidden) list at this location. A hidden match triggers a
   // reveal: we flip hidden=false so the item shows up in perception going
@@ -191,7 +205,8 @@ export async function handleSearch(
         target: { kind: ExaminableKind.Item, id: matchedVisible.id },
       };
       await repo.appendEvent(event);
-      return Ok({ render: renderLookTarget(matchedVisible), event });
+      const render = [...autoRevealLines, renderLookTarget(matchedVisible)].join('\n');
+      return Ok({ render, event });
     }
     const matchedHidden = findItemById(undiscoveredItems, response.matchedItemId);
     if (matchedHidden) {
@@ -204,7 +219,9 @@ export async function handleSearch(
         target: { kind: ExaminableKind.Item, id: revealed.id },
       };
       await repo.appendEvent(event);
-      return Ok({ render: renderLookTarget(revealed), event });
+      const matchLines = [renderRevealObserved(revealed), renderLookTarget(revealed)];
+      const render = [...autoRevealLines, ...matchLines].join('\n');
+      return Ok({ render, event });
     }
     // Hallucinated id — silently fall through to narration.
   }
@@ -220,7 +237,8 @@ export async function handleSearch(
         target: { kind: ExaminableKind.Agent, id: matchedAgent.id },
       };
       await repo.appendEvent(event);
-      return Ok({ render: renderLookAgent(matchedAgent), event });
+      const render = [...autoRevealLines, renderLookAgent(matchedAgent)].join('\n');
+      return Ok({ render, event });
     }
   }
 
@@ -257,5 +275,6 @@ export async function handleSearch(
     target: { kind: ExaminableKind.Room },
   };
   await repo.appendEvent(event);
-  return Ok({ render: response.narration, event });
+  const render = [...autoRevealLines, response.narration].filter((s) => s.length > 0).join('\n');
+  return Ok({ render, event });
 }
