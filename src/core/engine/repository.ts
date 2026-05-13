@@ -40,6 +40,11 @@ export interface Repository {
    * the actor produces the matching key item (`lockedByItem`).
    */
   setItemLocked(item: ItemId, locked: boolean): Promise<void>;
+  /**
+   * Runtime exit lock toggle. handleMove clears this when the actor enters
+   * carrying the matching key item (`Exit.lockedByItem`).
+   */
+  setExitLocked(exit: ExitId, locked: boolean): Promise<void>;
   setAgentHp(id: AgentId, hp: number): Promise<void>;
   /**
    * Toggle the runtime "in the scene" flag. The scheduler ticks any agent

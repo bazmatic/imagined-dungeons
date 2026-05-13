@@ -105,4 +105,33 @@ describe('handleMove', () => {
     expect(r.error).toContain('gate');
     expect(r.error).toMatch(/locked/i);
   });
+
+  it('auto-unlocks a locked exit when the actor carries the matching key', async () => {
+    const key = {
+      id: asItemId('item_key'),
+      worldId: W,
+      label: 'rusty key',
+      shortDescription: '',
+      longDescription: '',
+      owner: { kind: 'agent' as const, id: paff.id },
+      weight: 0,
+      hidden: false,
+      tags: [],
+      equipped: false,
+      container: false,
+      opened: true,
+      locked: false,
+      lockedByItem: null,
+    };
+    const repo = new MemoryRepository(W, {
+      locations: [locA, locB],
+      exits: [exitS],
+      items: [key],
+      agents: [paff],
+    });
+    const r = await handleMove({ kind: 'move', actorId: paff.id, direction: 'south' }, repo);
+    if (!r.ok) throw new Error(r.error);
+    const exitAfter = await repo.getExit(exitS.id);
+    expect(exitAfter.locked).toBe(false);
+  });
 });

@@ -219,6 +219,13 @@ export class SqliteRepository implements Repository {
       .where(and(eq(schema.items.worldId, this.worldId), eq(schema.items.id, id)));
   }
 
+  async setExitLocked(id: ExitId, locked: boolean): Promise<void> {
+    await this.db
+      .update(schema.exits)
+      .set({ locked })
+      .where(and(eq(schema.exits.worldId, this.worldId), eq(schema.exits.id, id)));
+  }
+
   async setAgentHp(id: AgentId, hp: number): Promise<void> {
     await this.db
       .update(schema.agents)
