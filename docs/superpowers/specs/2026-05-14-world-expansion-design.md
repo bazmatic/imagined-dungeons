@@ -43,21 +43,9 @@ create_exit: {
 
 create_agent: {
   kind: 'create_agent';
-  id: string;
-  label: string;
-  shortDescription: string;
-  longDescription: string;
-  locationId: string;
-  hp: number;
-  damage: number;
-  defense: number;
-  capacity: number;
-  mood: string | null;
-  goal: string | null;
-  autonomous: boolean;
-  gold: number;
-  tags: string[];
-  secretDescription: string;
+  templateKey: string;   // references an existing MonsterTemplate.templateKey
+  locationId: string;    // existing or minted in this batch
+  count?: number;        // defaults to 1; spawns that many instances
 }
 
 create_item: {
@@ -98,6 +86,16 @@ Within a single consequence pass, actions are applied in this fixed order to avo
 
 Total actions per pass capped at **5** (up from current 3 for descriptions only). Maximum **3** of those may be create/delete actions. The system prompt enforces this in prose; the JSON schema enforces it via `maxItems`.
 
+### create_agent Processing
+
+`create_agent` reuses the existing spawn infrastructure (`expandSpawn` from `src/core/spawning/expand.ts`) rather than building agents from scratch. The engine:
+
+1. Looks up the `MonsterTemplate` by `templateKey` in the live world.
+2. Calls `expandSpawn(template, locationId, builderRepo, liveWorldId)` once per `count` (default 1).
+3. If the template is not found, drops the action with `console.warn`.
+
+This keeps stat definitions in monster templates where GMs already maintain them, and avoids duplicating hp/damage/defense/etc. in the consequence schema.
+
 ### Builder Repository Access
 
 The consequence engine already receives `builderRepo` via `ConsequenceLoreSink`. This interface is extended to carry `liveWorldId: WorldId` so creation/deletion calls can target the live world. No new parameters on `consequencesFor()`.
@@ -113,6 +111,8 @@ A new `WORLD_EXPANSION` section is appended to the existing system prompt:
 > You may delete entities when they are permanently removed — a building collapses, an NPC dies with no chance of return, a door is sealed forever.
 >
 > **IDs:** Invent a short snake_case id prefixed by kind (`loc_`, `agent_`, `item_`, `exit_`). Use that same id if you reference the new entity in later actions in the same batch.
+>
+> **Spawning agents:** Use `create_agent` with an existing `templateKey` from the world's monster templates. Do not invent stats. If no template fits the scene, prefer description colour over spawning something.
 >
 > **Enriching sparse locations:** When a location has empty or minimal descriptions (a newly generated stub), treat any player action there as a signal to generate full content: proper label, descriptions, atmosphere, and any items or agents that belong there. You may plant exits with `to: null` to suggest depth beyond the current scene.
 >
@@ -207,6 +207,7 @@ The consequence engine may plant further undefined exits (`to: null`) when enric
 | `src/core/engine/actions/move.ts` | Stub creation branch |
 | `src/core/engine/consequences.ts` | New action kinds, schema, processing, system prompt |
 | `src/core/domain/actions.ts` | New consequence action types (or keep in consequences.ts) |
+| `src/core/spawning/expand.ts` | Called by `create_agent` processing; must accept liveWorldId |
 | `app/routes/admin/-components/ExitsEditor.tsx` | Auto-generate option in destination selector |
 | `src/mcp/tools.ts` | `to` nullable in upsert_exit tool |
 | Test fixtures | All Exit object literals with nullable `to` |
