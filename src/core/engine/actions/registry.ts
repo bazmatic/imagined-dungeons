@@ -6,6 +6,7 @@ import { Err, type Result } from '@core/domain/result';
 import type { LanguageModel } from '../language-model';
 import type { Repository } from '../repository';
 import { handleAttack } from './attack';
+import { handleBuy } from './buy';
 import { handleClose } from './close';
 import { handleDrop } from './drop';
 import { handleEmote } from './emote';
@@ -18,6 +19,7 @@ import { handleOffer } from './offer';
 import { handleOpen } from './open';
 import { handleRevealItem } from './reveal-item';
 import { handleSearch } from './search';
+import { handleSell } from './sell';
 import { handleSpeak } from './speak';
 import { handleTake } from './take';
 import type { ActionOutcome } from './types';
@@ -80,10 +82,14 @@ export async function dispatch(
       return handleOpen(action, repo);
     case ActionKind.Close:
       return handleClose(action, repo);
-    case ActionKind.Buy:
-      return Err('buy handler not yet wired');
-    case ActionKind.Sell:
-      return Err('sell handler not yet wired');
+    case ActionKind.Buy: {
+      if (!deps.llm) return Err('buy requires llm');
+      return handleBuy(action, repo, { llm: deps.llm });
+    }
+    case ActionKind.Sell: {
+      if (!deps.llm) return Err('sell requires llm');
+      return handleSell(action, repo, { llm: deps.llm });
+    }
     case ActionKind.Offer:
       return handleOffer(action, repo);
     case ActionKind.RevealItem:
