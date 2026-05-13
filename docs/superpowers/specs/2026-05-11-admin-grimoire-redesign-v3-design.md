@@ -19,7 +19,7 @@ Restructure the detail-route master pane from "one hierarchical tree of everythi
 
 ```
 Top bar
-├─ Aethelgard Archive title (link to /admin)
+├─ Imagined Archive title (link to /admin)
 ├─ Draft / Live / Archive tabs
 └─ Right side
    ├─ Search/palette trigger

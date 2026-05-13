@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans. Steps use checkbox (`- [ ]`) syntax.
 
-**Goal:** Bring the admin UI to the structural and informational depth of the Stitch mockups (top-bar shell, side-nav, hero cards, two-column detail with metadata sidebar, collapsible tree sub-groups), with a small set of backend additions (cover image URL on worlds, free-form tags on locations, derived world stats) and a palette retune to the warm Aethelgard tokens. Spec: `docs/superpowers/specs/2026-05-11-admin-grimoire-redesign-v2-design.md`.
+**Goal:** Bring the admin UI to the structural and informational depth of the Stitch mockups (top-bar shell, side-nav, hero cards, two-column detail with metadata sidebar, collapsible tree sub-groups), with a small set of backend additions (cover image URL on worlds, free-form tags on locations, derived world stats) and a palette retune to the warm Imagined tokens. Spec: `docs/superpowers/specs/2026-05-11-admin-grimoire-redesign-v2-design.md`.
 
 **Architecture:** One Drizzle migration (`0008`) adds two columns. Domain types and both repositories (`SqliteBuilderRepository`, `MemoryBuilderRepository`) grow correspondingly. `listWorlds` returns a richer summary with location/agent/item counts. The admin stylesheet's existing CSS variable names get new values (palette swap) plus four new tokens. React components are added under `app/routes/admin/-components/` and the two admin routes are restructured to use the new `AdminShell`. No new dependencies.
 
@@ -47,7 +47,7 @@
 - `app/routes/admin/admin.css` — palette retune, new component classes.
 - `app/routes/admin/index.tsx` — restructure with AdminShell + Inscribe + hero grid + footer.
 - `app/routes/admin/$worldId.tsx` — restructure with AdminShell + side nav + new master/detail; wire TagsPanel, KeyVisualPanel, EntityHeader, FootnoteBar; turn ProblemsRail into a drawer.
-- `app/routes/admin/-components/Breadcrumbs.tsx` — prepend `Aethelgard / World Editor /` to the trail.
+- `app/routes/admin/-components/Breadcrumbs.tsx` — prepend `Imagined / World Editor /` to the trail.
 - `app/routes/admin/-components/ManuscriptCard.tsx` — restyle (no internal gutter; word count moves to FootnoteBar).
 - `app/routes/admin/-components/ProblemsRail.tsx` — add `open: boolean` prop and slide-in positioning.
 
@@ -557,7 +557,7 @@ EOF
 
 - [ ] **Step 1: Retune palette values**
 
-Replace the entire `:root` token block in `app/routes/admin/admin.css` with the warm Aethelgard values plus the four new tokens. The spec's "Palette retune" table is the source of truth. Specifically, in `.admin-root { ... }`, replace the color block (lines defining `--ink-black` through `--tertiary`) with:
+Replace the entire `:root` token block in `app/routes/admin/admin.css` with the warm Imagined values plus the four new tokens. The spec's "Palette retune" table is the source of truth. Specifically, in `.admin-root { ... }`, replace the color block (lines defining `--ink-black` through `--tertiary`) with:
 
 ```css
   --ink-black: #1c1010;
@@ -1456,7 +1456,7 @@ Expected: PASS. Biome doesn't lint CSS — this is a sanity check that nothing e
 ```bash
 git add app/routes/admin/admin.css
 git commit -m "$(cat <<'EOF'
-admin v2: retune palette to warm Aethelgard tokens; add v2 classes
+admin v2: retune palette to warm Imagined tokens; add v2 classes
 
 Replaces the cold narrative palette with the Material-3-derived warm
 palette from DESIGN.md frontmatter. Variable names unchanged so v1
@@ -1661,7 +1661,7 @@ export function TopBar(props: TopBarProps) {
     <header className="top-bar">
       <div className="top-bar__left">
         <Link to="/admin" className="top-bar__title">
-          Aethelgard Archive
+          Imagined Archive
         </Link>
         <nav className="top-bar__tabs">
           <span className={`top-bar__tab ${activeTab === 'draft' ? 'top-bar__tab--active' : ''}`}>
@@ -2736,7 +2736,7 @@ export function ProblemsRail({ problems, open, onClose, onSelect }: ProblemsRail
 
 In `app/routes/admin/-components/Breadcrumbs.tsx`, in the `buildSegments` function, prepend two fixed segments to every return except `world`:
 
-Find each `return [worldName, ...]` and change to `return ['Aethelgard', 'World Editor', worldName, ...]`. The `world` case stays as `[worldName]` unchanged (the world settings screen doesn't need the extra prefix — the top bar already shows "Aethelgard Archive").
+Find each `return [worldName, ...]` and change to `return ['Imagined', 'World Editor', worldName, ...]`. The `world` case stays as `[worldName]` unchanged (the world settings screen doesn't need the extra prefix — the top bar already shows "Imagined Archive").
 
 - [ ] **Step 3: ManuscriptCard restyle**
 
@@ -3313,7 +3313,7 @@ Open a draft world. Confirm:
 - Side nav on left with GRIMOIRE wordmark, LORE/LOCATIONS/BESTIARY/ITEMS/CHARACTERS list. LOCATIONS is active. LORE/ITEMS/CHARACTERS are visibly disabled with a tooltip.
 - Master pane (320px wide) shows "WORLD HIERARCHY" header, locations as tree groups with expand arrows, sub-groups (Exits/Agents/Items/Triggers) under each expanded location.
 - Filter input at the bottom of the master pane filters locations live.
-- Selecting a location: gold left-border highlight, detail pane updates with breadcrumb `Aethelgard / World Editor / <world> / Locations / <label>`.
+- Selecting a location: gold left-border highlight, detail pane updates with breadcrumb `Imagined / World Editor / <world> / Locations / <label>`.
 - Detail pane has 8/4 grid: form on left (Label, Short, Manuscript long-description), Metadata column on right with Key Visual placeholder + Attributes & Tags panel.
 - Adding a tag and saving persists across reload. Removing a tag and saving persists.
 - On World Settings (top of tree), editing the cover image URL and clicking Save persists; reload shows the image on the hero card on `/admin`.

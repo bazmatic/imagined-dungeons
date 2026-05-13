@@ -11,7 +11,7 @@ Bring the admin UI up to the structural and informational depth of the Stitch mo
 ## Non-goals
 
 - Mobile / responsive collapse.
-- Pixel-exact reproduction of the mockups. v2 switches to the **warm "Aethelgard" Material-3-derived palette** from the DESIGN.md frontmatter (`#1c1010` background, `#f4dddb` on-surface, `#ebc24f` secondary/gold, `#ffb3ae` primary/crimson, `#58413f` outline-variant). This supersedes v1's colder narrative palette. The token names in `admin.css` change values; class names stay stable so the rest of the rewrite isn't disrupted.
+- Pixel-exact reproduction of the mockups. v2 switches to the **warm "Imagined" Material-3-derived palette** from the DESIGN.md frontmatter (`#1c1010` background, `#f4dddb` on-surface, `#ebc24f` secondary/gold, `#ffb3ae` primary/crimson, `#58413f` outline-variant). This supersedes v1's colder narrative palette. The token names in `admin.css` change values; class names stay stable so the rest of the rewrite isn't disrupted.
 - Decorative features unsupported by data: world stat counts that aren't computable, X/Y coordinates, mini-maps, "related lore" cross-references, "Chronicle Log" / "Bulk Import", FAB. Skip all of these.
 - Tailwind. We keep plain CSS + tokens in `app/routes/admin/admin.css`.
 - Material Symbols icon font. Adds a 1MB+ font dependency for icons. Use a small inline-SVG icon set (or Unicode glyphs from v1) instead.
@@ -68,7 +68,7 @@ The admin UI has three structural surfaces:
 
 ### 1. App shell (every admin route)
 
-- **Top bar (`.top-bar`, 64px tall).** Left: archive title "AETHELGARD ARCHIVE" in display caps + filter pills (Draft / Live / Archive). Right: search input, draft-version chip when on a draft, Reset + Publish actions, history/help icon-buttons. Search input is wired to the existing in-memory entity search behind the Command Palette (Cmd-K still works; the visible input is a shortcut into the same flow). On the index route the search filters worlds; on the detail route it triggers the palette.
+- **Top bar (`.top-bar`, 64px tall).** Left: archive title "Imagined ARCHIVE" in display caps + filter pills (Draft / Live / Archive). Right: search input, draft-version chip when on a draft, Reset + Publish actions, history/help icon-buttons. Search input is wired to the existing in-memory entity search behind the Command Palette (Cmd-K still works; the visible input is a shortcut into the same flow). On the index route the search filters worlds; on the detail route it triggers the palette.
 - **Side nav (`.side-nav`, 224px wide, desktop only).** Visible only on the detail route. Top: GRIMOIRE wordmark + version line. Middle: category links — LORE, LOCATIONS, BESTIARY, ITEMS, CHARACTERS (which we render as ENTITIES → mapped to LOCATIONS+AGENTS for the time being; LORE is intentionally a no-op stub until we have a lore data model — visible to suggest the IA but disabled with a tooltip). Bottom: CREATE NEW ENTITY (opens command palette with creation menu) + Settings/Support links (also stubs, hidden behind a single SETTINGS link only).
 - The shell is rendered by a new `AdminShell` component that wraps page content. Routes pass `route="index"` or `route="detail"`.
 
@@ -86,7 +86,7 @@ Layout (12-column grid, `--container-max` width centered):
 
 Full app shell + side nav. Workspace fills the remaining width. Internal structure:
 
-- **Inner top header (`.detail-header`, below the global top bar).** Breadcrumb (italic serif, slash-separated): `Aethelgard / World Editor / <world name> / <selected entity>`. No publish/reset buttons here — they're in the global top bar's right side, which already shows them via the existing Draft/Live conditional. Status badge from v1 stays in the top bar.
+- **Inner top header (`.detail-header`, below the global top bar).** Breadcrumb (italic serif, slash-separated): `Imagined / World Editor / <world name> / <selected entity>`. No publish/reset buttons here — they're in the global top bar's right side, which already shows them via the existing Draft/Live conditional. Status badge from v1 stays in the top bar.
 - **Master pane (`.master-pane`, 320px).** Header strip "WORLD HIERARCHY" + filter icon (no-op for now; future use). Tree content: outer location nodes with expand/collapse arrows. When expanded, each location shows four sub-groups: Exits, Agents, Items, Triggers. Each sub-group has a count chip; expanding a sub-group reveals the individual entities. Selection: gold left-border accent (already in v1), bumped to a faint background tint. Bottom strip: a quick-search input that drives the same Command-Palette filter inline (filters the tree itself; doesn't open a modal). The Bestiary section moves out of this tree and into the side-nav's BESTIARY category (clicking BESTIARY in the side nav swaps the master pane to a flat bestiary list).
 - **Detail pane (`.detail-pane`, max-width 1024px, generous padding).** Sections:
   - **Entity header.** Two-row block. Top row: entity-kind eyebrow ("ENTITY: LOCATION"), then `headline-lg` label. Right-aligned: UUID line and "Last Modified: …" line. (We don't track last-modified yet; render "—" or hide. Spec: hide if absent.)
@@ -126,7 +126,7 @@ Out of scope for v2 to build per-entity forms for Agents, Items, Exits, Template
 - `app/routes/admin/-components/ProblemsRail.tsx` — gains an `open: boolean` prop and absolute positioning (slides in from the right). Or we can convert it to a popover; either way it's no longer permanently visible.
 - `app/routes/admin/-components/ManuscriptCard.tsx` — restyled: bordered surface-container-lowest, taller min-height, hover toolbar icons (no-op for v2). Gutter notes move out — word count goes to FootnoteBar; the card itself loses the side gutter.
 - `app/routes/admin/-components/CommandPalette.tsx` — unchanged.
-- `app/routes/admin/-components/Breadcrumbs.tsx` — output format updated to match the mockup: prepend "Aethelgard / World Editor / " before the rest. Same parsing function, just an extra prefix.
+- `app/routes/admin/-components/Breadcrumbs.tsx` — output format updated to match the mockup: prepend "Imagined / World Editor / " before the rest. Same parsing function, just an extra prefix.
 - `app/routes/admin/admin.css` — substantial additions: shell, top-bar, side-nav, hero-card, inscribe-card, entity-header, tag-chip, key-visual, footnote-bar, tree-subgroup. Tokens unchanged. The v1 `.detail-shell` grid is replaced by the new shell + master/detail layout.
 
 **Backend:**
