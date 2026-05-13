@@ -1,4 +1,5 @@
 import { BuilderErrorKind, WorldKind } from '@core/domain/builder-kinds';
+import { OwnerKind } from '@core/domain/kinds';
 import type {
   BuilderError,
   CreateDraftInput,
@@ -186,6 +187,30 @@ export async function upsertItem(
 ): Promise<Result<ItemId, BuilderError>> {
   const s = await requireWorld(repo, worldId);
   if (!s.ok) return s;
+  // Walk the proposed parent chain from input.ownerId upward. If it ever
+  // re-encounters input.id (self-ownership or any longer cycle), reject —
+  // otherwise perception's owner-chain walk would spin forever.
+  if (input.ownerKind === OwnerKind.Item) {
+    const items = await repo.listItems(worldId);
+    const byId = new Map<string, Item>(items.map((it) => [it.id as string, it]));
+    const seen = new Set<string>([input.id as string]);
+    let cursor: string | null = input.ownerId;
+    while (cursor !== null) {
+      if (seen.has(cursor)) {
+        return Err(
+          err(
+            BuilderErrorKind.ItemOwnerCycle,
+            `item ${input.id} would form an ownership cycle through ${cursor}`,
+          ),
+        );
+      }
+      seen.add(cursor);
+      const parent = byId.get(cursor);
+      if (!parent) break;
+      if (parent.owner.kind !== OwnerKind.Item) break;
+      cursor = parent.owner.id as string;
+    }
+  }
   await repo.upsertItem(worldId, input);
   return Ok(input.id);
 }

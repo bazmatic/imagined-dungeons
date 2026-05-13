@@ -1,12 +1,14 @@
 import { BuilderErrorKind, TriggerEventKind, WorldKind } from '@core/domain/builder-kinds';
 import {
   asAgentId,
+  asItemId,
   asLocationId,
   asMonsterTemplateId,
   asSpawnTriggerId,
   asTagLoreId,
   asWorldId,
 } from '@core/domain/ids';
+import { OwnerKind } from '@core/domain/kinds';
 import { MemoryBuilderRepository } from '@infra/builder-memory-repository';
 import { describe, expect, it } from 'vitest';
 import {
@@ -21,6 +23,7 @@ import {
   saveStartingState,
   updateWorldLore,
   upsertAgent,
+  upsertItem,
   upsertLocation,
   upsertLocationSpawnTrigger,
   upsertMonsterTemplate,
@@ -403,5 +406,109 @@ describe('templates and triggers', () => {
     if (!tree.ok) throw new Error(tree.error.message);
     expect(tree.value.triggers).toHaveLength(1);
     expect(tree.value.templates).toHaveLength(1);
+  });
+});
+
+describe('upsertItem — owner-chain cycle rejection', () => {
+  const locOwnedBox = (id: string) => ({
+    id: asItemId(id),
+    label: id,
+    shortDescription: '',
+    longDescription: '',
+    ownerKind: OwnerKind.Location,
+    ownerId: 'loc_a',
+    weight: 1,
+    hidden: false,
+    tags: [],
+    container: true,
+    opened: false,
+    locked: false,
+    lockedByItem: null,
+  });
+
+  it('rejects an item whose owner chain forms a cycle', async () => {
+    const repo = new MemoryBuilderRepository();
+    const created = await createDraft(repo, { displayName: 'D', label: 'L' });
+    if (!created.ok) throw new Error('create');
+    const W = created.value;
+    await upsertLocation(repo, W, {
+      id: asLocationId('loc_a'),
+      label: 'A',
+      shortDescription: '',
+      longDescription: '',
+      tags: [],
+      secretDescription: '',
+    });
+    // box owned by loc_a
+    const r1 = await upsertItem(repo, W, locOwnedBox('box'));
+    if (!r1.ok) throw new Error('seed box');
+    // key owned by box
+    const r2 = await upsertItem(repo, W, {
+      id: asItemId('key'),
+      label: 'key',
+      shortDescription: '',
+      longDescription: '',
+      ownerKind: OwnerKind.Item,
+      ownerId: 'box',
+      weight: 0,
+      hidden: false,
+      tags: [],
+      container: false,
+      opened: true,
+      locked: false,
+      lockedByItem: null,
+    });
+    if (!r2.ok) throw new Error('seed key');
+    // now try to re-parent box under key → box → key → box cycle
+    const r = await upsertItem(repo, W, {
+      id: asItemId('box'),
+      label: 'box',
+      shortDescription: '',
+      longDescription: '',
+      ownerKind: OwnerKind.Item,
+      ownerId: 'key',
+      weight: 1,
+      hidden: false,
+      tags: [],
+      container: true,
+      opened: false,
+      locked: false,
+      lockedByItem: null,
+    });
+    if (r.ok) throw new Error('expected cycle rejection');
+    expect(r.error.kind).toBe(BuilderErrorKind.ItemOwnerCycle);
+  });
+
+  it('rejects an item that owns itself', async () => {
+    const repo = new MemoryBuilderRepository();
+    const created = await createDraft(repo, { displayName: 'D', label: 'L' });
+    if (!created.ok) throw new Error('create');
+    const W = created.value;
+    await upsertLocation(repo, W, {
+      id: asLocationId('loc_a'),
+      label: 'A',
+      shortDescription: '',
+      longDescription: '',
+      tags: [],
+      secretDescription: '',
+    });
+    await upsertItem(repo, W, locOwnedBox('box'));
+    const r = await upsertItem(repo, W, {
+      id: asItemId('box'),
+      label: 'box',
+      shortDescription: '',
+      longDescription: '',
+      ownerKind: OwnerKind.Item,
+      ownerId: 'box',
+      weight: 1,
+      hidden: false,
+      tags: [],
+      container: true,
+      opened: false,
+      locked: false,
+      lockedByItem: null,
+    });
+    if (r.ok) throw new Error('expected self-cycle rejection');
+    expect(r.error.kind).toBe(BuilderErrorKind.ItemOwnerCycle);
   });
 });
