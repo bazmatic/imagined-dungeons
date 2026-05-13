@@ -14,6 +14,7 @@ import { handleGive } from './give';
 import { handleInventory } from './inventory';
 import { handleLook } from './look';
 import { handleMove } from './move';
+import { handleOffer } from './offer';
 import { handleOpen } from './open';
 import { handleRevealItem } from './reveal-item';
 import { handleSearch } from './search';
@@ -84,7 +85,7 @@ export async function dispatch(
     case ActionKind.Sell:
       return Err('sell handler not yet wired');
     case ActionKind.Offer:
-      return Err('offer handler not yet wired');
+      return handleOffer(action, repo);
     case ActionKind.RevealItem:
       return handleRevealItem(action, repo);
   }
