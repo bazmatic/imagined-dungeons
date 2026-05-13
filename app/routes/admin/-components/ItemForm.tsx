@@ -237,6 +237,43 @@ export function ItemForm({ tree, itemId, problemCount, onSaved, onDeleted }: Ite
               />
               Container
             </label>
+            <label className="row-editor__checkbox" style={{ gridColumn: 'span 12' }}>
+              <input
+                type="checkbox"
+                checked={v.priceTag !== null}
+                onChange={(e) =>
+                  setV({
+                    ...v,
+                    priceTag: e.target.checked
+                      ? typeof v.priceTag === 'number' && v.priceTag > 0
+                        ? v.priceTag
+                        : 1
+                      : null,
+                  })
+                }
+              />
+              For sale
+            </label>
+            {v.priceTag !== null ? (
+              <div className="row-editor__field" style={{ gridColumn: 'span 12' }}>
+                <label className="row-editor__field-label" htmlFor="it-price">
+                  Price (gold)
+                </label>
+                <input
+                  id="it-price"
+                  type="number"
+                  min={1}
+                  className="row-editor__input"
+                  value={v.priceTag}
+                  onChange={(e) =>
+                    setV({
+                      ...v,
+                      priceTag: Math.max(1, Math.trunc(Number(e.target.value))),
+                    })
+                  }
+                />
+              </div>
+            ) : null}
             {v.container ? (
               <>
                 <label className="row-editor__checkbox" style={{ gridColumn: 'span 12' }}>

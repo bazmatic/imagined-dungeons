@@ -208,6 +208,21 @@ export function AgentForm({ tree, agentId, problemCount, onSaved, onDeleted }: A
                 onChange={(e) => setV({ ...v, defense: Number(e.target.value) })}
               />
             </div>
+            <div className="row-editor__field" style={{ gridColumn: 'span 6' }}>
+              <label className="row-editor__field-label" htmlFor="ag-gold">
+                Gold
+              </label>
+              <input
+                id="ag-gold"
+                type="number"
+                min={0}
+                className="row-editor__input"
+                value={v.gold}
+                onChange={(e) =>
+                  setV({ ...v, gold: Math.max(0, Math.trunc(Number(e.target.value))) })
+                }
+              />
+            </div>
             <div className="row-editor__field" style={{ gridColumn: 'span 12' }}>
               <label className="row-editor__field-label" htmlFor="ag-mood">
                 Mood
