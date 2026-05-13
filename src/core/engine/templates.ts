@@ -102,6 +102,27 @@ export function renderUnequipObserved(actor: Agent, item: Item, manner: string):
   return `${actor.label} ${manner}s the ${item.label}.`;
 }
 
+export function renderOpenSelf(item: Item, contents: readonly Item[], unlocked: boolean): string {
+  const lead = unlocked
+    ? `You unlock the ${item.label} and open it.`
+    : `You open the ${item.label}.`;
+  if (contents.length === 0) return `${lead} It is empty.`;
+  const names = contents.map((c) => c.label).join(', ');
+  return `${lead} Inside: ${names}.`;
+}
+
+export function renderOpenObserved(actor: Agent, item: Item): string {
+  return `${actor.label} opens the ${item.label}.`;
+}
+
+export function renderCloseSelf(item: Item): string {
+  return `You close the ${item.label}.`;
+}
+
+export function renderCloseObserved(actor: Agent, item: Item): string {
+  return `${actor.label} closes the ${item.label}.`;
+}
+
 export function renderRevealObserved(item: Item): string {
   return `You spot ${item.label} you hadn't noticed before.`;
 }
