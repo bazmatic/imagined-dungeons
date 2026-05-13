@@ -33,6 +33,8 @@ export type RunBuilderAssistantResponse =
       readonly stopReason: BuilderAgentStopReason;
       readonly steps: readonly BuilderAgentStepLogEntry[];
       readonly assistantSummary: string | null;
+      /** Set when the loop stopped with an error path (tool, scope, parse, max steps, OpenAI). */
+      readonly errorMessage: string | null;
     }
   | {
       readonly ok: false;
@@ -159,6 +161,7 @@ export const runBuilderAssistant = createServerFn({ method: 'POST' })
         stopReason: result.stopReason,
         steps: result.steps,
         assistantSummary: result.assistantSummary,
+        errorMessage: result.errorMessage,
       };
     } catch (err: unknown) {
       return {

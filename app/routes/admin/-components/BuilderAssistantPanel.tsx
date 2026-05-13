@@ -1,4 +1,7 @@
-import type { BuilderAgentStepLogEntry } from '@infra/builder-agent/openai-agent-loop';
+import {
+  type BuilderAgentStepLogEntry,
+  BuilderAgentStopReason,
+} from '@infra/builder-agent/openai-agent-loop';
 import type { FormEvent } from 'react';
 import { useEffect, useState } from 'react';
 import {
@@ -23,6 +26,7 @@ export function BuilderAssistantPanel({ worldId, onApplied }: BuilderAssistantPa
   const [error, setError] = useState<string | null>(null);
   const [steps, setSteps] = useState<readonly BuilderAgentStepLogEntry[]>([]);
   const [lastSummary, setLastSummary] = useState<string | null>(null);
+  const [runInfo, setRunInfo] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,11 +73,24 @@ export function BuilderAssistantPanel({ worldId, onApplied }: BuilderAssistantPa
         setSteps(result.steps);
         setLastSummary(result.assistantSummary);
         setError(null);
+        const detailParts: string[] = [`Stop: ${result.stopReason}`];
+        if (result.errorMessage !== null && result.errorMessage.length > 0) {
+          detailParts.push(result.errorMessage);
+        }
+        if (
+          result.stopReason !== BuilderAgentStopReason.Completed ||
+          (result.errorMessage !== null && result.errorMessage.length > 0)
+        ) {
+          setRunInfo(detailParts.join(' — '));
+        } else {
+          setRunInfo(null);
+        }
         await onApplied();
       } else {
         const message =
           result.code === RunBuilderAssistantErrorCode.LlmDisabled ? OpenAiKeyHelp : result.message;
         setError(message);
+        setRunInfo(null);
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
@@ -139,6 +156,11 @@ export function BuilderAssistantPanel({ worldId, onApplied }: BuilderAssistantPa
             {lastSummary}
           </p>
         </div>
+      ) : null}
+      {runInfo !== null ? (
+        <p className="t-metadata" style={{ marginTop: 'var(--s-3)', fontStyle: 'italic' }}>
+          {runInfo}
+        </p>
       ) : null}
       {steps.length > 0 ? (
         <div style={{ marginTop: 'var(--s-4)' }}>
