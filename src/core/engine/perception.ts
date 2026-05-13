@@ -12,16 +12,20 @@ export interface PerceptionView {
 }
 
 /**
- * Walk an item's owner-chain upward. If the chain passes through any
- * container item with `opened=false`, the candidate item is unreachable
- * from perception. Walk terminates as soon as we leave the item layer
- * (owner becomes a location or an agent).
+ * Walk an item's owner-chain upward. The candidate is unreachable from
+ * perception if any ancestor along the chain is either:
+ *   - a hidden item (`hidden=true`) — the ancestor itself is undiscovered,
+ *     so the player can't know about anything inside it; or
+ *   - a closed container (`container=true && opened=false`).
+ * Walk terminates as soon as we leave the item layer (owner becomes a
+ * location or an agent).
  */
 function isReachable(item: Item, byId: ReadonlyMap<ItemId, Item>): boolean {
   let cursor: Item | undefined = item;
   while (cursor && cursor.owner.kind === OwnerKind.Item) {
     const parent = byId.get(cursor.owner.id);
     if (!parent) return false; // dangling owner — drop
+    if (parent.hidden) return false;
     if (parent.container && !parent.opened) return false;
     cursor = parent;
   }

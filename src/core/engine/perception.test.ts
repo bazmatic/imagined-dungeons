@@ -206,4 +206,18 @@ describe('perceive — container chain', () => {
     expect(ids).not.toContain(INNER as string);
     expect(ids).not.toContain(KEY as string);
   });
+
+  it('hides contents of a hidden container even when the container is open', async () => {
+    const hiddenOpenBox: Item = { ...closedBox, hidden: true, opened: true };
+    const repo = new MemoryRepository(W, {
+      locations: [locA],
+      exits: [],
+      items: [hiddenOpenBox, keyInBox],
+      agents: [actor],
+    });
+    const view = await perceive(ACTOR, repo);
+    const ids = view.items.map((i) => i.id as string);
+    expect(ids).not.toContain(BOX as string); // hidden ancestor not visible
+    expect(ids).not.toContain(KEY as string); // contents inherit the hide
+  });
 });
