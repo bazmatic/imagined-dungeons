@@ -287,6 +287,24 @@ async function summariseEvent(
         return 'something previously hidden became visible nearby';
       }
     }
+    case EventKind.Open: {
+      try {
+        const item = await repo.getItem(event.itemId);
+        return event.unlocked
+          ? `${actorLabel} unlocked and opened the ${item.label}`
+          : `${actorLabel} opened the ${item.label}`;
+      } catch {
+        return `${actorLabel} opened a container`;
+      }
+    }
+    case EventKind.Close: {
+      try {
+        const item = await repo.getItem(event.itemId);
+        return `${actorLabel} closed the ${item.label}`;
+      } catch {
+        return `${actorLabel} closed a container`;
+      }
+    }
   }
 }
 

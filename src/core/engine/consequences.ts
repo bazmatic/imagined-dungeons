@@ -298,6 +298,26 @@ async function summarise(event: DomainEvent, repo: Repository): Promise<string> 
         return 'a hidden item became visible';
       }
     }
+    case EventKind.Open: {
+      const actor = await labelOf(event.actorId);
+      try {
+        const item = await repo.getItem(event.itemId);
+        return event.unlocked
+          ? `${actor} unlocked and opened the ${item.label}`
+          : `${actor} opened the ${item.label}`;
+      } catch {
+        return `${actor} opened a container`;
+      }
+    }
+    case EventKind.Close: {
+      const actor = await labelOf(event.actorId);
+      try {
+        const item = await repo.getItem(event.itemId);
+        return `${actor} closed the ${item.label}`;
+      } catch {
+        return `${actor} closed a container`;
+      }
+    }
   }
 }
 

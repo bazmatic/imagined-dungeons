@@ -25,6 +25,8 @@ export type Action =
   | { kind: 'search'; actorId: AgentId; query: string }
   | { kind: 'equip'; actorId: AgentId; itemId: ItemId; manner: string }
   | { kind: 'unequip'; actorId: AgentId; itemId: ItemId; manner: string }
+  | { kind: 'open'; actorId: AgentId; itemId: ItemId }
+  | { kind: 'close'; actorId: AgentId; itemId: ItemId }
   | { kind: 'reveal_item'; actorId: AgentId; itemId: ItemId }
   | {
       kind: 'update_description';

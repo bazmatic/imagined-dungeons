@@ -147,6 +147,12 @@ function summariseEvent(event: DomainEvent): string {
       return `${event.actorId} ${event.manner} ${event.itemId}`;
     case EventKind.Reveal:
       return `${event.itemId} revealed at ${event.locationId}`;
+    case EventKind.Open:
+      return event.unlocked
+        ? `${event.actorId} unlocked and opened ${event.itemId}`
+        : `${event.actorId} opened ${event.itemId}`;
+    case EventKind.Close:
+      return `${event.actorId} closed ${event.itemId}`;
   }
 }
 

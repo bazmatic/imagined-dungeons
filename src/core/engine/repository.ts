@@ -30,6 +30,16 @@ export interface Repository {
    * consequence engine's `reveal_item` action.
    */
   setItemHidden(item: ItemId, hidden: boolean): Promise<void>;
+  /**
+   * Runtime container open/close toggle. Pure data flip; narration is the
+   * action handler's job (Open/Close handlers emit the corresponding events).
+   */
+  setItemOpened(item: ItemId, opened: boolean): Promise<void>;
+  /**
+   * Runtime container lock toggle. The Open handler clears this flag when
+   * the actor produces the matching key item (`lockedByItem`).
+   */
+  setItemLocked(item: ItemId, locked: boolean): Promise<void>;
   setAgentHp(id: AgentId, hp: number): Promise<void>;
   /**
    * Toggle the runtime "in the scene" flag. The scheduler ticks any agent

@@ -6,6 +6,7 @@ import { Err, type Result } from '@core/domain/result';
 import type { LanguageModel } from '../language-model';
 import type { Repository } from '../repository';
 import { handleAttack } from './attack';
+import { handleClose } from './close';
 import { handleDrop } from './drop';
 import { handleEmote } from './emote';
 import { handleEquip, handleUnequip } from './equip';
@@ -13,6 +14,7 @@ import { handleGive } from './give';
 import { handleInventory } from './inventory';
 import { handleLook } from './look';
 import { handleMove } from './move';
+import { handleOpen } from './open';
 import { handleRevealItem } from './reveal-item';
 import { handleSearch } from './search';
 import { handleSpeak } from './speak';
@@ -73,6 +75,10 @@ export async function dispatch(
       return handleEquip(action, repo);
     case ActionKind.Unequip:
       return handleUnequip(action, repo);
+    case ActionKind.Open:
+      return handleOpen(action, repo);
+    case ActionKind.Close:
+      return handleClose(action, repo);
     case ActionKind.RevealItem:
       return handleRevealItem(action, repo);
   }

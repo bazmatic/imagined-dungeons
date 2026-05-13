@@ -18,6 +18,7 @@ import type { Repository } from './repository';
 import {
   renderAgentSpawnedObserved,
   renderAgentStateUpdatedObserved,
+  renderCloseObserved,
   renderDescriptionUpdatedObserved,
   renderDropObserved,
   renderEquipObserved,
@@ -26,6 +27,7 @@ import {
   renderLook,
   renderLookObserved,
   renderMoveObserved,
+  renderOpenObserved,
   renderRevealObserved,
   renderTakeObserved,
   renderUnequipObserved,
@@ -213,6 +215,22 @@ async function renderWitnessForPlayer(
       try {
         const item = await repo.getItem(event.itemId);
         return renderRevealObserved(item);
+      } catch {
+        return null;
+      }
+    }
+    case EventKind.Open: {
+      try {
+        const item = await repo.getItem(event.itemId);
+        return renderOpenObserved(actor, item);
+      } catch {
+        return null;
+      }
+    }
+    case EventKind.Close: {
+      try {
+        const item = await repo.getItem(event.itemId);
+        return renderCloseObserved(actor, item);
       } catch {
         return null;
       }

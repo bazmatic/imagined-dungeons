@@ -62,6 +62,8 @@ export type DomainEvent =
     })
   | (BaseEvent & { kind: 'equip'; itemId: ItemId; manner: string })
   | (BaseEvent & { kind: 'unequip'; itemId: ItemId; manner: string })
+  | (BaseEvent & { kind: 'open'; itemId: ItemId; unlocked: boolean })
+  | (BaseEvent & { kind: 'close'; itemId: ItemId })
   | (BaseEvent & { kind: 'reveal'; itemId: ItemId; locationId: LocationId });
 
 export const NARRATED_EVENT_KINDS: ReadonlySet<EventKind> = new Set<EventKind>([
