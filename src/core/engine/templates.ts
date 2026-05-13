@@ -6,6 +6,11 @@ import type { PerceptionView } from './perception';
 
 const list = (items: readonly { label: string }[]): string => items.map((i) => i.label).join(', ');
 
+const labelWithPrice = (i: Item): string =>
+  i.priceTag === null ? i.label : `${i.label} (${i.priceTag}gp)`;
+
+const listInventory = (items: readonly Item[]): string => items.map(labelWithPrice).join(', ');
+
 export function renderLook(view: PerceptionView): string {
   const lines: string[] = [];
   lines.push(view.location.label);
@@ -123,6 +128,38 @@ export function renderCloseObserved(actor: Agent, item: Item): string {
   return `${actor.label} closes the ${item.label}.`;
 }
 
+export function renderTradeSelf(
+  _buyer: Agent,
+  seller: Agent,
+  item: Item,
+  price: number,
+  accepted: boolean,
+  narration: string,
+): string {
+  // The LLM-supplied narration is the seller's voice. Surface it directly;
+  // the structural fact ("you paid Ngp") is implicit in the gold update.
+  if (narration.length > 0) return narration;
+  return accepted
+    ? `${seller.label} accepts ${price} gold for the ${item.label}.`
+    : `${seller.label} refuses ${price} gold for the ${item.label}.`;
+}
+
+export function renderTradeObserved(
+  buyer: Agent,
+  seller: Agent,
+  item: Item,
+  price: number,
+  accepted: boolean,
+): string {
+  return accepted
+    ? `${buyer.label} buys the ${item.label} from ${seller.label} for ${price} gold.`
+    : `${seller.label} refuses ${price} gold from ${buyer.label} for the ${item.label}.`;
+}
+
+export function renderOfferSelf(item: Item, price: number): string {
+  return `You set the price of the ${item.label} at ${price} gold.`;
+}
+
 export function renderRevealObserved(item: Item): string {
   return `You spot ${item.label} you hadn't noticed before.`;
 }
@@ -132,8 +169,8 @@ export function renderInventory(items: readonly Item[]): string {
   const equipped = items.filter((i) => i.equipped);
   const carried = items.filter((i) => !i.equipped);
   const parts: string[] = [];
-  if (carried.length > 0) parts.push(`You are carrying: ${list(carried)}.`);
-  if (equipped.length > 0) parts.push(`Equipped: ${list(equipped)}.`);
+  if (carried.length > 0) parts.push(`You are carrying: ${listInventory(carried)}.`);
+  if (equipped.length > 0) parts.push(`Equipped: ${listInventory(equipped)}.`);
   return parts.join(' ');
 }
 

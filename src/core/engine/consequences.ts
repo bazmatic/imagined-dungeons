@@ -318,6 +318,19 @@ async function summarise(event: DomainEvent, repo: Repository): Promise<string> 
         return `${actor} closed a container`;
       }
     }
+    case EventKind.Trade: {
+      const buyerLabel = await labelOf(event.buyerId);
+      const sellerLabel = await labelOf(event.sellerId);
+      let itemLabel: string;
+      try {
+        itemLabel = (await repo.getItem(event.itemId)).label;
+      } catch {
+        itemLabel = event.itemId;
+      }
+      return event.accepted
+        ? `${buyerLabel} bought the ${itemLabel} from ${sellerLabel} for ${event.price} gold`
+        : `${sellerLabel} refused to sell the ${itemLabel} to ${buyerLabel} for ${event.price} gold`;
+    }
   }
 }
 

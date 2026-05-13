@@ -27,6 +27,9 @@ export type Action =
   | { kind: 'unequip'; actorId: AgentId; itemId: ItemId; manner: string }
   | { kind: 'open'; actorId: AgentId; itemId: ItemId }
   | { kind: 'close'; actorId: AgentId; itemId: ItemId }
+  | { kind: 'buy'; actorId: AgentId; sellerId: AgentId; itemId: ItemId }
+  | { kind: 'sell'; actorId: AgentId; buyerId: AgentId; itemId: ItemId }
+  | { kind: 'offer'; actorId: AgentId; itemId: ItemId; price: number }
   | { kind: 'reveal_item'; actorId: AgentId; itemId: ItemId }
   | {
       kind: 'update_description';

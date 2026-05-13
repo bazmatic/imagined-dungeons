@@ -64,6 +64,14 @@ export type DomainEvent =
   | (BaseEvent & { kind: 'unequip'; itemId: ItemId; manner: string })
   | (BaseEvent & { kind: 'open'; itemId: ItemId; unlocked: boolean })
   | (BaseEvent & { kind: 'close'; itemId: ItemId })
+  | (BaseEvent & {
+      kind: typeof EventKind.Trade;
+      buyerId: AgentId;
+      sellerId: AgentId;
+      itemId: ItemId;
+      price: number;
+      accepted: boolean;
+    })
   | (BaseEvent & { kind: 'reveal'; itemId: ItemId; locationId: LocationId });
 
 export const NARRATED_EVENT_KINDS: ReadonlySet<EventKind> = new Set<EventKind>([

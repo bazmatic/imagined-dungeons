@@ -30,6 +30,7 @@ import {
   renderOpenObserved,
   renderRevealObserved,
   renderTakeObserved,
+  renderTradeObserved,
   renderUnequipObserved,
 } from './templates';
 import { type DiscoveryBudget, runTurn } from './turn';
@@ -231,6 +232,16 @@ async function renderWitnessForPlayer(
       try {
         const item = await repo.getItem(event.itemId);
         return renderCloseObserved(actor, item);
+      } catch {
+        return null;
+      }
+    }
+    case EventKind.Trade: {
+      try {
+        const buyer = await repo.getAgent(event.buyerId);
+        const seller = await repo.getAgent(event.sellerId);
+        const item = await repo.getItem(event.itemId);
+        return renderTradeObserved(buyer, seller, item, event.price, event.accepted);
       } catch {
         return null;
       }

@@ -79,6 +79,12 @@ export async function dispatch(
       return handleOpen(action, repo);
     case ActionKind.Close:
       return handleClose(action, repo);
+    case ActionKind.Buy:
+      return Err('buy handler not yet wired');
+    case ActionKind.Sell:
+      return Err('sell handler not yet wired');
+    case ActionKind.Offer:
+      return Err('offer handler not yet wired');
     case ActionKind.RevealItem:
       return handleRevealItem(action, repo);
   }

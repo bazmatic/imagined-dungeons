@@ -153,6 +153,10 @@ function summariseEvent(event: DomainEvent): string {
         : `${event.actorId} opened ${event.itemId}`;
     case EventKind.Close:
       return `${event.actorId} closed ${event.itemId}`;
+    case EventKind.Trade:
+      return event.accepted
+        ? `${event.buyerId} bought ${event.itemId} from ${event.sellerId} for ${event.price} gold`
+        : `${event.sellerId} refused to sell ${event.itemId} to ${event.buyerId} for ${event.price} gold`;
   }
 }
 
