@@ -379,10 +379,13 @@ const asItemInput = (i: Item): UpsertItemInput => ({
   weight: i.weight,
   hidden: i.hidden,
   tags: i.tags,
-  container: i.container,
-  opened: i.opened,
-  locked: i.locked,
-  lockedByItem: i.lockedByItem,
+  // Default-coercion absorbs legacy snapshot blobs saved before the four
+  // container fields existed on Item. Old blobs have `i.container === undefined`;
+  // we need real booleans / null before handing to upsertItem.
+  container: typeof i.container === 'boolean' ? i.container : false,
+  opened: typeof i.opened === 'boolean' ? i.opened : true,
+  locked: typeof i.locked === 'boolean' ? i.locked : false,
+  lockedByItem: i.lockedByItem ?? null,
 });
 const asAgentInput = (a: Agent): UpsertAgentInput => ({
   id: a.id,
