@@ -33,6 +33,9 @@ const INTERPRETER_KINDS = [
   ActionKind.Unequip,
   ActionKind.Open,
   ActionKind.Close,
+  ActionKind.Buy,
+  ActionKind.Sell,
+  ActionKind.Offer,
 ] as const;
 const KINDS = [...INTERPRETER_KINDS, UnknownKind, ImpossibleKind] as const;
 type Kind = (typeof KINDS)[number];
@@ -69,6 +72,7 @@ export const PLAYER_ACTION_SCHEMA: JsonSchema = {
     'targetAgentRef',
     'utterance',
     'emoteDescription',
+    'price',
     'reason',
   ],
   properties: {
@@ -83,6 +87,7 @@ export const PLAYER_ACTION_SCHEMA: JsonSchema = {
     targetAgentRef: { type: ['string', 'null'] },
     utterance: { type: ['string', 'null'] },
     emoteDescription: { type: ['string', 'null'] },
+    price: { type: ['number', 'null'] },
     reason: { type: ['string', 'null'] },
   },
 };
@@ -134,6 +139,17 @@ export type ValidatedPlayerAction =
   | { readonly kind: 'unequip'; readonly itemRef: string; readonly manner: string }
   | { readonly kind: typeof ActionKind.Open; readonly itemRef: string }
   | { readonly kind: typeof ActionKind.Close; readonly itemRef: string }
+  | {
+      readonly kind: typeof ActionKind.Buy;
+      readonly itemRef: string;
+      readonly targetAgentRef: string;
+    }
+  | {
+      readonly kind: typeof ActionKind.Sell;
+      readonly itemRef: string;
+      readonly targetAgentRef: string;
+    }
+  | { readonly kind: typeof ActionKind.Offer; readonly itemRef: string; readonly price: number }
   | { readonly kind: 'unknown'; readonly reason: string }
   | { readonly kind: 'impossible'; readonly reason: string }
   | { readonly kind: 'invalid' };
@@ -266,6 +282,33 @@ export function validatePlayerAction(input: unknown): ValidatedPlayerAction {
       const itemRef = input.itemRef;
       if (typeof itemRef !== 'string' || itemRef.length === 0) return { kind: InvalidKind };
       return { kind: ActionKind.Close, itemRef };
+    }
+    case ActionKind.Buy: {
+      const itemRef = input.itemRef;
+      const targetAgentRef = input.targetAgentRef;
+      if (typeof itemRef !== 'string' || itemRef.length === 0) return { kind: InvalidKind };
+      if (typeof targetAgentRef !== 'string' || targetAgentRef.length === 0) {
+        return { kind: InvalidKind };
+      }
+      return { kind: ActionKind.Buy, itemRef, targetAgentRef };
+    }
+    case ActionKind.Sell: {
+      const itemRef = input.itemRef;
+      const targetAgentRef = input.targetAgentRef;
+      if (typeof itemRef !== 'string' || itemRef.length === 0) return { kind: InvalidKind };
+      if (typeof targetAgentRef !== 'string' || targetAgentRef.length === 0) {
+        return { kind: InvalidKind };
+      }
+      return { kind: ActionKind.Sell, itemRef, targetAgentRef };
+    }
+    case ActionKind.Offer: {
+      const itemRef = input.itemRef;
+      const price = input.price;
+      if (typeof itemRef !== 'string' || itemRef.length === 0) return { kind: InvalidKind };
+      if (typeof price !== 'number' || !Number.isInteger(price) || price <= 0) {
+        return { kind: InvalidKind };
+      }
+      return { kind: ActionKind.Offer, itemRef, price };
     }
     case UnknownKind: {
       const reason = input.reason;

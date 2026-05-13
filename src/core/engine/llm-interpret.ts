@@ -188,6 +188,40 @@ export async function llmInterpret(
       if (!r.ok) return null;
       return { kind: ActionKind.Close, actorId: actor.id, itemId: r.item.id };
     }
+    case ActionKind.Buy: {
+      const itemR = resolveItem(validated.itemRef, [...view.items, ...inventory]);
+      if (!itemR.ok) return null;
+      const sellerR = resolveAgent(validated.targetAgentRef, view.agents);
+      if (!sellerR.ok) return null;
+      return {
+        kind: ActionKind.Buy,
+        actorId: actor.id,
+        sellerId: sellerR.agent.id,
+        itemId: itemR.item.id,
+      };
+    }
+    case ActionKind.Sell: {
+      const itemR = resolveItem(validated.itemRef, inventory);
+      if (!itemR.ok) return null;
+      const buyerR = resolveAgent(validated.targetAgentRef, view.agents);
+      if (!buyerR.ok) return null;
+      return {
+        kind: ActionKind.Sell,
+        actorId: actor.id,
+        buyerId: buyerR.agent.id,
+        itemId: itemR.item.id,
+      };
+    }
+    case ActionKind.Offer: {
+      const itemR = resolveItem(validated.itemRef, inventory);
+      if (!itemR.ok) return null;
+      return {
+        kind: ActionKind.Offer,
+        actorId: actor.id,
+        itemId: itemR.item.id,
+        price: validated.price,
+      };
+    }
     case 'impossible':
       return { kind: ParseErrorKind.ImpossibleAction, reason: validated.reason };
     case 'unknown':
