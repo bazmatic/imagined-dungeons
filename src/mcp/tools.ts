@@ -33,6 +33,8 @@ import {
 } from '@core/domain/ids';
 import type { OwnerKind } from '@core/domain/kinds';
 
+import { AGENT_EXCLUDED_TOOL_NAMES } from './agent-excluded-tools';
+
 /**
  * The MCP tool surface. Each entry is a thin wrapper around a builder facade
  * function. The server (server.ts) registers these against an MCP server.
@@ -541,3 +543,7 @@ export const TOOLS: readonly ToolDef[] = [
 export const TOOL_BY_NAME: Record<string, ToolDef> = Object.fromEntries(
   TOOLS.map((t) => [t.name, t]),
 );
+
+export function toolsForAdminAgent(): readonly ToolDef[] {
+  return TOOLS.filter((t) => !AGENT_EXCLUDED_TOOL_NAMES.has(t.name));
+}
