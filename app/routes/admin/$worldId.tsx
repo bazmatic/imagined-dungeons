@@ -5,6 +5,7 @@ import { validate } from '~/server/admin/validate';
 import { getWorld, listWorlds, saveStartingState } from '~/server/admin/worlds';
 import { AdminShell } from './-components/AdminShell';
 import { Breadcrumbs } from './-components/Breadcrumbs';
+import { BuilderAssistantPanel } from './-components/BuilderAssistantPanel';
 import { useCategoryRouter } from './-components/CategoryRouter';
 import { CommandPalette } from './-components/CommandPalette';
 import { Fonts } from './-components/Fonts';
@@ -106,7 +107,11 @@ function AdminWorld() {
             current: t.summary.kind,
             siblingId,
             onSwitch: (id: string) => {
-              void navigate({ to: '/admin/$worldId', params: { worldId: id }, search: { cat: search.cat } });
+              void navigate({
+                to: '/admin/$worldId',
+                params: { worldId: id },
+                search: { cat: search.cat },
+              });
             },
           },
           onWorldSettings: openWorldSettings,
@@ -184,6 +189,9 @@ function AdminWorld() {
                 }
               />
               {showingSettings ? <WorldSettingsForm tree={t} onSaved={refresh} /> : detail}
+              {isDraft ? (
+                <BuilderAssistantPanel worldId={t.summary.id as string} onApplied={refresh} />
+              ) : null}
             </div>
           </section>
         </div>
