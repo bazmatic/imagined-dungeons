@@ -62,6 +62,7 @@ describe('lore + generative discovery — end-to-end', () => {
       mood: null,
       goal: null,
       autonomous: false,
+      gold: 0,
       tags: [],
     });
     if (!ag.ok) throw new Error(ag.error.message);
@@ -103,6 +104,7 @@ describe('lore + generative discovery — end-to-end', () => {
       opened: true,
       locked: false,
       lockedByItem: null,
+      priceTag: null,
     };
 
     const responder = (_req: LanguageModelRequest): LanguageModelResponse => {

@@ -67,6 +67,12 @@ export interface Item {
   readonly locked: boolean;
   /** The item-id whose presence in the actor's inventory auto-unlocks this container. */
   readonly lockedByItem: ItemId | null;
+  /**
+   * If non-null and > 0, the item is for sale at this many gold by
+   * whoever currently owns it. Cleared to null when the item changes
+   * hands via a Trade event (the new owner must re-`offer` to resell).
+   */
+  readonly priceTag: number | null;
 }
 
 export interface Agent {
@@ -97,5 +103,10 @@ export interface Agent {
    * the agent has finished what they were drawn into.
    */
   readonly awake: boolean;
+  /**
+   * Currency balance. Authored as the starting balance; mutated at runtime
+   * by buy/sell. Always non-negative.
+   */
+  readonly gold: number;
   readonly tags: readonly string[];
 }

@@ -30,6 +30,7 @@ beforeEach(async () => {
     goal: null,
     autonomous: false,
     awake: false,
+    gold: 0,
   });
   await handle.db.insert(schema.items).values({
     id: 'item_map',

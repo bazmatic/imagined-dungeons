@@ -37,6 +37,7 @@ const spark: Agent = {
   goal: 'Map out all safe routes in the district',
   autonomous: true,
   awake: true,
+  gold: 0,
   tags: [],
 };
 
@@ -56,6 +57,7 @@ const paff: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  gold: 0,
   tags: [],
 };
 

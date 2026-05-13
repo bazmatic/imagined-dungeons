@@ -77,6 +77,7 @@ async function ensureSystemAgent(db: DB, worldId: WorldId): Promise<void> {
     goal: 'Referee for the game',
     autonomous: false,
     awake: false,
+    gold: 0,
   });
 }
 
@@ -153,6 +154,7 @@ async function writeStartingStateSnapshot(
     goal: a.goal ?? null,
     autonomous: a.autonomous,
     awake: false,
+    gold: 0,
     tags: [],
   }));
   const blob = {

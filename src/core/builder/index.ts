@@ -411,6 +411,7 @@ const asItemInput = (i: Item): UpsertItemInput => ({
   opened: typeof i.opened === 'boolean' ? i.opened : true,
   locked: typeof i.locked === 'boolean' ? i.locked : false,
   lockedByItem: i.lockedByItem ?? null,
+  priceTag: typeof i.priceTag === 'number' ? i.priceTag : null,
 });
 const asAgentInput = (a: Agent): UpsertAgentInput => ({
   id: a.id,
@@ -425,6 +426,7 @@ const asAgentInput = (a: Agent): UpsertAgentInput => ({
   mood: a.mood,
   goal: a.goal,
   autonomous: a.autonomous,
+  gold: typeof a.gold === 'number' ? a.gold : 0,
   tags: a.tags,
 });
 const asTemplateInput = (t: MonsterTemplate): UpsertMonsterTemplateInput => ({

@@ -82,6 +82,9 @@ export const items = sqliteTable(
     locked: integer('locked', { mode: 'boolean' }).notNull().default(false),
     // The item-id whose presence in the actor's inventory auto-unlocks this container.
     lockedByItemId: text('locked_by_item_id'),
+    // Authored asking price (nullable). When non-null and > 0 the item is for
+    // sale at this many gold; the engine clears it on Trade-event handover.
+    priceTag: integer('price_tag'),
   },
   (t) => [primaryKey({ columns: [t.worldId, t.id] })],
 );
@@ -106,6 +109,7 @@ export const agents = sqliteTable(
     goal: text('goal'),
     autonomous: integer('autonomous', { mode: 'boolean' }).notNull(),
     awake: integer('awake', { mode: 'boolean' }).notNull(),
+    gold: integer('gold').notNull().default(0),
     tags: text('tags').notNull().default('[]'),
   },
   (t) => [primaryKey({ columns: [t.worldId, t.id] })],

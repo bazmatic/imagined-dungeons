@@ -26,6 +26,7 @@ const lantern: Item = {
   opened: true,
   locked: false,
   lockedByItem: null,
+  priceTag: null,
 };
 
 const guard: Agent = {
@@ -44,6 +45,7 @@ const guard: Agent = {
   goal: null,
   autonomous: false,
   awake: true,
+  gold: 0,
   tags: [],
 };
 
@@ -127,6 +129,7 @@ describe('runDiscovery', () => {
       mood: 'wary',
       goal: null,
       autonomous: false,
+      gold: 0,
       tags: [],
     };
     const llm = makeFakeLanguageModel({

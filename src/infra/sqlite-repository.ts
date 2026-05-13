@@ -58,6 +58,7 @@ const toAgent = (r: typeof schema.agents.$inferSelect, worldId: WorldId): Agent 
   goal: r.goal,
   autonomous: r.autonomous,
   awake: r.awake,
+  gold: r.gold,
   tags: [],
 });
 
@@ -76,6 +77,7 @@ const toItem = (r: typeof schema.items.$inferSelect, worldId: WorldId): Item => 
   opened: r.opened,
   locked: r.locked,
   lockedByItem: r.lockedByItemId === null ? null : asItemId(r.lockedByItemId),
+  priceTag: r.priceTag,
 });
 
 const toExit = (r: typeof schema.exits.$inferSelect, worldId: WorldId): Exit => ({

@@ -101,6 +101,7 @@ const SPAWNED_AGENT_SCHEMA: JsonSchema = {
     'mood',
     'goal',
     'autonomous',
+    'gold',
     'tags',
   ],
   properties: {
@@ -116,6 +117,7 @@ const SPAWNED_AGENT_SCHEMA: JsonSchema = {
     mood: { type: ['string', 'null'] },
     goal: { type: ['string', 'null'] },
     autonomous: { type: 'boolean' },
+    gold: { type: 'number' },
     tags: { type: 'array', items: { type: 'string' } },
   },
 };

@@ -78,6 +78,7 @@ describe('resolveOwnerSubtitle', () => {
       autonomous: false,
       shortTermIntent: null,
       awake: false,
+      gold: 0,
       tags: [],
     },
   ];
@@ -97,6 +98,7 @@ describe('resolveOwnerSubtitle', () => {
       opened: true,
       locked: false,
       lockedByItem: null,
+      priceTag: null,
     },
   ];
 

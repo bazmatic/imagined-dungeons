@@ -66,6 +66,7 @@ describe('collectLoreTags', () => {
           opened: true,
           locked: false,
           lockedByItem: null,
+          priceTag: null,
         },
       ],
       agents: [
@@ -85,6 +86,7 @@ describe('collectLoreTags', () => {
           autonomous: false,
           shortTermIntent: null,
           awake: false,
+          gold: 0,
           tags: ['cult'],
         },
       ],

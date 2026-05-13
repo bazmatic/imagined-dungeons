@@ -32,6 +32,7 @@ export function expandSpawn(args: {
       mood: args.template.mood,
       goal: null,
       autonomous: false,
+      gold: 0,
       tags: [...args.template.tags],
     });
   }

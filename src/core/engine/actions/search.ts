@@ -79,6 +79,7 @@ function coerceSpawnedItem(raw: unknown): UpsertItemInput | null {
     opened: typeof raw.opened === 'boolean' ? raw.opened : true,
     locked: typeof raw.locked === 'boolean' ? raw.locked : false,
     lockedByItem: null,
+    priceTag: typeof raw.priceTag === 'number' ? raw.priceTag : null,
   };
 }
 
@@ -111,6 +112,7 @@ function coerceSpawnedAgent(raw: unknown): UpsertAgentInput | null {
     mood: isString(raw.mood) ? raw.mood : null,
     goal: isString(raw.goal) ? raw.goal : null,
     autonomous: typeof raw.autonomous === 'boolean' ? raw.autonomous : false,
+    gold: typeof raw.gold === 'number' ? raw.gold : 0,
     tags,
   };
 }

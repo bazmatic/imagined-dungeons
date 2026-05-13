@@ -41,6 +41,7 @@ const player: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  gold: 0,
   tags: [],
 };
 
@@ -60,6 +61,7 @@ const spark: Agent = {
   goal: null,
   autonomous: true,
   awake: true,
+  gold: 0,
   tags: [],
 };
 
@@ -79,6 +81,7 @@ const paff: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  gold: 0,
   tags: [],
 };
 
@@ -97,6 +100,7 @@ const map: Item = {
   opened: true,
   locked: false,
   lockedByItem: null,
+  priceTag: null,
 };
 
 const hidden: Item = {
@@ -114,6 +118,7 @@ const hidden: Item = {
   opened: true,
   locked: false,
   lockedByItem: null,
+  priceTag: null,
 };
 
 const exitN: Exit = {

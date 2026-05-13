@@ -73,6 +73,7 @@ describe('spawning end-to-end (tick pass)', () => {
       mood: null,
       goal: null,
       autonomous: false,
+      gold: 0,
       tags: [],
     });
 
@@ -177,6 +178,7 @@ describe('spawning end-to-end (tick pass)', () => {
       mood: null,
       goal: null,
       autonomous: false,
+      gold: 0,
       tags: [],
     });
     await builderRepo.updateWorldSummary(W, { playerAgentId: PLAYER });

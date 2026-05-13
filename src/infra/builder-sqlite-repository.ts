@@ -191,6 +191,7 @@ export class SqliteBuilderRepository implements BuilderRepository {
         opened: i.opened,
         locked: i.locked,
         lockedByItemId: i.lockedByItem,
+        priceTag: i.priceTag,
       })
       .onConflictDoUpdate({
         target: [schema.items.worldId, schema.items.id],
@@ -207,6 +208,7 @@ export class SqliteBuilderRepository implements BuilderRepository {
           opened: i.opened,
           locked: i.locked,
           lockedByItemId: i.lockedByItem,
+          priceTag: i.priceTag,
         },
       });
   }
@@ -232,6 +234,7 @@ export class SqliteBuilderRepository implements BuilderRepository {
         goal: i.goal,
         autonomous: i.autonomous,
         awake: false,
+        gold: i.gold,
         tags: JSON.stringify(i.tags),
       })
       .onConflictDoUpdate({
@@ -246,6 +249,7 @@ export class SqliteBuilderRepository implements BuilderRepository {
           capacity: i.capacity,
           goal: i.goal,
           autonomous: i.autonomous,
+          gold: i.gold,
         },
       });
   }
@@ -599,6 +603,7 @@ const toItem = (r: typeof schema.items.$inferSelect, w: WorldId): Item => ({
   opened: r.opened,
   locked: r.locked,
   lockedByItem: r.lockedByItemId === null ? null : asItemId(r.lockedByItemId),
+  priceTag: r.priceTag,
 });
 
 const toAgent = (r: typeof schema.agents.$inferSelect, w: WorldId): Agent => ({
@@ -617,6 +622,7 @@ const toAgent = (r: typeof schema.agents.$inferSelect, w: WorldId): Agent => ({
   goal: r.goal,
   autonomous: r.autonomous,
   awake: r.awake,
+  gold: r.gold,
   tags: parseTagsJson(r.tags),
 });
 

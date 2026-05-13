@@ -54,6 +54,7 @@ const map: Item = {
   opened: true,
   locked: false,
   lockedByItem: null,
+  priceTag: null,
 };
 const paff: Agent = {
   id: asAgentId('char_p'),
@@ -71,6 +72,7 @@ const paff: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  gold: 0,
   tags: [],
 };
 
@@ -183,6 +185,7 @@ describe('runTurn with narrated events', () => {
     goal: 'observe',
     autonomous: false,
     awake: false,
+    gold: 0,
     tags: [],
   };
 

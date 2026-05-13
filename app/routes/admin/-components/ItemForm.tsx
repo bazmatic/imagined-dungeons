@@ -41,6 +41,7 @@ export function ItemForm({ tree, itemId, problemCount, onSaved, onDeleted }: Ite
           opened: item.opened,
           locked: item.locked,
           lockedByItem: (item.lockedByItem as string | null) ?? null,
+          priceTag: item.priceTag,
         }
       : null,
   );
@@ -76,6 +77,7 @@ export function ItemForm({ tree, itemId, problemCount, onSaved, onDeleted }: Ite
             opened: v.opened,
             locked: v.locked,
             lockedByItem: v.locked ? v.lockedByItem : null,
+            priceTag: v.priceTag,
           },
         },
       });

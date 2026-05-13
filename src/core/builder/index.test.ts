@@ -128,6 +128,7 @@ describe('builder facade — simple ops', () => {
       mood: null,
       goal: null,
       autonomous: false,
+      gold: 0,
       tags: [],
     });
     expect(r.ok).toBe(false);
@@ -182,6 +183,7 @@ const seedMinimalScratch = async (repo: MemoryBuilderRepository) => {
     mood: null,
     goal: null,
     autonomous: false,
+    gold: 0,
     tags: [],
   });
   await repo.updateWorldSummary(W, { playerAgentId: asAgentId('char_p') });
@@ -424,6 +426,7 @@ describe('upsertItem — owner-chain cycle rejection', () => {
     opened: false,
     locked: false,
     lockedByItem: null,
+    priceTag: null,
   });
 
   it('rejects an item whose owner chain forms a cycle', async () => {
@@ -457,6 +460,7 @@ describe('upsertItem — owner-chain cycle rejection', () => {
       opened: true,
       locked: false,
       lockedByItem: null,
+      priceTag: null,
     });
     if (!r2.ok) throw new Error('seed key');
     // now try to re-parent box under key → box → key → box cycle
@@ -474,6 +478,7 @@ describe('upsertItem — owner-chain cycle rejection', () => {
       opened: false,
       locked: false,
       lockedByItem: null,
+      priceTag: null,
     });
     if (r.ok) throw new Error('expected cycle rejection');
     expect(r.error.kind).toBe(BuilderErrorKind.ItemOwnerCycle);
@@ -507,6 +512,7 @@ describe('upsertItem — owner-chain cycle rejection', () => {
       opened: false,
       locked: false,
       lockedByItem: null,
+      priceTag: null,
     });
     if (r.ok) throw new Error('expected self-cycle rejection');
     expect(r.error.kind).toBe(BuilderErrorKind.ItemOwnerCycle);

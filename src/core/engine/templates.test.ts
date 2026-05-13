@@ -43,6 +43,7 @@ const itemA: Item = {
   opened: true,
   locked: false,
   lockedByItem: null,
+  priceTag: null,
 };
 
 const npc: Agent = {
@@ -61,6 +62,7 @@ const npc: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  gold: 0,
   tags: [],
 };
 
@@ -193,6 +195,7 @@ describe('renderEmoteMechanical', () => {
     goal: null,
     autonomous: false,
     awake: false,
+    gold: 0,
     tags: [],
   };
   const spark: Agent = {
@@ -211,6 +214,7 @@ describe('renderEmoteMechanical', () => {
     goal: null,
     autonomous: false,
     awake: false,
+    gold: 0,
     tags: [],
   };
   const ember: Agent = {
@@ -229,6 +233,7 @@ describe('renderEmoteMechanical', () => {
     goal: null,
     autonomous: false,
     awake: false,
+    gold: 0,
     tags: [],
   };
   const evWith = (

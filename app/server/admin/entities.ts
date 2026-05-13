@@ -78,6 +78,7 @@ export const saveEntity = createServerFn({ method: 'POST' })
           typeof p.lockedByItem === 'string' && p.lockedByItem.length > 0
             ? asItemId(p.lockedByItem)
             : null,
+        priceTag: typeof p.priceTag === 'number' ? p.priceTag : null,
       });
     }
     return upsertAgentCore(repo, W, {
@@ -93,6 +94,7 @@ export const saveEntity = createServerFn({ method: 'POST' })
       mood: (p.mood as string | null) ?? null,
       goal: (p.goal as string | null) ?? null,
       autonomous: Boolean(p.autonomous),
+      gold: typeof p.gold === 'number' ? p.gold : 0,
       tags: Array.isArray(p.tags) ? (p.tags as string[]) : [],
     });
   });

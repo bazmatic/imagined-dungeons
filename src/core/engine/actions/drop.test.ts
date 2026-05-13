@@ -31,6 +31,7 @@ const paff: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  gold: 0,
   tags: [],
 };
 const heldMap: Item = {
@@ -48,6 +49,7 @@ const heldMap: Item = {
   opened: true,
   locked: false,
   lockedByItem: null,
+  priceTag: null,
 };
 
 describe('handleDrop', () => {

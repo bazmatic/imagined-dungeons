@@ -31,6 +31,7 @@ const agent = (id: string, label: string, locId: string): Agent => ({
   goal: null,
   autonomous: false,
   awake: false,
+  gold: 0,
   tags: [],
 });
 
@@ -57,6 +58,7 @@ const item = (
   opened: true,
   locked: false,
   lockedByItem: null,
+  priceTag: null,
 });
 
 describe('MemoryRepository', () => {

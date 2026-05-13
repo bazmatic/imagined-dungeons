@@ -43,6 +43,7 @@ const mkAgent = (id: AgentId, opts: Partial<Agent>): Agent => ({
   goal: null,
   autonomous: false,
   awake: false,
+  gold: 0,
   tags: [],
   ...opts,
 });
@@ -67,6 +68,7 @@ describe('scheduleNpcs', () => {
     const there_npc = mkAgent(asAgentId('char_there'), {
       autonomous: true,
       awake: true,
+      gold: 0,
       locationId: ELSEWHERE,
     });
     const repo = new MemoryRepository(W, {

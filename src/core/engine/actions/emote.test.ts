@@ -41,6 +41,7 @@ const paff: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  gold: 0,
   tags: [],
 };
 const spark: Agent = {
@@ -59,6 +60,7 @@ const spark: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  gold: 0,
   tags: [],
 };
 

@@ -65,6 +65,7 @@ const baseTree = (): WorldTree => ({
       goal: null,
       autonomous: false,
       awake: false,
+      gold: 0,
       tags: [],
     },
   ],
@@ -172,6 +173,7 @@ describe('validateWorld', () => {
           opened: true,
           locked: false,
           lockedByItem: null,
+          priceTag: null,
         },
       ],
     };

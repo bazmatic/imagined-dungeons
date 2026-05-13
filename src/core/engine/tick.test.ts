@@ -68,6 +68,7 @@ const player: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  gold: 0,
   tags: [],
 };
 
@@ -87,6 +88,7 @@ const spark: Agent = {
   goal: 'Explore',
   autonomous: true,
   awake: true,
+  gold: 0,
   tags: [],
 };
 
@@ -106,6 +108,7 @@ const ember: Agent = {
   goal: 'Spread chaos',
   autonomous: true,
   awake: true,
+  gold: 0,
   tags: [],
 };
 
@@ -215,6 +218,7 @@ describe('runTick', () => {
       opened: true,
       locked: false,
       lockedByItem: null,
+      priceTag: null,
     };
     const sys: Agent = {
       id: SYSTEM_AGENT_ID,
@@ -232,6 +236,7 @@ describe('runTick', () => {
       goal: null,
       autonomous: false,
       awake: false,
+      gold: 0,
       tags: [],
     };
     const repo = makeWorld([player, sys], [lantern]);

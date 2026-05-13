@@ -36,6 +36,7 @@ const player: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  gold: 0,
   tags: [],
 };
 
@@ -55,6 +56,7 @@ const dormantSerena: Agent = {
   goal: 'Return to the sea',
   autonomous: false,
   awake: false,
+  gold: 0,
   tags: [],
 };
 

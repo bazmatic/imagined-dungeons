@@ -77,6 +77,7 @@ describe('SqliteBuilderRepository (via builder facade)', () => {
       opened: true,
       locked: false,
       lockedByItem: null,
+      priceTag: null,
     });
     await upsertAgent(repo, scratch, {
       id: asAgentId('char_serena'),
@@ -91,6 +92,7 @@ describe('SqliteBuilderRepository (via builder facade)', () => {
       mood: null,
       goal: null,
       autonomous: false,
+      gold: 0,
       tags: [],
     });
     await repo.updateWorldSummary(scratch, { playerAgentId: asAgentId('char_serena') });
@@ -135,6 +137,7 @@ describe('SqliteBuilderRepository (via builder facade)', () => {
       mood: null,
       goal: null,
       autonomous: false,
+      gold: 0,
       tags: [],
     });
     await repo.updateWorldSummary(scratch, { playerAgentId: asAgentId('char_p') });

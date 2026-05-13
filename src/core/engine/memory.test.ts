@@ -37,6 +37,7 @@ const mkAgent = (id: AgentId): Agent => ({
   goal: null,
   autonomous: false,
   awake: false,
+  gold: 0,
   tags: [],
 });
 

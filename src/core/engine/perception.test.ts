@@ -35,6 +35,7 @@ const agent = (id: string, locId: string): Agent => ({
   goal: null,
   autonomous: false,
   awake: false,
+  gold: 0,
   tags: [],
 });
 
@@ -53,6 +54,7 @@ const item = (id: string, ownerLoc: string, hidden = false): Item => ({
   opened: true,
   locked: false,
   lockedByItem: null,
+  priceTag: null,
 });
 
 const exit: Exit = {
@@ -121,6 +123,7 @@ describe('perceive — container chain', () => {
     goal: null,
     autonomous: false,
     awake: false,
+    gold: 0,
     tags: [],
   };
   const closedBox: Item = {
@@ -138,6 +141,7 @@ describe('perceive — container chain', () => {
     opened: false,
     locked: false,
     lockedByItem: null,
+    priceTag: null,
   };
   const keyInBox: Item = {
     id: KEY,
@@ -154,6 +158,7 @@ describe('perceive — container chain', () => {
     opened: true,
     locked: false,
     lockedByItem: null,
+    priceTag: null,
   };
 
   it('hides items inside a closed container', async () => {

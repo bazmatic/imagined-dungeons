@@ -185,6 +185,7 @@ export const TOOLS: readonly ToolDef[] = [
         ownerId: stringField('owner id'),
         weight: { type: 'number' },
         hidden: { type: 'boolean' },
+        priceTag: { type: ['number', 'null'] },
         tags: tagsField,
       },
       required: [
@@ -217,6 +218,7 @@ export const TOOLS: readonly ToolDef[] = [
           typeof a.lockedByItem === 'string' && a.lockedByItem.length > 0
             ? asItemId(a.lockedByItem)
             : null,
+        priceTag: typeof a.priceTag === 'number' ? a.priceTag : null,
       }),
   },
   {
@@ -238,6 +240,7 @@ export const TOOLS: readonly ToolDef[] = [
         mood: { type: ['string', 'null'] },
         goal: { type: ['string', 'null'] },
         autonomous: { type: 'boolean' },
+        gold: { type: 'number' },
         tags: tagsField,
       },
       required: [
@@ -268,6 +271,7 @@ export const TOOLS: readonly ToolDef[] = [
         mood: (a.mood as string | null) ?? null,
         goal: (a.goal as string | null) ?? null,
         autonomous: Boolean(a.autonomous),
+        gold: typeof a.gold === 'number' ? a.gold : 0,
         tags: readTags(a),
       }),
   },

@@ -61,6 +61,7 @@ const paff: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  gold: 0,
   tags: [],
 };
 
@@ -122,6 +123,7 @@ describe('handleMove', () => {
       opened: true,
       locked: false,
       lockedByItem: null,
+      priceTag: null,
     };
     const repo = new MemoryRepository(W, {
       locations: [locA, locB],

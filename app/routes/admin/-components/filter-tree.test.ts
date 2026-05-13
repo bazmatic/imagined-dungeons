@@ -72,6 +72,7 @@ function makeTree(): WorldTree {
         opened: true,
         locked: false,
         lockedByItem: null,
+        priceTag: null,
       },
     ],
     agents: [
@@ -91,6 +92,7 @@ function makeTree(): WorldTree {
         goal: null,
         autonomous: false,
         awake: false,
+        gold: 0,
         tags: [],
       },
     ],

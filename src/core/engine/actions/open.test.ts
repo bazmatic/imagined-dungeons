@@ -36,6 +36,7 @@ const actor: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  gold: 0,
   tags: [],
 };
 const baseItem = {
@@ -56,6 +57,7 @@ const closedBox: Item = {
   opened: false,
   locked: false,
   lockedByItem: null,
+  priceTag: null,
 };
 const keyInBox: Item = {
   ...baseItem,
@@ -66,6 +68,7 @@ const keyInBox: Item = {
   opened: true,
   locked: false,
   lockedByItem: null,
+  priceTag: null,
 };
 const heldKey: Item = { ...keyInBox, owner: { kind: OwnerKind.Agent, id: ACTOR } };
 const sword: Item = {
@@ -77,6 +80,7 @@ const sword: Item = {
   opened: true,
   locked: false,
   lockedByItem: null,
+  priceTag: null,
 };
 
 describe('handleOpen', () => {

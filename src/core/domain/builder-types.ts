@@ -265,6 +265,7 @@ export interface UpsertItemInput {
   readonly locked: boolean;
   /** The item-id whose presence in the actor's inventory auto-unlocks this container. */
   readonly lockedByItem: ItemId | null;
+  readonly priceTag: number | null;
 }
 
 export interface UpsertAgentInput {
@@ -280,6 +281,7 @@ export interface UpsertAgentInput {
   readonly mood: string | null;
   readonly goal: string | null;
   readonly autonomous: boolean;
+  readonly gold: number;
   readonly tags: readonly string[];
 }
 

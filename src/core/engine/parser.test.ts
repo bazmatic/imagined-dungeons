@@ -22,6 +22,7 @@ const ACTOR: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  gold: 0,
   tags: [],
 };
 const LOC: Location = {
@@ -48,6 +49,7 @@ const map: Item = {
   opened: true,
   locked: false,
   lockedByItem: null,
+  priceTag: null,
 };
 const rustyKey: Item = {
   id: asItemId('item_rusty'),
@@ -64,6 +66,7 @@ const rustyKey: Item = {
   opened: true,
   locked: false,
   lockedByItem: null,
+  priceTag: null,
 };
 const silverKey: Item = {
   id: asItemId('item_silver'),
@@ -80,6 +83,7 @@ const silverKey: Item = {
   opened: true,
   locked: false,
   lockedByItem: null,
+  priceTag: null,
 };
 const containerBox: Item = {
   id: asItemId('item_box'),
@@ -96,6 +100,7 @@ const containerBox: Item = {
   opened: false,
   locked: false,
   lockedByItem: null,
+  priceTag: null,
 };
 const exitN: Exit = {
   id: asExitId('e'),
@@ -124,6 +129,7 @@ const spark: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  gold: 0,
   tags: [],
 };
 const ember: Agent = {
@@ -142,6 +148,7 @@ const ember: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  gold: 0,
   tags: [],
 };
 
@@ -415,6 +422,7 @@ describe('parse', () => {
       goal: null,
       autonomous: false,
       awake: false,
+      gold: 0,
       tags: [],
     };
     const speakerView: PerceptionView = {

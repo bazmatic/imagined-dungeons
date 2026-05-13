@@ -92,6 +92,13 @@
       "when": 1778600000000,
       "tag": "0012_item_container",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1778700000000,
+      "tag": "0013_currency",
+      "breakpoints": true
     }
   ]
 }

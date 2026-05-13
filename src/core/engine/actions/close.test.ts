@@ -34,6 +34,7 @@ const actor: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  gold: 0,
   tags: [],
 };
 const baseItem = {
@@ -54,6 +55,7 @@ const openedBox: Item = {
   opened: true,
   locked: false,
   lockedByItem: null,
+  priceTag: null,
 };
 const sword: Item = {
   ...baseItem,
@@ -64,6 +66,7 @@ const sword: Item = {
   opened: true,
   locked: false,
   lockedByItem: null,
+  priceTag: null,
 };
 
 describe('handleClose', () => {

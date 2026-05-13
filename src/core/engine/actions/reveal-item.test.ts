@@ -32,6 +32,7 @@ const paff: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  gold: 0,
   tags: [],
 };
 const hiddenBox: Item = {
@@ -49,6 +50,7 @@ const hiddenBox: Item = {
   opened: true,
   locked: false,
   lockedByItem: null,
+  priceTag: null,
 };
 
 describe('handleRevealItem', () => {

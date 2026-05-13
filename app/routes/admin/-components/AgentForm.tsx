@@ -35,6 +35,7 @@ export function AgentForm({ tree, agentId, problemCount, onSaved, onDeleted }: A
           mood: ag.mood ?? '',
           goal: ag.goal ?? '',
           autonomous: ag.autonomous,
+          gold: ag.gold,
           tags: ag.tags,
         }
       : null,
@@ -69,6 +70,7 @@ export function AgentForm({ tree, agentId, problemCount, onSaved, onDeleted }: A
             mood: v.mood === '' ? null : v.mood,
             goal: v.goal === '' ? null : v.goal,
             autonomous: v.autonomous,
+            gold: v.gold,
             tags: v.tags,
           },
         },

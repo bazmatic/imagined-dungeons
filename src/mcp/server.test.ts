@@ -248,6 +248,7 @@ describe('MCP tool surface', () => {
       defense: 0,
       capacity: 0,
       autonomous: false,
+      gold: 0,
       tags: ['vermin'],
     });
     await upsertTemplateTool.run(repo, {

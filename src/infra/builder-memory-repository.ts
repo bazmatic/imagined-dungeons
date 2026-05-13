@@ -156,6 +156,7 @@ export class MemoryBuilderRepository implements BuilderRepository {
       opened: i.opened,
       locked: i.locked,
       lockedByItem: i.lockedByItem,
+      priceTag: i.priceTag ?? null,
     });
   }
   async upsertAgent(w: WorldId, i: UpsertAgentInput) {
@@ -176,6 +177,7 @@ export class MemoryBuilderRepository implements BuilderRepository {
       goal: i.goal,
       autonomous: i.autonomous,
       awake: existing ? existing.awake : false,
+      gold: i.gold ?? 0,
       tags: [...i.tags],
     });
   }

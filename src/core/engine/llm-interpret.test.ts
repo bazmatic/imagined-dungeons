@@ -32,6 +32,7 @@ const paff: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  gold: 0,
   tags: [],
 };
 const map: Item = {
@@ -49,6 +50,7 @@ const map: Item = {
   opened: true,
   locked: false,
   lockedByItem: null,
+  priceTag: null,
 };
 const spark: Agent = {
   id: asAgentId('char_spark'),
@@ -66,6 +68,7 @@ const spark: Agent = {
   goal: null,
   autonomous: false,
   awake: false,
+  gold: 0,
   tags: [],
 };
 
