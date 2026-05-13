@@ -20,10 +20,6 @@ const ITEMS: ReadonlyArray<{
 export function SideNav({ active, onSelect, onCreateNew }: SideNavProps) {
   return (
     <aside className="side-nav">
-      <div className="side-nav__brand">
-        <div className="side-nav__brand-name">Imagined Builder</div>
-        <div className="side-nav__brand-version">BETA</div>
-      </div>
       <ul className="side-nav__list">
         {ITEMS.map((item) => (
           <li key={item.key}>
@@ -39,8 +35,13 @@ export function SideNav({ active, onSelect, onCreateNew }: SideNavProps) {
       </ul>
       <div className="side-nav__footer">
         {onCreateNew ? (
-          <button type="button" className="side-nav__cta" onClick={onCreateNew}>
-            Create new entity
+          <button
+            type="button"
+            className="side-nav__cta"
+            onClick={onCreateNew}
+            title="Quick find (⌘K)"
+          >
+            Quick find <span className="side-nav__cta-kbd">⌘K</span>
           </button>
         ) : null}
       </div>

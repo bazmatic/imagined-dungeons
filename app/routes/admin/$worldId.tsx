@@ -2,7 +2,7 @@ import { EntityKind, WorldKind } from '@core/domain/builder-kinds';
 import { createFileRoute, useRouter } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { validate } from '~/server/admin/validate';
-import { getWorld } from '~/server/admin/worlds';
+import { getWorld, listWorlds, saveStartingState } from '~/server/admin/worlds';
 import { AdminShell } from './-components/AdminShell';
 import { Breadcrumbs } from './-components/Breadcrumbs';
 import { useCategoryRouter } from './-components/CategoryRouter';
@@ -18,12 +18,13 @@ export const Route = createFileRoute('/admin/$worldId')({
   loader: async ({ params }) => {
     const tree = await getWorld({ data: { id: params.worldId } });
     const v = await validate({ data: { id: params.worldId } });
-    return { tree, problems: v.ok ? v.value : [] };
+    const worlds = await listWorlds();
+    return { tree, problems: v.ok ? v.value : [], worlds };
   },
 });
 
 function AdminWorld() {
-  const { tree, problems } = Route.useLoaderData();
+  const { tree, problems, worlds } = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
   const router = useRouter();
@@ -88,6 +89,11 @@ function AdminWorld() {
 
   const showingSettings = search.view === 'settings';
 
+  const sibling = isDraft
+    ? worlds.find((w) => w.kind === WorldKind.Live && w.parentDraftId === t.summary.id)
+    : worlds.find((w) => w.id === t.summary.parentDraftId);
+  const siblingId = sibling ? (sibling.id as string) : null;
+
   return (
     <div className="admin-root">
       <Fonts />
@@ -95,19 +101,50 @@ function AdminWorld() {
         route="detail"
         topBar={{
           activeTab: isDraft ? 'draft' : 'live',
-          showDraftChip: isDraft,
-          onSearch: () => setPaletteOpen(true),
-          onPaletteOpen: () => setPaletteOpen(true),
+          worldName: t.summary.displayName || t.summary.label,
+          versionSwitcher: {
+            current: t.summary.kind,
+            siblingId,
+            onSwitch: (id: string) => {
+              void navigate({ to: '/admin/$worldId', params: { worldId: id }, search: { cat: search.cat } });
+            },
+          },
           onWorldSettings: openWorldSettings,
           extra: (
-            <button
-              type="button"
-              className="btn"
-              onClick={() => setProblemsOpen((p) => !p)}
-              title="Problems"
-            >
-              ⚑ {problems.length}
-            </button>
+            <>
+              {isDraft ? (
+                <button
+                  type="button"
+                  className="btn btn--primary"
+                  title="Save the current seed state as the starting snapshot"
+                  onClick={async () => {
+                    if (
+                      !confirm(
+                        'Save current seed state as the starting snapshot?\n\n' +
+                          'This becomes what Reset rewinds the live world to.',
+                      )
+                    )
+                      return;
+                    const r = await saveStartingState({ data: { id: t.summary.id as string } });
+                    if (!r.ok) {
+                      alert(`Save failed: ${r.error.message}`);
+                      return;
+                    }
+                    await refresh();
+                  }}
+                >
+                  Save Seed
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setProblemsOpen((p) => !p)}
+                title="Problems"
+              >
+                ⚑ {problems.length}
+              </button>
+            </>
           ),
         }}
         sideNav={{

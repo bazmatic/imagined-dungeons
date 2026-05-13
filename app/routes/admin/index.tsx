@@ -1,6 +1,7 @@
 import { WorldKind } from '@core/domain/builder-kinds';
 import type { WorldSummaryWithStats } from '@core/domain/builder-types';
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router';
+import { useState } from 'react';
 import { createWorld, listWorlds, resetLiveFromStartingState } from '~/server/admin/worlds';
 import { AdminShell } from './-components/AdminShell';
 import { Fonts } from './-components/Fonts';
@@ -58,16 +59,21 @@ function AdminIndex() {
   const { worlds } = Route.useLoaderData();
   const router = useRouter();
   const cards = groupIntoCampaigns(worlds);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const onCreate = async (input: { displayName: string; label: string }): Promise<void> => {
     await createWorld({ data: input });
+    setCreateOpen(false);
     router.invalidate();
   };
 
   const onReset = async (scratchId: string, name: string): Promise<void> => {
     if (
       !confirm(
-        `Reset live world for "${name}" to the saved starting state? This wipes gameplay progress and replaces it with the starting state.`,
+        `Reset live world for "${name}" to the SAVED seed snapshot?\n\n` +
+          `This wipes live gameplay progress and replays the last-saved seed.\n\n` +
+          `NOTE: Reset uses the snapshot, not whatever is currently in the seed editor. ` +
+          `If you have edited the seed since the last Save, open the seed editor and click Save first.`,
       )
     ) {
       return;
@@ -88,7 +94,6 @@ function AdminIndex() {
         route="index"
         topBar={{
           activeTab: 'draft',
-          onSearch: () => undefined,
         }}
       >
         <div className="index-page-v2">
@@ -115,7 +120,40 @@ function AdminIndex() {
                 </span>
               </header>
 
-              <NewWorldCard onCreate={onCreate} />
+              <div style={{ margin: 'var(--s-4) 0' }}>
+                <button
+                  type="button"
+                  className="btn btn--primary"
+                  onClick={() => setCreateOpen(true)}
+                >
+                  Create new world
+                </button>
+              </div>
+
+              {createOpen ? (
+                <div
+                  className="modal-backdrop"
+                  onClick={(e) => {
+                    if (e.target === e.currentTarget) setCreateOpen(false);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') setCreateOpen(false);
+                  }}
+                  role="presentation"
+                >
+                  <div className="modal-panel" role="dialog" aria-modal="true">
+                    <button
+                      type="button"
+                      className="modal-close"
+                      onClick={() => setCreateOpen(false)}
+                      aria-label="Close"
+                    >
+                      ×
+                    </button>
+                    <NewWorldCard onCreate={onCreate} />
+                  </div>
+                </div>
+              ) : null}
 
               <div className="drafts-table">
                 <div className="drafts-table__head">

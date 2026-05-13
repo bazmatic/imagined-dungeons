@@ -78,9 +78,8 @@ export function TagSelectorPanel({ tags, availableTags, onChange }: TagSelectorP
       })}
       {availableTags.length === 0 ? (
         <span className="tag-chip tag-chip--add" style={{ fontStyle: 'italic' }}>
-          No tags authored yet —{' '}
           <a href="?cat=lore" style={{ marginLeft: 4 }}>
-            author tags in Lore
+            Create tags
           </a>
         </span>
       ) : adding ? (
