@@ -75,7 +75,7 @@ Available actions:
   Example "bribe the guard with a gold coin" -> { "kind":"speak", "targetAgentRef":"guard", "utterance":"Would a gold coin help speed things along?" }.
   Example "order a drink" (a bartender is present) -> { "kind":"speak", "targetAgentRef":"bartender", "utterance":"I'd like a drink, please." }.
 
-- emote: a physical action the actor performs. This is the catch-all for any bodily action that doesn't have a dedicated verb above — gestures and expressions (wave, grin, shrug, shake their head), but ALSO actions involving objects the actor can plausibly access: drinking, eating, putting on / taking off clothing or gear, sitting, drawing weapons, opening doors that aren't locked, kicking, pouring, lighting, breaking, reading, writing, kissing, hugging, dancing, etc. The renderer turns the emoteDescription into prose; the engine doesn't track separate "worn" or "wielded" or "seated" states, so these are narrated, not mechanical.
+- emote: a physical action the actor performs. This is the catch-all for any bodily action that doesn't have a dedicated verb above — gestures and expressions (wave, grin, shrug, shake their head), but ALSO actions involving objects the actor can plausibly access: drinking, eating, putting on / taking off clothing or gear, sitting, drawing weapons, kicking, pouring, lighting, breaking, reading, writing, kissing, hugging, dancing, etc. The renderer turns the emoteDescription into prose; the engine doesn't track separate "worn" or "wielded" or "seated" states, so these are narrated, not mechanical.
   Use emote whenever the input describes a physical thing the actor does that isn't covered by move/look/search/take/drop/give/inventory/speak/attack. Prefer emote over impossible for any phrasing where the action is plausible for the actor's body and the materials at hand — and over unknown for any action attempt at all.
   Crucially: actions involving items the actor is HOLDING (in inventory) are emote, not impossible. Holding a thing is how you read, drink from, use, light, or pour from it. Do not reject "read/use/light/pour from <item the actor holds>" as impossible. (Wearing or wielding clothes/weapons is a distinct verb: equip — see below.)
   Set: kind="emote", emoteDescription as a short verb phrase in the BASE form, third-person infinitive (no trailing 's'): "wave", "drink some spirit", "put on the fireproof cloak", "shake their head", "draw a sword", "light the lantern" — NOT "waves"/"drinks"/"puts". The renderer conjugates for third-person observers.
@@ -89,7 +89,6 @@ Available actions:
   Example "kick the door" -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"kick the door" }.
   Example "read the fire map" (actor holds it) -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"read the fire map" }.
   Example "light the lantern" (actor holds it) -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"light the lantern" }.
-  Example "open the wooden box" -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"open the wooden box" }. (Opening a container, chest, drawer, lid, door, etc. is ALWAYS an emote — the engine has no opened/closed state, so never reject "open X" as impossible and never tell the player "it is closed; you need to open it" — that is exactly what they just tried.)
   (Remember to fill every other field with null, per the output shape.)
 
 - equip: put on / wear / wield / draw an item the actor is carrying. The item moves into an "equipped" state — still in their inventory, but actively worn or wielded. Reserved for clothes, armour, weapons, accessories — things meant to be worn or held in a way that affects how the actor presents. NOT for consuming, breaking, opening, or merely interacting with held items (those are emote).
@@ -108,6 +107,15 @@ Available actions:
   Example "remove my helmet" -> { "kind":"unequip", "itemRef":"helmet", "emoteDescription":"take off" }.
   Example "sheathe the sword" -> { "kind":"unequip", "itemRef":"sword", "emoteDescription":"sheathe" }.
   Example "unequip the dagger" -> { "kind":"unequip", "itemRef":"dagger", "emoteDescription":"put away" }.
+
+- open: open a container (chest, drawer, lid, cabinet, door, etc.). Emit when the input describes opening such an object. Set kind="open", itemRef=the target. All other fields null. NEVER route opening to emote, and NEVER tell the player the target "is closed; you need to open it" — that is exactly what they just tried.
+  Example "open the wooden box" -> { "kind":"open", "direction":null, "targetKind":null, "targetRef":null, "itemRef":"wooden box", "targetAgentRef":null, "utterance":null, "emoteDescription":null, "reason":null }.
+  Example "lift the lid of the chest" -> { "kind":"open", "itemRef":"chest" }.
+  Example "could you open the cabinet for me" -> { "kind":"open", "itemRef":"cabinet" }.
+
+- close: shut / close a container. Set kind="close", itemRef=the target. All other fields null.
+  Example "close the box" -> { "kind":"close", "itemRef":"box" }.
+  Example "shut the chest" -> { "kind":"close", "itemRef":"chest" }.
 
 - attack: attack another agent in the location.
   Set: kind="attack", targetAgentRef as a short natural-language reference to the agent.

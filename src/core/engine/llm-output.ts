@@ -31,6 +31,8 @@ const INTERPRETER_KINDS = [
   ActionKind.Search,
   ActionKind.Equip,
   ActionKind.Unequip,
+  ActionKind.Open,
+  ActionKind.Close,
 ] as const;
 const KINDS = [...INTERPRETER_KINDS, UnknownKind, ImpossibleKind] as const;
 type Kind = (typeof KINDS)[number];
@@ -130,6 +132,8 @@ export type ValidatedPlayerAction =
   | { readonly kind: 'search'; readonly query: string }
   | { readonly kind: 'equip'; readonly itemRef: string; readonly manner: string }
   | { readonly kind: 'unequip'; readonly itemRef: string; readonly manner: string }
+  | { readonly kind: typeof ActionKind.Open; readonly itemRef: string }
+  | { readonly kind: typeof ActionKind.Close; readonly itemRef: string }
   | { readonly kind: 'unknown'; readonly reason: string }
   | { readonly kind: 'impossible'; readonly reason: string }
   | { readonly kind: 'invalid' };
@@ -252,6 +256,16 @@ export function validatePlayerAction(input: unknown): ValidatedPlayerAction {
       return kind === ActionKind.Equip
         ? { kind: ActionKind.Equip, itemRef, manner }
         : { kind: ActionKind.Unequip, itemRef, manner };
+    }
+    case ActionKind.Open: {
+      const itemRef = input.itemRef;
+      if (typeof itemRef !== 'string' || itemRef.length === 0) return { kind: InvalidKind };
+      return { kind: ActionKind.Open, itemRef };
+    }
+    case ActionKind.Close: {
+      const itemRef = input.itemRef;
+      if (typeof itemRef !== 'string' || itemRef.length === 0) return { kind: InvalidKind };
+      return { kind: ActionKind.Close, itemRef };
     }
     case UnknownKind: {
       const reason = input.reason;

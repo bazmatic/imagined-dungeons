@@ -171,6 +171,16 @@ export async function llmInterpret(
         manner: validated.manner,
       };
     }
+    case ActionKind.Open: {
+      const r = resolveItem(validated.itemRef, [...view.items, ...inventory]);
+      if (!r.ok) return null;
+      return { kind: ActionKind.Open, actorId: actor.id, itemId: r.item.id };
+    }
+    case ActionKind.Close: {
+      const r = resolveItem(validated.itemRef, [...view.items, ...inventory]);
+      if (!r.ok) return null;
+      return { kind: ActionKind.Close, actorId: actor.id, itemId: r.item.id };
+    }
     case 'impossible':
       return { kind: ParseErrorKind.ImpossibleAction, reason: validated.reason };
     case 'unknown':
