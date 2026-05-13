@@ -50,6 +50,7 @@ export const BuilderErrorKind = {
   SnapshotConflict: 'snapshot_conflict',
   NoLiveWorldForDraft: 'no_live_world_for_draft',
   IdAlreadyExists: 'id_already_exists',
+  ItemOwnerCycle: 'item_owner_cycle',
 } as const;
 export type BuilderErrorKind = (typeof BuilderErrorKind)[keyof typeof BuilderErrorKind];
 

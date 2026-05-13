@@ -30,6 +30,8 @@ export const ActionKind = {
    * Never produced by player or NPC parsing.
    */
   RevealItem: 'reveal_item',
+  Open: 'open',
+  Close: 'close',
 } as const;
 export type ActionKind = (typeof ActionKind)[keyof typeof ActionKind];
 
@@ -68,6 +70,8 @@ export const EventKind = {
   Equip: 'equip',
   Unequip: 'unequip',
   Reveal: 'reveal',
+  Open: 'open',
+  Close: 'close',
 } as const;
 export type EventKind = (typeof EventKind)[keyof typeof EventKind];
 
