@@ -1,4 +1,4 @@
-ALTER TABLE items ADD COLUMN container INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE items ADD COLUMN opened INTEGER NOT NULL DEFAULT 1;
-ALTER TABLE items ADD COLUMN locked INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE items ADD COLUMN locked_by_item_id TEXT;
+ALTER TABLE `items` ADD `container` integer DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE `items` ADD `opened` integer DEFAULT 1 NOT NULL;--> statement-breakpoint
+ALTER TABLE `items` ADD `locked` integer DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE `items` ADD `locked_by_item_id` text;
