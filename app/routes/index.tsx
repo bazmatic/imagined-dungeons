@@ -101,9 +101,31 @@ function Page() {
     const base = e.label ? `${e.direction} (${e.label})` : e.direction;
     return e.locked ? `${base} 🔒` : base;
   };
+  // (renderCharacter removed — sidebar now renders label / short / mood on separate lines.)
 
-  const renderCharacter = (c: SurroundingsCharacter): string =>
-    c.mood ? `${c.label} (${c.mood})` : c.label;
+  // Per-line classifier for system renders. Most system renders that
+  // describe the room come out as: <location label>\n<long description>\n
+  // <list lines like "You see:" / "Also here:" / "Exits:">. We style line 0
+  // as a heading, list lines as plain text, and any free-text line in
+  // between (descriptions, narration) as italic.
+  const LIST_PREFIXES = [
+    'You see:',
+    'Also here:',
+    'Exits:',
+    'There are no obvious exits',
+    'You are carrying:',
+    'Equipped:',
+    'You are carrying nothing',
+  ];
+  const isListLine = (s: string): boolean => LIST_PREFIXES.some((p) => s.startsWith(p));
+
+  const styleForSystemSubline = (subline: string, index: number): React.CSSProperties => {
+    if (index === 0 && subline.trim().length > 0 && !isListLine(subline)) {
+      return { fontSize: 22, fontWeight: 600, letterSpacing: 0.5 };
+    }
+    if (!isListLine(subline)) return { fontStyle: 'italic' };
+    return {};
+  };
 
   const sectionHeaderStyle: React.CSSProperties = {
     opacity: 0.6,
@@ -156,18 +178,35 @@ function Page() {
               paddingRight: 8,
             }}
           >
-            {lines.map((l) => (
-              <div
-                key={l.id}
-                style={{
-                  color: colorFor(l.kind),
-                  marginBottom: 8,
-                  fontStyle: l.kind === 'witnessed' ? 'italic' : 'normal',
-                }}
-              >
-                {l.text}
-              </div>
-            ))}
+            {lines.map((l) => {
+              const baseStyle: React.CSSProperties = {
+                color: colorFor(l.kind),
+                marginBottom: 8,
+              };
+              if (l.kind !== 'system') {
+                return (
+                  <div
+                    key={l.id}
+                    style={{
+                      ...baseStyle,
+                      fontStyle: l.kind === 'witnessed' ? 'italic' : 'normal',
+                    }}
+                  >
+                    {l.text}
+                  </div>
+                );
+              }
+              const sublines = l.text.split('\n');
+              return (
+                <div key={l.id} style={baseStyle}>
+                  {sublines.map((sl, i) => (
+                    <div key={i} style={styleForSystemSubline(sl, i)}>
+                      {sl}
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
             {busy && (
               <div
                 aria-label="Thinking"
@@ -265,8 +304,18 @@ function Page() {
             ) : (
               <ul style={listStyle}>
                 {surroundings.characters.map((c) => (
-                  <li key={c.id} style={itemStyle}>
-                    {renderCharacter(c)}
+                  <li key={c.id} style={{ ...itemStyle, marginBottom: 8 }}>
+                    <div>{c.label}</div>
+                    {c.shortDescription ? (
+                      <div style={{ fontStyle: 'italic', opacity: 0.85, fontSize: 12 }}>
+                        {c.shortDescription}
+                      </div>
+                    ) : null}
+                    {c.mood ? (
+                      <div style={{ fontStyle: 'italic', color: '#888', fontSize: 12 }}>
+                        {c.mood}
+                      </div>
+                    ) : null}
                   </li>
                 ))}
               </ul>
