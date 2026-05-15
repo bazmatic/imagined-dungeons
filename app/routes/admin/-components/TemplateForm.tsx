@@ -31,9 +31,11 @@ export function TemplateForm({
           id: tpl.id as string,
           templateKey: tpl.templateKey,
           label: tpl.label,
+          labelPrefixInstructions: tpl.labelPrefixInstructions ?? '',
           shortDescription: tpl.shortDescription,
           longDescription: tpl.longDescription,
-          hp: tpl.hp,
+          hpMin: tpl.hpMin,
+          hpMax: tpl.hpMax,
           mood: tpl.mood ?? '',
           startingItems: tpl.startingItems,
           tags: tpl.tags,
@@ -60,9 +62,11 @@ export function TemplateForm({
             id: v.id,
             templateKey: v.templateKey,
             label: v.label,
+            labelPrefixInstructions: v.labelPrefixInstructions === '' ? null : v.labelPrefixInstructions,
             shortDescription: v.shortDescription,
             longDescription: v.longDescription,
-            hp: v.hp,
+            hpMin: v.hpMin,
+            hpMax: v.hpMax,
             mood: v.mood === '' ? null : v.mood,
             startingItems: v.startingItems,
             tags: v.tags,
@@ -94,6 +98,19 @@ export function TemplateForm({
               className="manuscript-input-v2 manuscript-input-v2--large"
               value={v.label}
               onChange={(e) => setV({ ...v, label: e.target.value })}
+            />
+          </div>
+          <div>
+            <label htmlFor="tpl-label-prefix" className="form-grid__field-label">
+              Label Prefix Instructions
+            </label>
+            <textarea
+              id="tpl-label-prefix"
+              className="manuscript-input-v2"
+              rows={3}
+              value={v.labelPrefixInstructions}
+              placeholder="LLM instructions for generating a unique prefix per spawn, e.g. 'Generate a short physical/personality descriptor in square brackets'"
+              onChange={(e) => setV({ ...v, labelPrefixInstructions: e.target.value })}
             />
           </div>
           <div>
@@ -140,16 +157,30 @@ export function TemplateForm({
         </div>
         <MetadataColumn>
           <div className="row-editor__grid" style={{ gap: 'var(--s-4)' }}>
-            <div className="row-editor__field" style={{ gridColumn: 'span 6' }}>
-              <label className="row-editor__field-label" htmlFor="tpl-hp">
-                HP
+            <div className="row-editor__field" style={{ gridColumn: 'span 3' }}>
+              <label className="row-editor__field-label" htmlFor="tpl-hp-min">
+                HP Min
               </label>
               <input
-                id="tpl-hp"
+                id="tpl-hp-min"
                 type="number"
                 className="row-editor__input"
-                value={v.hp}
-                onChange={(e) => setV({ ...v, hp: Number(e.target.value) })}
+                value={v.hpMin}
+                min={1}
+                onChange={(e) => setV({ ...v, hpMin: Number(e.target.value) })}
+              />
+            </div>
+            <div className="row-editor__field" style={{ gridColumn: 'span 3' }}>
+              <label className="row-editor__field-label" htmlFor="tpl-hp-max">
+                HP Max
+              </label>
+              <input
+                id="tpl-hp-max"
+                type="number"
+                className="row-editor__input"
+                value={v.hpMax}
+                min={1}
+                onChange={(e) => setV({ ...v, hpMax: Number(e.target.value) })}
               />
             </div>
             <div className="row-editor__field" style={{ gridColumn: 'span 12' }}>

@@ -85,9 +85,11 @@ describe('spawning end-to-end (tick pass)', () => {
       id: TPL,
       templateKey: 'goblin',
       label: 'goblin',
+      labelPrefixInstructions: null,
       shortDescription: 'a goblin',
       longDescription: 'a small goblin',
-      hp: 5,
+      hpMin: 3,
+      hpMax: 5,
       mood: null,
       startingItems: [],
       tags: [],
@@ -122,7 +124,7 @@ describe('spawning end-to-end (tick pass)', () => {
     const engineRepo = new SqliteRepository(handle.db, liveId);
 
     const before = await engineRepo.agentsAt(LOC_SEWER);
-    expect(before.filter((a) => a.label === 'goblin')).toHaveLength(0);
+    expect(before.filter((a) => a.label.startsWith('goblin'))).toHaveLength(0);
 
     const parse = makeCompositeParser({ llm: null });
 
@@ -136,7 +138,7 @@ describe('spawning end-to-end (tick pass)', () => {
     expect(result.events.some((e) => e.kind === EventKind.AgentSpawned)).toBe(true);
 
     const after = await engineRepo.agentsAt(LOC_SEWER);
-    expect(after.filter((a) => a.label === 'goblin')).toHaveLength(1);
+    expect(after.filter((a) => a.label.startsWith('goblin'))).toHaveLength(1);
 
     expect(result.witnessed.some((line) => line.toLowerCase().includes('goblin'))).toBe(true);
   });
@@ -188,9 +190,11 @@ describe('spawning end-to-end (tick pass)', () => {
       id: asMonsterTemplateId('tpl_goblin'),
       templateKey: 'goblin',
       label: 'goblin',
+      labelPrefixInstructions: null,
       shortDescription: 'g',
       longDescription: 'g',
-      hp: 5,
+      hpMin: 3,
+      hpMax: 5,
       mood: null,
       startingItems: [],
       tags: [],
@@ -241,6 +245,6 @@ describe('spawning end-to-end (tick pass)', () => {
     expect(r3.events.filter((e) => e.kind === EventKind.AgentSpawned)).toHaveLength(0);
 
     const sewerAgents = await engineRepo.agentsAt(LOC_SEWER);
-    expect(sewerAgents.filter((a) => a.label === 'goblin')).toHaveLength(1);
+    expect(sewerAgents.filter((a) => a.label.startsWith('goblin'))).toHaveLength(1);
   });
 });

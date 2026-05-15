@@ -91,7 +91,9 @@ beforeEach(async () => {
     label: 'goblin',
     shortDescription: 'a goblin',
     longDescription: 'a small goblin',
-    hp: 5,
+    hpMin: 5,
+    hpMax: 5,
+    labelPrefixInstructions: null,
     mood: null,
     startingItems: [],
     tags: [],
@@ -138,7 +140,7 @@ describe('runSpawnTickPass', () => {
     // In production, builder + engine repos share a backing DB so the engine
     // sees this too; the in-memory test fixtures are separate stores.
     const builderAgents = await builderRepo.listAgents(W);
-    expect(builderAgents.map((a) => a.label)).toContain('goblin');
+    expect(builderAgents.map((a) => a.label)).toContain('goblin 1');
   });
 
   it('one-shot trigger fires once across two ticks', async () => {

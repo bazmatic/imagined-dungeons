@@ -11,21 +11,28 @@ const newSpawnedAgentId = (templateKey: string): AgentId =>
  *
  * `damage`/`defense`/`capacity` carry sensible defaults; templates can
  * grow these fields in a later slice (out of scope for v1).
+ *
+ * Optional `labels` overrides per-agent label strings; falls back to
+ * `template.label` when the array is shorter than `count` or omitted.
  */
 export function expandSpawn(args: {
   readonly template: MonsterTemplate;
   readonly locationId: LocationId;
   readonly count: number;
+  readonly labels?: readonly string[];
 }): readonly UpsertAgentInput[] {
   const out: UpsertAgentInput[] = [];
   for (let i = 0; i < args.count; i++) {
+    const hp =
+      Math.floor(Math.random() * (args.template.hpMax - args.template.hpMin + 1)) +
+      args.template.hpMin;
     out.push({
       id: newSpawnedAgentId(args.template.templateKey),
-      label: args.template.label,
+      label: args.labels?.[i] ?? args.template.label,
       shortDescription: args.template.shortDescription,
       longDescription: args.template.longDescription,
       locationId: args.locationId,
-      hp: args.template.hp,
+      hp,
       damage: 1,
       defense: 0,
       capacity: 5,

@@ -161,12 +161,20 @@ export function validateWorld(tree: WorldTree): Problem[] {
         message: `template ${tpl.id} has empty label`,
       });
     }
-    if (tpl.hp <= 0) {
+    if (tpl.hpMin <= 0) {
       problems.push({
         kind: ProblemKind.TemplateHpInvalid,
         entity: EntityKind.MonsterTemplate,
         entityId: tpl.id as string,
-        message: `template ${tpl.id} hp must be > 0`,
+        message: `template ${tpl.id} hpMin must be > 0`,
+      });
+    }
+    if (tpl.hpMax < tpl.hpMin) {
+      problems.push({
+        kind: ProblemKind.TemplateHpRangeInvalid,
+        entity: EntityKind.MonsterTemplate,
+        entityId: tpl.id as string,
+        message: `template ${tpl.id} hpMax must be >= hpMin`,
       });
     }
     for (const entry of tpl.startingItems) {

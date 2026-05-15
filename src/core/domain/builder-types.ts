@@ -54,9 +54,11 @@ export interface MonsterTemplate {
   readonly worldId: WorldId;
   readonly templateKey: string;
   readonly label: string;
+  readonly labelPrefixInstructions: string | null;
   readonly shortDescription: string;
   readonly longDescription: string;
-  readonly hp: number;
+  readonly hpMin: number;
+  readonly hpMax: number;
   readonly mood: string | null;
   readonly startingItems: readonly StarterPackEntry[];
   readonly tags: readonly string[];
@@ -291,9 +293,11 @@ export interface UpsertMonsterTemplateInput {
   readonly id: MonsterTemplateId;
   readonly templateKey: string;
   readonly label: string;
+  readonly labelPrefixInstructions: string | null;
   readonly shortDescription: string;
   readonly longDescription: string;
-  readonly hp: number;
+  readonly hpMin: number;
+  readonly hpMax: number;
   readonly mood: string | null;
   readonly startingItems: readonly StarterPackEntry[];
   readonly tags: readonly string[];
