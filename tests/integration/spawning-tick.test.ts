@@ -142,6 +142,7 @@ describe('spawning end-to-end (tick pass)', () => {
     expect(after.filter((a) => a.label.startsWith('goblin'))).toHaveLength(1);
 
     expect(result.render.some((s) => s.kind === SegmentKind.Spawn && s.text.toLowerCase().includes('goblin'))).toBe(true);
+    expect(result.witnessed.every((w) => !w.toLowerCase().includes('goblin'))).toBe(true);
   });
 
   it('one-shot trigger does not re-fire when the player exits and returns', async () => {

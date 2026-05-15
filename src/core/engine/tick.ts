@@ -127,15 +127,6 @@ async function renderWitnessForPlayer(
   if (event.actorId === playerId) return null; // player's own action — already in `render`
   if (!event.witnesses.some((w) => w === playerId)) return null;
 
-  // AgentSpawned events are emitted by the synthetic system actor and
-  // don't need an actor lookup — render directly from the spawned agent.
-  // Resolving the system agent here would fail in any world that doesn't
-  // pre-seed a `system` row (e.g. published draft worlds).
-  if (event.kind === EventKind.AgentSpawned) {
-    const spawned = await repo.getAgent(event.spawnedAgentId);
-    return renderAgentSpawnedObserved(spawned.label);
-  }
-
   const actor = await repo.getAgent(event.actorId);
 
   switch (event.kind) {
