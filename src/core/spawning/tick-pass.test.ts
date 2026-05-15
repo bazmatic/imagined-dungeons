@@ -137,7 +137,7 @@ describe('runSpawnTickPass', () => {
     // In production, builder + engine repos share a backing DB so the engine
     // sees this too; the in-memory test fixtures are separate stores.
     const builderAgents = await builderRepo.listAgents(W);
-    expect(builderAgents.map((a) => a.label)).toContain('goblin');
+    expect(builderAgents.map((a) => a.label)).toContain('goblin 1');
   });
 
   it('one-shot trigger fires once across two ticks', async () => {

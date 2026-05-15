@@ -14,6 +14,7 @@ import { EventKind } from '@core/domain/kinds';
 import type { LanguageModel } from '@core/engine/language-model';
 import type { Repository } from '@core/engine/repository';
 import { expandSpawn } from './expand';
+import { generateAgentNames } from './generate-names';
 import { MAX_JUDGEMENT_CALLS_PER_TICK, MAX_SPAWNS_PER_TICK } from './limits';
 import {
   type PerceptionView,
@@ -92,7 +93,8 @@ export async function runSpawnTickPass(args: {
     if (count <= 0) continue;
     const tpl = await args.builderRepo.getMonsterTemplate(args.worldId, hit.trigger.templateId);
     if (!tpl) continue;
-    const inserts = expandSpawn({ template: tpl, locationId: hit.trigger.locationId, count });
+    const labels = await generateAgentNames(tpl, count, args.llm);
+    const inserts = expandSpawn({ template: tpl, locationId: hit.trigger.locationId, count, labels });
     // Snapshot witnesses BEFORE inserts land so the just-spawned agents don't
     // observe their own arrival.
     const witnessesAtLoc = (await args.engineRepo.agentsAt(hit.trigger.locationId)).map(
