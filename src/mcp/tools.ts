@@ -170,7 +170,7 @@ export const TOOLS: readonly ToolDef[] = [
         worldId: stringField('world id'),
         id: stringField('exit id'),
         from: stringField('source location id'),
-        to: stringField('destination location id'),
+        to: { type: ['string', 'null'], description: 'destination location id, or null for auto-generate on traversal' },
         direction: stringField('direction (north/south/...)'),
         label: stringField('label'),
         locked: { type: 'boolean' },
@@ -182,7 +182,7 @@ export const TOOLS: readonly ToolDef[] = [
       upsertExit(repo, asWorldId(a.worldId as string), {
         id: asExitId(a.id as string),
         from: asLocationId(a.from as string),
-        to: asLocationId(a.to as string),
+        to: typeof a.to === 'string' && (a.to as string).length > 0 ? asLocationId(a.to as string) : null,
         direction: a.direction as string,
         label: a.label as string,
         locked: Boolean(a.locked),

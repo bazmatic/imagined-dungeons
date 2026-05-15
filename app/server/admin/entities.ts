@@ -50,7 +50,7 @@ export const saveEntity = createServerFn({ method: 'POST' })
       return upsertExitCore(repo, W, {
         id: asExitId(p.id as string),
         from: asLocationId(p.from as string),
-        to: asLocationId(p.to as string),
+        to: typeof p.to === 'string' && p.to.length > 0 ? asLocationId(p.to) : null,
         direction: p.direction as string,
         label: p.label as string,
         locked: Boolean(p.locked),
