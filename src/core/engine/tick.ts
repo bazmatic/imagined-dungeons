@@ -248,6 +248,15 @@ async function renderWitnessForPlayer(
         return null;
       }
     }
+    case EventKind.Death: {
+      try {
+        const target = await repo.getAgent(event.targetAgentId);
+        const actor = await repo.getAgent(event.actorId);
+        return `${actor.label} slays ${target.label}.`;
+      } catch {
+        return null;
+      }
+    }
   }
 }
 
@@ -292,6 +301,7 @@ const WAKING_EVENT_KINDS: ReadonlySet<DomainEvent['kind']> = new Set<DomainEvent
   EventKind.Speak,
   EventKind.Attack,
   EventKind.Emote,
+  EventKind.Death,
 ]);
 
 /**

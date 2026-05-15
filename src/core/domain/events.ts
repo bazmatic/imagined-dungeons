@@ -72,6 +72,7 @@ export type DomainEvent =
       price: number;
       accepted: boolean;
     })
+  | (BaseEvent & { kind: 'death'; targetAgentId: AgentId; locationId: LocationId })
   | (BaseEvent & { kind: 'reveal'; itemId: ItemId; locationId: LocationId });
 
 export const NARRATED_EVENT_KINDS: ReadonlySet<EventKind> = new Set<EventKind>([

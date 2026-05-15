@@ -66,6 +66,9 @@ export async function runTurn(
   const llm = opts.llm ?? null;
 
   const actor = await repo.getAgent(actorId);
+  if (actor.hp <= 0) {
+    return { render: [{ kind: SegmentKind.Error, text: 'You are dead and cannot act.' }], events: [] };
+  }
   const view = await perceive(actorId, repo);
   const inventory = await repo.itemsOwnedBy({ kind: OwnerKind.Agent, id: actorId });
 

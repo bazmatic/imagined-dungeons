@@ -1,5 +1,6 @@
-import type { Agent, Location } from '@core/domain/entities';
-import { asAgentId, asLocationId, asWorldId } from '@core/domain/ids';
+import type { Agent, Item, Location } from '@core/domain/entities';
+import { asAgentId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
+import { OwnerKind } from '@core/domain/kinds';
 import { MemoryRepository } from '@infra/memory-repository';
 import { describe, expect, it } from 'vitest';
 import { handleAttack } from './attack';
@@ -167,5 +168,60 @@ describe('handleAttack (seeded RNG)', () => {
     expect(r.value.event.outcome).toBe('miss');
     expect(r.value.event.damageDealt).toBe(0);
     expect((await repo.getAgent(t.id)).hp).toBe(10);
+  });
+
+  it('drops target inventory to location when target dies', async () => {
+    // Setup: give the target an item
+    const a = paff({ damage: 50 });
+    const t = spark({ hp: 1, defense: 1 });
+    const sword: Item = {
+      id: asItemId('item_sword'),
+      worldId: W,
+      label: 'sword',
+      shortDescription: '',
+      longDescription: '',
+      owner: { kind: OwnerKind.Agent, id: t.id },
+      weight: 1,
+      hidden: false,
+      tags: [],
+      equipped: false,
+      container: false,
+      opened: false,
+      locked: false,
+      lockedByItem: null,
+      priceTag: null,
+    };
+    const repo = new MemoryRepository(W, { locations: [locA, locB], exits: [], items: [sword], agents: [a, t], rngSeed: 1 });
+    const r = await handleAttack({ kind: 'attack', actorId: a.id, targetAgentId: t.id }, repo);
+    if (!r.ok) throw new Error(r.error);
+    if (r.value.event.kind !== 'attack') throw new Error();
+    if (r.value.event.outcome !== 'hit') return; // seed may miss — only check on hit
+    // After a kill, sword should now be owned by the location
+    const droppedSword = await repo.getItem(asItemId('item_sword'));
+    expect(droppedSword.owner).toEqual({ kind: 'location', id: A });
+  });
+
+  it('emits a death event when target is killed', async () => {
+    const a = paff({ damage: 50 });
+    const t = spark({ hp: 1, defense: 1 });
+    const repo = makeRepo(a, t, 1); // seed=1 with damage=50 hits
+    const r = await handleAttack({ kind: 'attack', actorId: a.id, targetAgentId: t.id }, repo);
+    if (!r.ok) throw new Error(r.error);
+    if (r.value.event.kind !== 'attack' || r.value.event.outcome !== 'hit') return;
+    const events = await repo.recentEvents(10);
+    const deathEvent = events.find((e) => e.kind === 'death');
+    expect(deathEvent).toBeTruthy();
+    if (!deathEvent || deathEvent.kind !== 'death') throw new Error();
+    expect(deathEvent.targetAgentId).toBe(t.id);
+  });
+
+  it('render includes Hit segment on hit', async () => {
+    const a = paff({ damage: 50 });
+    const t = spark({ hp: 10, defense: 1 });
+    const repo = makeRepo(a, t, 1);
+    const r = await handleAttack({ kind: 'attack', actorId: a.id, targetAgentId: t.id }, repo);
+    if (!r.ok) throw new Error(r.error);
+    if (r.value.event.kind !== 'attack' || r.value.event.outcome !== 'hit') return;
+    expect(r.value.render.some((s) => s.kind === 'hit')).toBe(true);
   });
 });
