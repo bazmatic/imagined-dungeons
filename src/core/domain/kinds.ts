@@ -35,6 +35,11 @@ export const ActionKind = {
   Buy: 'buy',
   Sell: 'sell',
   Offer: 'offer',
+  CreateLocation: 'create_location',
+  CreateExit: 'create_exit',
+  CreateAgent: 'create_agent',
+  CreateItem: 'create_item',
+  DeleteEntity: 'delete_entity',
 } as const;
 export type ActionKind = (typeof ActionKind)[keyof typeof ActionKind];
 
