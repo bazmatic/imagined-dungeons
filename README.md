@@ -1,16 +1,50 @@
 # Imagined Dungeons
 
-A generative, multi-agent text adventure engine. The world's *structure* is stored as data; the world's *behavior* and much of its *narration* are produced by a language model. The goal is emergent, coherent play — not branching pre-written content.
+A living world that remembers what happens in it.
 
-This repository is the staged build-out of the design in [abstract-design.md](abstract-design.md), beginning with a fully deterministic core and adding generative layers one slice at a time.
+Imagined Dungeons is a text adventure engine where the world isn't scripted — it's *alive*. The locations, inhabitants, and items exist as structured data you write. What those inhabitants *do*, what gets *said*, and how the world *responds* to events is handled by language models working behind the scenes.
 
-## Stack
+You write a world. The engine breathes life into it.
 
-- **TanStack Start** (Vite plugin) — server-rendered React, server functions
-- **Drizzle ORM + better-sqlite3** — file-backed persistence; schema is multi-world capable
-- **TypeScript** strict, `verbatimModuleSyntax`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`
-- **vitest** for unit + integration tests
-- **biome** for lint + format
+## What makes it different
+
+**The world notices things.** After anything significant happens — a key item is taken, a fight breaks out, a door is forced open — a consequence engine surveys the event and decides whether any room descriptions should change to reflect it. Pick up the only torch in a dark cellar, and the room description might update to note the darkness that followed. The world's memory is durable.
+
+**NPCs have their own agenda.** Characters in the world take autonomous turns. They move, act, speak, and respond to events without being driven by the player. Share a location with an NPC and you'll witness them going about their business.
+
+**Natural language, interpreted.** Players type what they'd naturally say — not `GO NORTH` but `head toward the sound of the market`. A language model interprets intent and maps it to the world's action vocabulary, falling back to a simpler parser when no AI key is present.
+
+**Narration shaped by perspective.** What a player sees depends on where they are and who they are. The narrator renders events differently depending on who witnessed them — a bystander gets a different account than someone who was involved.
+
+## Building a world
+
+World-building is designed to be conversational. You describe what you want — a location, a character, an item, a connection between places — and AI tools handle the construction.
+
+**From the app:** An in-app feature lets you request changes and additions in plain language. Describe a new room, ask for an NPC with a particular personality, or tell it what should change about a place — the engine works out the details.
+
+**From an AI agent:** The builder is exposed as an MCP server (`pnpm mcp`). This lets you drive world construction from any AI assistant that supports MCP — describe your world across a conversation, iterate on it, and have the agent build it out incrementally.
+
+The included world is the **Burning District**: a smoke-filled corner of a city under a slow catastrophe, where displaced people shelter in half-collapsed buildings and a market somehow still operates in the ruins.
+
+An admin-facing builder lives at `/admin`. You can clone an existing world as a draft, edit locations and items directly, and publish changes back — authored edits merge cleanly with any gameplay drift that's happened in the live world.
+
+## Getting started
+
+```bash
+pnpm install
+pnpm seed:gen   # parse the world markdown into a seed module
+pnpm dev        # start the dev server
+```
+
+Open the URL it prints (typically `http://localhost:5173`). Type `look` to orient yourself, then move, take things, talk to people. State persists between sessions — close the tab and pick up where you left off.
+
+## Technical stack
+
+- **TanStack Start** — server-rendered React with server functions
+- **Drizzle ORM + SQLite** — file-backed persistence, multi-world capable
+- **TypeScript strict** — `verbatimModuleSyntax`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`
+- **vitest** — unit and integration tests
+- **biome** — lint and format
 
 ## Architecture
 
@@ -23,36 +57,7 @@ app/                       — TanStack Start routes, server functions, UI
         └── src/core/domain/  — entities, ids, actions, events, Result
 ```
 
-The engine is written against a `Repository` interface; tests use an in-memory implementation, production uses Drizzle/SQLite. Swapping to Postgres later is a single concrete class.
-
-The action vocabulary is a closed set, dispatched through a registry. Adding a verb is one new file under `src/core/engine/actions/` and one line in `registry.ts`. The seam where the model layers slot in (interpreter, narrator, consequences) is the parser/template boundary — the rest of the engine is unaware of how text turns into actions or how events turn into prose.
-
-Campaigns (the seed world plus its player, world id, and display name) live behind a `Campaign` abstraction in `src/core/domain/campaign.ts`. Adding a new campaign is a single-module change: drop a new file under `src/campaigns/` exporting a `Campaign`, then point the composition root (`app/server/world.ts`) at it. The seeder, route heading, and scripts all read from the campaign — no further refactor required.
-
-## Campaign Builder
-
-An admin-facing builder lives at `/admin`. Drafts and live worlds share the same tables; publish runs a three-way merge against a per-live-world snapshot so authored changes apply without clobbering gameplay drift.
-
-The same operations are available two ways:
-
-- **UI:** `/admin` (no auth in v1).
-- **MCP server:** `pnpm mcp` — stdio transport. Use this to drive the builder from an AI agent.
-
-To bootstrap an editable draft of an existing live world (e.g. the seeded burning-district), open `/admin` and click "Clone as draft."
-
-Migration: `pnpm migrate:worlds` backfills `displayName` and `playerAgentId` on rows that pre-date the builder.
-
-(An HTTP API was planned as a third adapter but is deferred until TanStack Start ships file-based API routes; the current version exposes server functions only. See `docs/superpowers/specs/2026-05-08-campaign-builder-design.md`.)
-
-## Getting started
-
-```bash
-pnpm install
-pnpm seed:gen   # parse burning-district-data.md → src/infra/seed/burning-district.ts
-pnpm dev        # start the dev server
-```
-
-Then open the URL it prints (typically `http://localhost:5173`). Type `look`, `n`, `take fire map`, `i`, `drop fire map`, etc. State persists in `imagined-dungeons.db` — refresh resumes.
+The engine is written against a `Repository` interface; tests use an in-memory implementation, production uses Drizzle/SQLite. The action vocabulary is a closed set dispatched through a registry — adding a verb is one new file and one line in `registry.ts`. The seam where the model layers slot in (interpreter, narrator, consequences) is the parser/template boundary — the rest of the engine is unaware of how text turns into actions or how events turn into prose.
 
 ## Scripts
 
@@ -79,7 +84,7 @@ src/
     domain/                  — entity types, ids, Result, no I/O
     engine/                  — pure logic over a Repository interface
       actions/               — one file per verb + registry
-      parser.ts              — verb-noun parser (slice-1 stand-in for the LLM interpreter)
+      parser.ts              — verb-noun parser (fallback for the LLM interpreter)
       perception.ts          — what an actor can see in their location
       templates.ts           — mechanical narration; sole home for user-facing strings
       turn.ts                — orchestrator: parse → dispatch → render
@@ -97,42 +102,19 @@ app/
   server/                    — server functions (composition root)
 scripts/
   parse-world.ts             — markdown → seed module
-  smoke-resume.ts            — manual persistence smoke test
 tests/integration/           — full-flow + repo + seeder tests
 ```
 
 ## Roadmap
 
-Per [abstract-design.md §14](abstract-design.md#14-what-to-build-first):
-
-- ✅ **Slice 1** — mechanical core (move/look/take/drop/inventory).
-- ✅ **Slice 2** — LLM-backed interpreter, falls back from the rule parser.
-- ✅ **Slice 3** — narrated action types (`speak`/`attack`) with an observer-specific Narrator.
-- ✅ **Slice 4** — autonomous NPCs taking turns.
-- ✅ **Slice 5** — consequence engine + durable `update_description`.
-- **Slice 6+** — combat depth, containers, search, locks-with-keys.
+- ✅ **Slice 1** — mechanical core (move/look/take/drop/inventory)
+- ✅ **Slice 2** — LLM-backed interpreter, falls back to the rule parser
+- ✅ **Slice 3** — narrated action types (`speak`/`attack`) with observer-specific narration
+- ✅ **Slice 4** — autonomous NPCs taking turns
+- ✅ **Slice 5** — consequence engine and durable description updates
+- **Slice 6+** — combat depth, containers, search, locks and keys
 
 Each slice is independently playable and ships behind no feature flag.
-
-## Implementation rules learned
-
-Stack-specific lessons accumulated across slices 1–5. These are TypeScript/OpenAI/codebase rules, not architecture-level claims — those live in [abstract-design.md](abstract-design.md).
-
-### OpenAI strict mode forbids `oneOf`
-
-Structured outputs in strict mode reject `oneOf` / `anyOf` at the schema root and require every property listed under `properties` to also appear in `required`. Express union-shaped responses as a single flat object with a `kind` discriminator (an `enum`) and union/nullable payload fields; the validator picks the relevant fields per `kind` and ignores the rest. The slice 2 player-action schema (`src/core/engine/llm-output.ts`) and the slice 5 consequence schema (`src/core/engine/consequences.ts`) both follow this pattern.
-
-### NPC mind prompt must enumerate available verbs
-
-An open-ended "decide what you want to do" prompt produces verbs the closed parser rejects ("greet", "smile", "compliment", "wave"). The NPC mind's system prompt must enumerate the available verbs with first-person examples and explicitly forbid common alternatives. Without this, autonomous NPCs go silent — every intent fails to parse and the player sees nothing.
-
-### No string literals in logic
-
-Discriminator values (`kind`, `ownerKind`, `outcome`, etc.) live in `src/core/domain/kinds.ts` as `as const` objects, not raw strings sprinkled through the codebase. The TypeScript types stay as string-literal unions for inference; the *literals in code* always go through the const objects (`ActionKind.Move`, `EventKind.Attack`, `OwnerKind.Location`). This catches typos at compile time. The rule applies to logic; type declarations and test assertion strings keep raw literals.
-
-### Exhaustive switches over `EventKind` proliferate
-
-Every new event kind needs handling in `narrate.ts:summariseEvent`, `npc-mind.ts:summariseEvent`, `tick.ts:renderWitnessForPlayer`, and `consequences.ts:summarise`. TypeScript's exhaustiveness check catches missed cases at compile time — but the duplication itself is a smell. If more verbs land, consolidating into a single shared `summariseEvent` helper is the obvious next step. Flagged after slice 5.
 
 ## Design references
 
