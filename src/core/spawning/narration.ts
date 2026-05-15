@@ -42,9 +42,10 @@ export async function generateSpawnNarration(args: {
       const user = [
         `Location: ${location.label}`,
         location.shortDescription,
+        location.longDescription,
         '',
         'Creatures arriving:',
-        ...agents.map((a) => `- ${a.label}: ${a.shortDescription}`),
+        ...agents.map((a) => `- ${a.label}: ${a.shortDescription}\n  ${a.longDescription}`),
       ].join('\n');
       const response = await llm.complete({
         system: SYSTEM_PROMPT,

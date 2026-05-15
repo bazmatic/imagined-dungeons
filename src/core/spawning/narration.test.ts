@@ -17,6 +17,7 @@ const W = asWorldId('w_live');
 const PLAYER = asAgentId('char_p');
 const ZOMBIE = asAgentId('char_zombie');
 const LOC_A = asLocationId('loc_a');
+const LOC_B = asLocationId('loc_b');
 
 const location = {
   id: LOC_A,
@@ -24,6 +25,16 @@ const location = {
   label: 'Ash Lane',
   shortDescription: 'A smoke-choked alley.',
   longDescription: 'A long dark alley filled with ash.',
+  tags: [],
+  secretDescription: '',
+};
+
+const locationB = {
+  id: LOC_B,
+  worldId: W,
+  label: 'Cinder Court',
+  shortDescription: 'A courtyard choked with soot.',
+  longDescription: 'Ash drifts through a ruined courtyard.',
   tags: [],
   secretDescription: '',
 };
@@ -70,10 +81,33 @@ const zombieAgent: Agent = {
   secretDescription: '',
 };
 
+const zombieB = asAgentId('char_zombie_b');
+
+const zombieAgentB: Agent = {
+  id: zombieB,
+  worldId: W,
+  label: 'Cinder Ghoul',
+  shortDescription: 'A grey wraith trailing smoke.',
+  longDescription: 'A desiccated corpse wreathed in cinder.',
+  locationId: LOC_B,
+  hp: 6,
+  damage: 1,
+  defense: 0,
+  capacity: 0,
+  mood: null,
+  shortTermIntent: null,
+  goal: null,
+  autonomous: true,
+  awake: true,
+  gold: 0,
+  tags: [],
+  secretDescription: '',
+};
+
 function makeRepo() {
   return new MemoryRepository(W, {
-    locations: [location],
-    agents: [playerAgent, zombieAgent],
+    locations: [location, locationB],
+    agents: [playerAgent, zombieAgent, zombieAgentB],
     exits: [],
     items: [],
   });
@@ -167,5 +201,26 @@ describe('generateSpawnNarration', () => {
       llm,
     });
     expect(result).toEqual([]);
+  });
+
+  it('generates separate narrations for spawns at different locations', async () => {
+    let callCount = 0;
+    const llm = makeFakeLanguageModel({
+      responder: () => {
+        callCount += 1;
+        return { raw: '', parsed: { narration: `Narration ${callCount}` } };
+      },
+    });
+    const result = await generateSpawnNarration({
+      spawnEvents: [
+        makeSpawnEvent({ spawnedAgentId: ZOMBIE, locationId: LOC_A, witnesses: [PLAYER] }),
+        { ...makeSpawnEvent({ spawnedAgentId: zombieB, locationId: LOC_B, witnesses: [PLAYER] }), id: asEventId('ev_spawn_b') },
+      ],
+      playerId: PLAYER,
+      repo: makeRepo(),
+      llm,
+    });
+    expect(result).toHaveLength(2);
+    expect(llm.calls).toHaveLength(2);
   });
 });
