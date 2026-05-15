@@ -12,7 +12,7 @@ const NARRATION_SCHEMA: JsonSchema = {
 };
 
 const SYSTEM_PROMPT =
-  'You are a dungeon master narrating a tabletop RPG. Write a vivid, present-tense description of these creatures arriving in this location. Two to three sentences. Do not reference game mechanics or stats.';
+  'You are a dungeon master narrating a tabletop RPG. Write a vivid, present-tense description of these creatures arriving in this location. Two to three sentences. Do not reference game mechanics or stats. Use the exact number of creatures listed — do not imply more or fewer.';
 
 export async function generateSpawnNarration(args: {
   readonly spawnEvents: readonly DomainEvent[];
@@ -39,12 +39,14 @@ export async function generateSpawnNarration(args: {
     try {
       const location = await repo.getLocation(locationId);
       const agents = await Promise.all(entries.map((e) => repo.getAgent(e.spawnedAgentId)));
+      const creatureHeader =
+        agents.length === 1 ? '1 creature arriving:' : `${agents.length} creatures arriving:`;
       const user = [
         `Location: ${location.label}`,
         location.shortDescription,
         location.longDescription,
         '',
-        'Creatures arriving:',
+        creatureHeader,
         ...agents.map((a) => `- ${a.label}: ${a.shortDescription}\n  ${a.longDescription}`),
       ].join('\n');
       const response = await llm.complete({
