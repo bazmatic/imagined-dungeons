@@ -83,7 +83,7 @@ export function validateWorld(tree: WorldTree): Problem[] {
         message: `exit ${e.id} from missing location ${e.from}`,
       });
     }
-    if (!locIds.has(e.to as string)) {
+    if (e.to !== null && !locIds.has(e.to as string)) {
       problems.push({
         kind: ProblemKind.ExitToMissing,
         entity: EntityKind.Exit,
