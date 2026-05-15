@@ -4,6 +4,7 @@ import type { Agent } from '@core/domain/entities';
 import type { DomainEvent } from '@core/domain/events';
 import { type AgentId, type LocationId, SYSTEM_AGENT_ID, type WorldId } from '@core/domain/ids';
 import { EventKind, NpcFallbackIntent, OwnerKind } from '@core/domain/kinds';
+import { type Segment, SegmentKind } from '@core/domain/segments';
 import { log } from '@core/log';
 import { runSpawnTickPass } from '@core/spawning/tick-pass';
 import type { PerceptionView } from '@core/spawning/triggers';
@@ -90,7 +91,7 @@ const isWaitIntent = (intent: string): boolean => {
 
 export interface TickResult {
   /** The player's render — what would have been returned before slice 4. */
-  readonly render: string;
+  readonly render: readonly Segment[];
   /** Player-perspective lines describing NPC actions they witnessed this tick. */
   readonly witnessed: readonly string[];
   /** All events from this tick (player's + NPCs' + consequence-emitted), in order. */
@@ -414,10 +415,10 @@ export async function runTick(
   //    the player can deliberately let time pass to see what happens.
   const events: DomainEvent[] = [];
   const witnessed: string[] = [];
-  let playerRender: string;
+  let playerRender: readonly Segment[];
 
   if (isWaitIntent(text)) {
-    playerRender = 'You wait.';
+    playerRender = [{ kind: SegmentKind.Feedback, text: 'You wait.' }];
   } else {
     const playerResult = await runTurn(playerId, text, repo, {
       parse,
@@ -433,7 +434,7 @@ export async function runTick(
     // most parser-IFs do; matches the data the sidebar refreshes with.
     if (playerResult.events.some((e) => e.kind === EventKind.Move)) {
       const view = await perceive(playerId, repo);
-      playerRender = `${playerRender}\n\n${renderLook(view)}`;
+      playerRender = [...playerResult.render, ...renderLook(view)];
     }
 
     // Wake any dormant NPCs whose attention the player just drew, so the
@@ -504,7 +505,7 @@ export async function runTick(
         // Intent didn't parse or dispatch failed. The reason is in npcResult.render
         // (a parse-error or action-error message). Surface it so the dev terminal
         // shows why the NPC produced nothing visible to the player.
-        log.info(`[npc] ${npc.label} produced no event: ${npcResult.render}`);
+        log.info(`[npc] ${npc.label} produced no event: ${npcResult.render.map((s) => s.text).join(' ')}`);
       } else {
         for (const ev of npcResult.events) {
           log.info(`[npc] ${npc.label} -> ${ev.kind}`);

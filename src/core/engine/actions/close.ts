@@ -2,6 +2,7 @@ import type { Action } from '@core/domain/actions';
 import type { DomainEvent } from '@core/domain/events';
 import { ActionKind, EventKind } from '@core/domain/kinds';
 import { Err, Ok, type Result } from '@core/domain/result';
+import { SegmentKind } from '@core/domain/segments';
 import { nextEventId } from '../ids-gen';
 import { perceive } from '../perception';
 import type { Repository } from '../repository';
@@ -35,7 +36,7 @@ export async function handleClose(
   if (!item.opened) {
     const event: DomainEvent = baseEvent;
     await repo.appendEvent(event);
-    return Ok({ render: `The ${item.label} is already closed.`, event });
+    return Ok({ render: [{ kind: SegmentKind.Feedback, text: `The ${item.label} is already closed.` }], event });
   }
   await repo.setItemOpened(item.id, false);
   const event: DomainEvent = baseEvent;

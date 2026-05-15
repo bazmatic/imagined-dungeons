@@ -2,6 +2,7 @@ import type { Action } from '@core/domain/actions';
 import type { DomainEvent } from '@core/domain/events';
 import { EventKind, OwnerKind } from '@core/domain/kinds';
 import { Err, Ok, type Result } from '@core/domain/result';
+import { SegmentKind } from '@core/domain/segments';
 import { nextEventId } from '../ids-gen';
 import type { Repository } from '../repository';
 import { renderRevealObserved } from '../templates';
@@ -42,5 +43,5 @@ export async function handleRevealItem(
     locationId,
   };
   await repo.appendEvent(event);
-  return Ok({ render: renderRevealObserved(item), event });
+  return Ok({ render: [{ kind: SegmentKind.Narration, text: renderRevealObserved(item) }], event });
 }

@@ -4,6 +4,7 @@ import type { DomainEvent } from '@core/domain/events';
 import type { LocationId } from '@core/domain/ids';
 import { ActionKind, EventKind, OwnerKind } from '@core/domain/kinds';
 import { Err, Ok, type Result } from '@core/domain/result';
+import { SegmentKind } from '@core/domain/segments';
 import { nextEventId } from '../ids-gen';
 import { perceive } from '../perception';
 import type { Repository } from '../repository';
@@ -32,7 +33,7 @@ export async function handleOpen(
 
   if (item.opened) {
     const event = await emitOpenEvent(repo, action, item, view.location.id, false);
-    return Ok({ render: `The ${item.label} is already open.`, event });
+    return Ok({ render: [{ kind: SegmentKind.Feedback, text: `The ${item.label} is already open.` }], event });
   }
 
   let unlocked = false;

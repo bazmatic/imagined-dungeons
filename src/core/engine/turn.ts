@@ -9,6 +9,7 @@ import {
   OwnerKind,
   ParseErrorKind,
 } from '@core/domain/kinds';
+import { type Segment, SegmentKind } from '@core/domain/segments';
 import { dispatch } from './actions/registry';
 import { nextEventId } from './ids-gen';
 import type { LanguageModel } from './language-model';
@@ -20,7 +21,7 @@ import type { Repository } from './repository';
 import { renderActionError, renderParseError } from './templates';
 
 export interface TurnResult {
-  readonly render: string;
+  readonly render: readonly Segment[];
   readonly events: readonly DomainEvent[];
 }
 
@@ -96,7 +97,8 @@ export async function runTurn(
         }
       }
     }
-    const reason = renderParseError(parsed);
+    const errorSegs = renderParseError(parsed);
+    const reason = errorSegs[0]?.text ?? '';
     const failed: DomainEvent = {
       id: nextEventId(),
       worldId: await repo.getWorldId(),
@@ -108,7 +110,7 @@ export async function runTurn(
       reason,
     };
     await repo.appendEvent(failed);
-    return { render: reason, events: [failed] };
+    return { render: errorSegs, events: [failed] };
   }
 
   const worldId = await repo.getWorldId();
@@ -130,7 +132,7 @@ export async function runTurn(
         target: { kind: ExaminableKind.Room },
       };
       await repo.appendEvent(event);
-      return { render: 'You find nothing of note.', events: [event] };
+      return { render: [{ kind: SegmentKind.Narration, text: 'You find nothing of note.' }], events: [event] };
     }
     if (budget) budget.remaining -= 1;
   }
@@ -141,7 +143,8 @@ export async function runTurn(
     opts.builderRepo ? { llm, worldId, builderRepo: opts.builderRepo } : { llm, worldId },
   );
   if (!r.ok) {
-    const reason = renderActionError(r.error);
+    const errorSegs = renderActionError(r.error);
+    const reason = errorSegs[0]?.text ?? r.error;
     const failed: DomainEvent = {
       id: nextEventId(),
       worldId: await repo.getWorldId(),
@@ -153,12 +156,12 @@ export async function runTurn(
       reason,
     };
     await repo.appendEvent(failed);
-    return { render: reason, events: [failed] };
+    return { render: errorSegs, events: [failed] };
   }
 
   const outcome = r.value;
   let event = outcome.event;
-  let render = outcome.render;
+  let render: readonly Segment[] = outcome.render;
 
   if (NARRATED_EVENT_KINDS.has(event.kind)) {
     // Narrated handlers do NOT persist their own event — runTurn enriches
@@ -170,7 +173,10 @@ export async function runTurn(
       narrations[witnessId] = prose;
     }
     event = { ...event, narrations } as DomainEvent;
-    render = narrations[actorId] ?? render;
+    const narration = narrations[actorId];
+    if (narration && narration.length > 0) {
+      render = [{ kind: SegmentKind.Narration, text: narration }];
+    }
     await repo.appendEvent(event);
   }
   // Mechanical handlers already called repo.appendEvent themselves.

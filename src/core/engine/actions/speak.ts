@@ -2,6 +2,7 @@ import type { Action } from '@core/domain/actions';
 import type { DomainEvent } from '@core/domain/events';
 import { EventKind } from '@core/domain/kinds';
 import { Err, Ok, type Result } from '@core/domain/result';
+import { SegmentKind } from '@core/domain/segments';
 import { nextEventId } from '../ids-gen';
 import { perceive } from '../perception';
 import type { Repository } from '../repository';
@@ -31,5 +32,5 @@ export async function handleSpeak(
     utterance: action.utterance,
   };
   // Placeholder render — runTurn replaces this with the actor's narration.
-  return Ok({ render: '…', event });
+  return Ok({ render: [{ kind: SegmentKind.Narration, text: '…' }], event });
 }

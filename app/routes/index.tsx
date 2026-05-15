@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
+import { type Segment, SegmentKind } from '@core/domain/segments';
 import { getInitialView } from '../server/initial-view';
 import { submitCommand } from '../server/submit';
 
@@ -8,11 +9,9 @@ export const Route = createFileRoute('/')({
   loader: async () => await getInitialView(),
 });
 
-interface Line {
-  id: number;
-  kind: 'system' | 'user' | 'witnessed';
-  text: string;
-}
+type Line =
+  | { id: number; kind: 'system'; segments: readonly Segment[] }
+  | { id: number; kind: 'user' | 'witnessed'; text: string };
 
 interface InventoryItem {
   id: string;
@@ -49,7 +48,7 @@ const EMPTY_SURROUNDINGS: Surroundings = { items: [], exits: [], characters: [] 
 
 function Page() {
   const initial = Route.useLoaderData();
-  const [lines, setLines] = useState<Line[]>([{ id: 0, kind: 'system', text: initial.render }]);
+  const [lines, setLines] = useState<Line[]>([{ id: 0, kind: 'system', segments: initial.render }]);
   const [inventory, setInventory] = useState<InventoryItem[]>(initial.inventory ?? []);
   const [surroundings, setSurroundings] = useState<Surroundings>(
     initial.surroundings ?? EMPTY_SURROUNDINGS,
@@ -78,7 +77,7 @@ function Page() {
     try {
       const r = await submitCommand({ data: { text } });
       setLines((ls) => {
-        const next: Line[] = [...ls, { id: idRef.current++, kind: 'system', text: r.render }];
+        const next: Line[] = [...ls, { id: idRef.current++, kind: 'system', segments: r.render }];
         for (const w of r.witnessed) {
           next.push({ id: idRef.current++, kind: 'witnessed', text: w });
         }
@@ -91,10 +90,9 @@ function Page() {
     }
   }
 
-  const colorFor = (kind: Line['kind']): string => {
+  const colorFor = (kind: 'user' | 'witnessed'): string => {
     if (kind === 'user') return '#9aff9a';
-    if (kind === 'witnessed') return '#888888';
-    return '#cfcfcf';
+    return '#888888';
   };
 
   const renderExit = (e: SurroundingsExit): string => {
@@ -103,33 +101,14 @@ function Page() {
   };
   // (renderCharacter removed — sidebar now renders label / short / mood on separate lines.)
 
-  // Per-line classifier for system renders. Most system renders that
-  // describe the room come out as: <location label>\n<long description>\n
-  // <list lines like "You see:" / "Also here:" / "Exits:">. We style line 0
-  // as a heading, list lines as plain text, and any free-text line in
-  // between (descriptions, narration) as italic.
-  const LIST_PREFIXES = [
-    'You see:',
-    'Also here:',
-    'Exits:',
-    'There are no obvious exits',
-    'You are carrying:',
-    'Equipped:',
-    'You are carrying nothing',
-  ];
-  const isListLine = (s: string): boolean => LIST_PREFIXES.some((p) => s.startsWith(p));
-
-  const isNarrationLine = (s: string): boolean => s.trim().endsWith('.');
-
-  const styleForSystemSubline = (subline: string, index: number, sublines: string[]): React.CSSProperties => {
-    const headingIdx = sublines.findIndex(
-      (s) => s.trim().length > 0 && !isListLine(s) && !isNarrationLine(s),
-    );
-    if (index === headingIdx) {
-      return { fontSize: 22, fontWeight: 600, letterSpacing: 0.5 };
+  const styleForSegment = (kind: SegmentKind): React.CSSProperties => {
+    switch (kind) {
+      case SegmentKind.LocationName:        return { fontSize: 22, fontWeight: 600, letterSpacing: 0.5 };
+      case SegmentKind.LocationDescription: return { fontStyle: 'italic' };
+      case SegmentKind.Narration:           return { fontStyle: 'italic' };
+      case SegmentKind.Error:               return { color: '#ff9999' };
+      default:                              return {};
     }
-    if (!isListLine(subline)) return { fontStyle: 'italic' };
-    return {};
   };
 
   const sectionHeaderStyle: React.CSSProperties = {
@@ -184,31 +163,25 @@ function Page() {
             }}
           >
             {lines.map((l) => {
-              const baseStyle: React.CSSProperties = {
-                color: colorFor(l.kind),
-                marginBottom: 8,
-              };
-              if (l.kind !== 'system') {
+              if (l.kind === 'system') {
                 return (
-                  <div
-                    key={l.id}
-                    style={{
-                      ...baseStyle,
-                      fontStyle: l.kind === 'witnessed' ? 'italic' : 'normal',
-                    }}
-                  >
-                    {l.text}
+                  <div key={l.id} style={{ color: '#cfcfcf', marginBottom: 8 }}>
+                    {l.segments.map((seg, i) => (
+                      <div key={i} style={styleForSegment(seg.kind)}>{seg.text}</div>
+                    ))}
                   </div>
                 );
               }
-              const sublines = l.text.split('\n');
               return (
-                <div key={l.id} style={baseStyle}>
-                  {sublines.map((sl, i) => (
-                    <div key={i} style={styleForSystemSubline(sl, i, sublines)}>
-                      {sl}
-                    </div>
-                  ))}
+                <div
+                  key={l.id}
+                  style={{
+                    color: colorFor(l.kind),
+                    marginBottom: 8,
+                    fontStyle: l.kind === 'witnessed' ? 'italic' : 'normal',
+                  }}
+                >
+                  {l.text}
                 </div>
               );
             })}

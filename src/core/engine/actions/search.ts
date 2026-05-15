@@ -19,6 +19,7 @@ import {
 } from '@core/domain/ids';
 import { EventKind, ExaminableKind, OwnerKind } from '@core/domain/kinds';
 import { Ok, type Result } from '@core/domain/result';
+import { type Segment, SegmentKind } from '@core/domain/segments';
 import { loadLoreContext } from '@core/lore/context';
 import { runDiscovery } from '../discovery';
 import { nextEventId } from '../ids-gen';
@@ -190,11 +191,11 @@ export async function handleSearch(
   // discovery LLM's match path (below) still wins for rendering the matched
   // item's longDescription; the auto-reveal here covers the *other* hidden
   // items at the location.
-  const autoRevealLines: string[] = [];
+  const autoRevealSegs: Segment[] = [];
   for (const hidden of undiscoveredItems) {
     if (response.matchedItemId === hidden.id) continue; // handled by MATCH path below
     await repo.setItemHidden(hidden.id, false);
-    autoRevealLines.push(renderRevealObserved({ ...hidden, hidden: false }));
+    autoRevealSegs.push({ kind: SegmentKind.Narration, text: renderRevealObserved({ ...hidden, hidden: false }) });
   }
 
   // 1. MATCH item — accept a match against the visible list OR against the
@@ -212,7 +213,7 @@ export async function handleSearch(
         target: { kind: ExaminableKind.Item, id: matchedVisible.id },
       };
       await repo.appendEvent(event);
-      const render = [...autoRevealLines, renderLookTarget(matchedVisible)].join('\n');
+      const render = [...autoRevealSegs, ...renderLookTarget(matchedVisible)];
       return Ok({ render, event });
     }
     const matchedHidden = findItemById(undiscoveredItems, response.matchedItemId);
@@ -226,8 +227,11 @@ export async function handleSearch(
         target: { kind: ExaminableKind.Item, id: revealed.id },
       };
       await repo.appendEvent(event);
-      const matchLines = [renderRevealObserved(revealed), renderLookTarget(revealed)];
-      const render = [...autoRevealLines, ...matchLines].join('\n');
+      const matchSegs: readonly Segment[] = [
+        { kind: SegmentKind.Narration, text: renderRevealObserved(revealed) },
+        ...renderLookTarget(revealed),
+      ];
+      const render = [...autoRevealSegs, ...matchSegs];
       return Ok({ render, event });
     }
     // Hallucinated id — silently fall through to narration.
@@ -244,7 +248,7 @@ export async function handleSearch(
         target: { kind: ExaminableKind.Agent, id: matchedAgent.id },
       };
       await repo.appendEvent(event);
-      const render = [...autoRevealLines, renderLookAgent(matchedAgent)].join('\n');
+      const render = [...autoRevealSegs, ...renderLookAgent(matchedAgent)];
       return Ok({ render, event });
     }
   }
@@ -282,6 +286,9 @@ export async function handleSearch(
     target: { kind: ExaminableKind.Room },
   };
   await repo.appendEvent(event);
-  const render = [...autoRevealLines, response.narration].filter((s) => s.length > 0).join('\n');
+  const narrationSeg: Segment[] = response.narration.length > 0
+    ? [{ kind: SegmentKind.Narration, text: response.narration }]
+    : [];
+  const render = [...autoRevealSegs, ...narrationSeg];
   return Ok({ render, event });
 }
