@@ -60,6 +60,10 @@ export interface MonsterTemplate {
   readonly longDescription: string;
   readonly hpMin: number;
   readonly hpMax: number;
+  readonly damageMin: number;
+  readonly damageMax: number;
+  readonly defenseMin: number;
+  readonly defenseMax: number;
   readonly mood: string | null;
   readonly startingItems: readonly StarterPackEntry[];
   readonly tags: readonly string[];
@@ -299,6 +303,10 @@ export interface UpsertMonsterTemplateInput {
   readonly longDescription: string;
   readonly hpMin: number;
   readonly hpMax: number;
+  readonly damageMin: number;
+  readonly damageMax: number;
+  readonly defenseMin: number;
+  readonly defenseMax: number;
   readonly mood: string | null;
   readonly startingItems: readonly StarterPackEntry[];
   readonly tags: readonly string[];

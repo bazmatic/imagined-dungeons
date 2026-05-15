@@ -120,6 +120,13 @@
       "when": 1778900001000,
       "tag": "0016_undefined_exits",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1778900002000,
+      "tag": "0017_monster_template_combat_stats",
+      "breakpoints": true
     }
   ]
 }

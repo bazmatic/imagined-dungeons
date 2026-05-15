@@ -9,9 +9,6 @@ const newSpawnedAgentId = (templateKey: string): AgentId =>
  * `locationId`. Each insert is mechanically identical to a hand-authored
  * agent — once the rows hit the `agents` table they're indistinguishable.
  *
- * `damage`/`defense`/`capacity` carry sensible defaults; templates can
- * grow these fields in a later slice (out of scope for v1).
- *
  * Optional `labels` overrides per-agent label strings; falls back to
  * `template.label` when the array is shorter than `count` or omitted.
  */
@@ -21,11 +18,13 @@ export function expandSpawn(args: {
   readonly count: number;
   readonly labels?: readonly string[];
 }): readonly UpsertAgentInput[] {
+  const randInRange = (min: number, max: number): number =>
+    Math.floor(Math.random() * (max - min + 1)) + min;
   const out: UpsertAgentInput[] = [];
   for (let i = 0; i < args.count; i++) {
-    const hp =
-      Math.floor(Math.random() * (args.template.hpMax - args.template.hpMin + 1)) +
-      args.template.hpMin;
+    const hp = randInRange(args.template.hpMin, args.template.hpMax);
+    const damage = randInRange(args.template.damageMin, args.template.damageMax);
+    const defense = randInRange(args.template.defenseMin, args.template.defenseMax);
     out.push({
       id: newSpawnedAgentId(args.template.templateKey),
       label: args.labels?.[i] ?? args.template.label,
@@ -33,8 +32,8 @@ export function expandSpawn(args: {
       longDescription: args.template.longDescription,
       locationId: args.locationId,
       hp,
-      damage: 1,
-      defense: 0,
+      damage,
+      defense,
       capacity: 5,
       mood: args.template.mood,
       goal: null,

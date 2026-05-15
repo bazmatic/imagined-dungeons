@@ -177,6 +177,38 @@ export function validateWorld(tree: WorldTree): Problem[] {
         message: `template ${tpl.id} hpMax must be >= hpMin`,
       });
     }
+    if (tpl.damageMin < 0) {
+      problems.push({
+        kind: ProblemKind.TemplateDamageInvalid,
+        entity: EntityKind.MonsterTemplate,
+        entityId: tpl.id as string,
+        message: `template ${tpl.id} damageMin must be >= 0`,
+      });
+    }
+    if (tpl.damageMax < tpl.damageMin) {
+      problems.push({
+        kind: ProblemKind.TemplateDamageRangeInvalid,
+        entity: EntityKind.MonsterTemplate,
+        entityId: tpl.id as string,
+        message: `template ${tpl.id} damageMax must be >= damageMin`,
+      });
+    }
+    if (tpl.defenseMin < 0) {
+      problems.push({
+        kind: ProblemKind.TemplateDefenseInvalid,
+        entity: EntityKind.MonsterTemplate,
+        entityId: tpl.id as string,
+        message: `template ${tpl.id} defenseMin must be >= 0`,
+      });
+    }
+    if (tpl.defenseMax < tpl.defenseMin) {
+      problems.push({
+        kind: ProblemKind.TemplateDefenseRangeInvalid,
+        entity: EntityKind.MonsterTemplate,
+        entityId: tpl.id as string,
+        message: `template ${tpl.id} defenseMax must be >= defenseMin`,
+      });
+    }
     for (const entry of tpl.startingItems) {
       if (entry.kind === StarterPackEntryKind.Inline && entry.label.trim().length === 0) {
         problems.push({

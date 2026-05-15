@@ -29,6 +29,10 @@ export function TemplateForm({ tree, templateId, onSaved, onDeleted }: TemplateF
           longDescription: tpl.longDescription,
           hpMin: tpl.hpMin,
           hpMax: tpl.hpMax,
+          damageMin: tpl.damageMin,
+          damageMax: tpl.damageMax,
+          defenseMin: tpl.defenseMin,
+          defenseMax: tpl.defenseMax,
           mood: tpl.mood ?? '',
           startingItems: tpl.startingItems,
           tags: tpl.tags,
@@ -61,6 +65,10 @@ export function TemplateForm({ tree, templateId, onSaved, onDeleted }: TemplateF
             longDescription: v.longDescription,
             hpMin: v.hpMin,
             hpMax: v.hpMax,
+            damageMin: v.damageMin,
+            damageMax: v.damageMax,
+            defenseMin: v.defenseMin,
+            defenseMax: v.defenseMax,
             mood: v.mood === '' ? null : v.mood,
             startingItems: v.startingItems,
             tags: v.tags,
@@ -165,6 +173,58 @@ export function TemplateForm({ tree, templateId, onSaved, onDeleted }: TemplateF
                 value={v.hpMax}
                 min={1}
                 onChange={(e) => setV({ ...v, hpMax: Number(e.target.value) })}
+              />
+            </div>
+            <div className="row-editor__field" style={{ gridColumn: 'span 3' }}>
+              <label className="row-editor__field-label" htmlFor="tpl-damage-min">
+                Dmg Min
+              </label>
+              <input
+                id="tpl-damage-min"
+                type="number"
+                className="row-editor__input"
+                value={v.damageMin}
+                min={0}
+                onChange={(e) => setV({ ...v, damageMin: Number(e.target.value) })}
+              />
+            </div>
+            <div className="row-editor__field" style={{ gridColumn: 'span 3' }}>
+              <label className="row-editor__field-label" htmlFor="tpl-damage-max">
+                Dmg Max
+              </label>
+              <input
+                id="tpl-damage-max"
+                type="number"
+                className="row-editor__input"
+                value={v.damageMax}
+                min={0}
+                onChange={(e) => setV({ ...v, damageMax: Number(e.target.value) })}
+              />
+            </div>
+            <div className="row-editor__field" style={{ gridColumn: 'span 3' }}>
+              <label className="row-editor__field-label" htmlFor="tpl-defense-min">
+                Def Min
+              </label>
+              <input
+                id="tpl-defense-min"
+                type="number"
+                className="row-editor__input"
+                value={v.defenseMin}
+                min={0}
+                onChange={(e) => setV({ ...v, defenseMin: Number(e.target.value) })}
+              />
+            </div>
+            <div className="row-editor__field" style={{ gridColumn: 'span 3' }}>
+              <label className="row-editor__field-label" htmlFor="tpl-defense-max">
+                Def Max
+              </label>
+              <input
+                id="tpl-defense-max"
+                type="number"
+                className="row-editor__input"
+                value={v.defenseMax}
+                min={0}
+                onChange={(e) => setV({ ...v, defenseMax: Number(e.target.value) })}
               />
             </div>
             <div className="row-editor__field" style={{ gridColumn: 'span 12' }}>
