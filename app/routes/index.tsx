@@ -104,9 +104,9 @@ function Page() {
   const styleForSegment = (kind: SegmentKind): React.CSSProperties => {
     switch (kind) {
       case SegmentKind.LocationName:
-        return { color: '#ffffff', fontSize: 18, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 12 };
+        return { color: '#ffffff', fontSize: 18, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 12, marginBottom: 6 };
       case SegmentKind.LocationDescription:
-        return { fontStyle: 'italic', color: '#cfcfcf', borderLeft: '2px solid #333', paddingLeft: 8 };
+        return { fontStyle: 'italic', color: '#cfcfcf', borderLeft: '2px solid #333', paddingLeft: 8, marginBottom: 10 };
       case SegmentKind.Narration:
         return { fontStyle: 'italic', color: '#cfcfcf', borderLeft: '2px solid #444', paddingLeft: 8 };
       case SegmentKind.ItemList:
