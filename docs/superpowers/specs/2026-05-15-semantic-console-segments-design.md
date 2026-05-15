@@ -52,20 +52,26 @@ export interface Segment {
 
 ## Template Functions — `src/core/engine/templates.ts`
 
-Every render function changes return type from `string` to `readonly Segment[]`. Kind is set at the point of production.
+Only functions that feed the `render` path change return type to `readonly Segment[]`. Functions used exclusively in the `witnessed` path (`renderWitnessForPlayer` in `tick.ts`) or in `narrate.ts` mechanical fallbacks keep returning `string` — changing them would conflict with `witnessed` staying as `readonly string[]`.
+
+**Functions that change to `Segment[]`:**
 
 | Function(s) | Kind |
 |---|---|
 | `renderLook` | `LocationName`, `LocationDescription`, `ItemList`?, `CharacterList`?, `ExitList` or `NoExits` |
 | `renderLookTarget`, `renderLookAgent`, `renderLookExit` | `Narration` |
 | `renderMoveSelf`, `renderTakeSelf`, `renderDropSelf`, `renderGiveSelf`, `renderEquipSelf`, `renderUnequipSelf`, `renderOpenSelf`, `renderCloseSelf`, `renderOfferSelf` | `Feedback` |
-| `renderGiveByActor`, `renderGiveObserved`, `renderTradeSelf`, `renderTradeObserved`, `renderRevealObserved`, `renderAgentSpawnedObserved`, `renderAgentStateUpdatedObserved`, `renderDescriptionUpdatedObserved` | `Narration` |
+| `renderTradeSelf` | `Narration` |
 | `renderInventory` | `Inventory` |
 | `renderParseError`, `renderActionError` | `Error` |
-| `renderSpeakMechanical`, `renderEmoteMechanical`, `renderAttackMechanical` | `Narration` |
-| `renderMoveObserved`, `renderTakeObserved`, `renderDropObserved`, `renderLookObserved`, `renderEquipObserved`, `renderUnequipObserved`, `renderOpenObserved`, `renderCloseObserved` | `Narration` |
 
 `renderLook` is the only multi-segment function (2–5 segments). All others return a single-element array.
+
+**Functions that stay as `string` (witnessed path / narrate.ts):**
+
+All `render*Observed` functions (`renderMoveObserved`, `renderTakeObserved`, `renderDropObserved`, `renderGiveObserved`, `renderGiveByActor`, `renderLookObserved`, `renderEquipObserved`, `renderUnequipObserved`, `renderOpenObserved`, `renderCloseObserved`, `renderTradeObserved`, `renderAgentSpawnedObserved`, `renderAgentStateUpdatedObserved`, `renderDescriptionUpdatedObserved`), plus the mechanical narration fallbacks `renderSpeakMechanical`, `renderEmoteMechanical`, `renderAttackMechanical`.
+
+`renderRevealObserved` is used in both the witnessed path and `search.ts` (render path). It stays as `string`; `search.ts` wraps its result inline: `{ kind: SegmentKind.Narration, text: renderRevealObserved(item) }`.
 
 Example — `renderLook` after:
 ```ts
@@ -150,11 +156,13 @@ playerRender = [...playerResult.render, ...renderLook(view)];
 
 ### `src/core/engine/actions/search.ts`
 
-Multi-segment assembly changes from `join('\n')` to array concatenation:
+`renderRevealObserved` stays as `string` (witnessed path). In the search render path, its result is wrapped inline as a `Narration` segment. Multi-segment assembly changes from `join('\n')` to array concatenation:
 ```ts
 // Before:
+autoRevealLines.push(renderRevealObserved({ ...hidden, hidden: false }));
 const render = [...autoRevealLines, renderLookTarget(matchedVisible)].join('\n');
 // After:
+autoRevealSegs.push({ kind: SegmentKind.Narration, text: renderRevealObserved({ ...hidden, hidden: false }) });
 const render = [...autoRevealSegs, ...renderLookTarget(matchedVisible)];
 ```
 
