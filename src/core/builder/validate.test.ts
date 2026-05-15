@@ -80,9 +80,11 @@ const baseTemplate = (id = 'tpl_goblin') => ({
   worldId: W,
   templateKey: 'goblin',
   label: 'goblin',
+  labelPrefixInstructions: null,
   shortDescription: 'a goblin',
   longDescription: 'a small goblin',
-  hp: 5,
+  hpMin: 3,
+  hpMax: 5,
   mood: null,
   startingItems: [],
   tags: [],
@@ -233,7 +235,7 @@ describe('validateWorld', () => {
 
   it('reports TemplateHpInvalid', () => {
     const t = baseTree();
-    const dirty = { ...t, templates: [{ ...baseTemplate(), hp: 0 }] };
+    const dirty = { ...t, templates: [{ ...baseTemplate(), hpMin: 0 }] };
     expect(validateWorld(dirty).map((p) => p.kind)).toContain(ProblemKind.TemplateHpInvalid);
   });
 

@@ -9,9 +9,11 @@ const tpl: MonsterTemplate = {
   worldId: W,
   templateKey: 'goblin',
   label: 'goblin',
+  labelPrefixInstructions: null,
   shortDescription: 'a goblin',
   longDescription: 'a small goblin',
-  hp: 5,
+  hpMin: 3,
+  hpMax: 5,
   mood: 'wary',
   startingItems: [],
   tags: [],
@@ -24,7 +26,8 @@ describe('expandSpawn', () => {
     for (const a of inserts) {
       expect(a.locationId).toBe(asLocationId('loc_a'));
       expect(a.label).toBe('goblin');
-      expect(a.hp).toBe(5);
+      expect(a.hp).toBeGreaterThanOrEqual(tpl.hpMin);
+      expect(a.hp).toBeLessThanOrEqual(tpl.hpMax);
       expect(a.mood).toBe('wary');
     }
   });
