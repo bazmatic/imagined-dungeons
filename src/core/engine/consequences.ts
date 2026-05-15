@@ -2,7 +2,8 @@ import type { BuilderRepository } from '@core/builder/repository';
 import type { Action, DescriptionTarget } from '@core/domain/actions';
 import type { Agent, Item, Location } from '@core/domain/entities';
 import type { DomainEvent } from '@core/domain/events';
-import { type AgentId, SYSTEM_AGENT_ID, type WorldId } from '@core/domain/ids';
+import { asAgentId, asExitId, asItemId, asLocationId, type AgentId, SYSTEM_AGENT_ID, type WorldId } from '@core/domain/ids';
+import { expandSpawn } from '@core/spawning/expand';
 import { ActionKind, AttackOutcome, EventKind, OwnerKind } from '@core/domain/kinds';
 import { log } from '@core/log';
 import type { JsonSchema, LanguageModel } from './language-model';
@@ -371,6 +372,143 @@ function parseResponse(parsed: unknown): readonly RawConsequence[] {
   return out;
 }
 
+async function applyWorldExpansion(
+  raws: readonly RawConsequence[],
+  lore: ConsequenceLoreSink,
+  playerLocationId: string,
+): Promise<void> {
+  const mintedLocationIds = new Set<string>();
+
+  // Step 1: create_location
+  for (const raw of raws) {
+    if (raw.kind !== ActionKind.CreateLocation) continue;
+    try {
+      await lore.builderRepo.upsertLocation(lore.worldId, {
+        id: asLocationId(raw.id),
+        label: raw.label,
+        shortDescription: raw.shortDescription,
+        longDescription: raw.longDescription,
+        secretDescription: raw.secretDescription,
+        tags: [...raw.tags],
+      });
+      mintedLocationIds.add(raw.id);
+    } catch (err) {
+      log.warn(`[consequence] create_location ${raw.id} failed: ${String(err)}`);
+    }
+  }
+
+  // Step 2: create_item and create_agent
+  const templates = await lore.builderRepo.listMonsterTemplates(lore.worldId);
+  const templateByKey = new Map(templates.map((t) => [t.templateKey, t]));
+
+  for (const raw of raws) {
+    if (raw.kind === ActionKind.CreateItem) {
+      if (raw.ownerKind !== OwnerKind.Location && raw.ownerKind !== OwnerKind.Agent) continue;
+      try {
+        await lore.builderRepo.upsertItem(lore.worldId, {
+          id: asItemId(raw.id),
+          label: raw.label,
+          shortDescription: raw.shortDescription,
+          longDescription: raw.longDescription,
+          ownerKind: raw.ownerKind,
+          ownerId: raw.ownerId,
+          weight: raw.weight,
+          hidden: raw.hidden,
+          tags: [...raw.tags],
+          container: false,
+          opened: true,
+          locked: false,
+          lockedByItem: null,
+          priceTag: null,
+        });
+      } catch (err) {
+        log.warn(`[consequence] create_item ${raw.id} failed: ${String(err)}`);
+      }
+    }
+
+    if (raw.kind === ActionKind.CreateAgent) {
+      const template = templateByKey.get(raw.templateKey);
+      if (!template) {
+        log.warn(`[consequence] create_agent: no template with key "${raw.templateKey}"; dropping`);
+        continue;
+      }
+      const inputs = expandSpawn({
+        template,
+        locationId: asLocationId(raw.locationId),
+        count: raw.count,
+      });
+      for (const input of inputs) {
+        try {
+          await lore.builderRepo.upsertAgent(lore.worldId, input);
+        } catch (err) {
+          log.warn(`[consequence] create_agent upsert failed: ${String(err)}`);
+        }
+      }
+    }
+  }
+
+  // Step 3: create_exit
+  for (const raw of raws) {
+    if (raw.kind !== ActionKind.CreateExit) continue;
+    const fromExists = mintedLocationIds.has(raw.from) || await locationExistsInLive(raw.from, lore);
+    if (!fromExists) {
+      log.warn(`[consequence] create_exit: from "${raw.from}" not found; dropping`);
+      continue;
+    }
+    if (raw.to !== null) {
+      const toExists = mintedLocationIds.has(raw.to) || await locationExistsInLive(raw.to, lore);
+      if (!toExists) {
+        log.warn(`[consequence] create_exit: to "${raw.to}" not found; dropping`);
+        continue;
+      }
+    }
+    try {
+      await lore.builderRepo.upsertExit(lore.worldId, {
+        id: asExitId(raw.id),
+        from: asLocationId(raw.from),
+        to: raw.to ? asLocationId(raw.to) : null,
+        direction: raw.direction,
+        label: raw.label,
+        locked: raw.locked,
+        lockedByItem: null,
+      });
+    } catch (err) {
+      log.warn(`[consequence] create_exit ${raw.id} failed: ${String(err)}`);
+    }
+  }
+
+  // Step 4: delete_entity
+  for (const raw of raws) {
+    if (raw.kind !== ActionKind.DeleteEntity) continue;
+    if (raw.targetKind === 'location' && raw.entityId === playerLocationId) {
+      log.warn(`[consequence] delete_entity: refusing to delete player's current location; dropping`);
+      continue;
+    }
+    try {
+      if (raw.targetKind === 'location') {
+        await lore.builderRepo.deleteLocation(lore.worldId, asLocationId(raw.entityId));
+      } else if (raw.targetKind === 'exit') {
+        await lore.builderRepo.deleteExit(lore.worldId, asExitId(raw.entityId));
+      } else if (raw.targetKind === 'agent') {
+        await lore.builderRepo.deleteAgent(lore.worldId, asAgentId(raw.entityId));
+      } else if (raw.targetKind === 'item') {
+        await lore.builderRepo.deleteItem(lore.worldId, asItemId(raw.entityId));
+      }
+    } catch (err) {
+      log.warn(`[consequence] delete_entity ${raw.entityId} failed: ${String(err)}`);
+    }
+  }
+}
+
+async function locationExistsInLive(id: string, lore: ConsequenceLoreSink): Promise<boolean> {
+  try {
+    const locs = await lore.builderRepo.listLocations(lore.worldId);
+    return locs.some((l) => (l.id as string) === id);
+  } catch {
+    return false;
+  }
+}
+
 async function summarise(event: DomainEvent, repo: Repository): Promise<string> {
   const labelOf = async (id: AgentId): Promise<string> => {
     try {
@@ -725,6 +863,24 @@ export async function consequencesFor(
   }
 
   const raws = parseResponse(parsed).slice(0, MAX_CONSEQUENCES_PER_PASS);
+
+  // Execute create/delete actions via builderRepo before returning domain actions.
+  if (lore) {
+    try {
+      let playerLocId = SYSTEM_AGENT_ID as string;
+      try {
+        const locs = await locationsInvolved(events, repo);
+        const firstLoc = locs[0];
+        if (firstLoc) playerLocId = firstLoc.id as string;
+      } catch {
+        // skip
+      }
+      await applyWorldExpansion(raws, lore, playerLocId);
+    } catch (err) {
+      log.warn(`[consequence] applyWorldExpansion error: ${String(err)}`);
+    }
+  }
+
   const actions: Action[] = [];
   for (const raw of raws) {
     if (raw.kind === ActionKind.RevealItem) {
@@ -733,8 +889,6 @@ export async function consequencesFor(
       actions.push({ kind: ActionKind.RevealItem, actorId: SYSTEM_AGENT_ID, itemId: item.id });
       continue;
     }
-    // New world-expansion kinds (create_location, create_exit, create_agent,
-    // create_item, delete_entity) are handled in Task 10. Skip them here.
     if (raw.kind !== ActionKind.UpdateDescription) continue;
     const target = await resolveTarget(raw, events, repo);
     if (!target) continue;
