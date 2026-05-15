@@ -7,9 +7,9 @@ export const SegmentKind = {
   NoExits:             'no-exits',
   Feedback:            'feedback',
   Narration:           'narration',
+  Spawn:               'spawn',
   Error:               'error',
   Inventory:           'inventory',
-  Spawn:               'spawn',
 } as const;
 export type SegmentKind = (typeof SegmentKind)[keyof typeof SegmentKind];
 
