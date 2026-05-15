@@ -32,6 +32,7 @@ export const ProblemKind = {
   DuplicateId: 'duplicate_id',
   TemplateLabelEmpty: 'template_label_empty',
   TemplateHpInvalid: 'template_hp_invalid',
+  TemplateHpRangeInvalid: 'template_hp_range_invalid',
   TemplateStartingItemMissing: 'template_starting_item_missing',
   LocationSpawnTriggerTemplateMissing: 'location_spawn_trigger_template_missing',
   LocationSpawnTriggerLocationMissing: 'location_spawn_trigger_location_missing',
