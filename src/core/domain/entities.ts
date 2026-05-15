@@ -30,7 +30,7 @@ export interface Exit {
   readonly id: ExitId;
   readonly worldId: WorldId;
   readonly from: LocationId;
-  readonly to: LocationId;
+  readonly to: LocationId | null;
   readonly direction: Direction;
   readonly label: string;
   readonly locked: boolean;

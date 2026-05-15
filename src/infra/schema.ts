@@ -43,7 +43,7 @@ export const exits = sqliteTable(
       .notNull()
       .references(() => worlds.id),
     fromLocationId: text('from_location_id').notNull(),
-    toLocationId: text('to_location_id').notNull(),
+    toLocationId: text('to_location_id'),
     direction: text('direction').notNull(),
     label: text('label').notNull(),
     locked: integer('locked', { mode: 'boolean' }).notNull(),

@@ -238,7 +238,7 @@ export interface UpsertLocationInput {
 export interface UpsertExitInput {
   readonly id: ExitId;
   readonly from: LocationId;
-  readonly to: LocationId;
+  readonly to: LocationId | null;
   readonly direction: string;
   readonly label: string;
   readonly locked: boolean;
