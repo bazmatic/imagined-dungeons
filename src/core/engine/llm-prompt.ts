@@ -12,9 +12,10 @@ Output shape: every response is a single JSON object with these ten keys: kind, 
 For each kind, fill in the relevant fields and set every other field to null.
 
 Available actions:
-- move: travel in a compass/vertical direction.
+- move: travel in a compass/vertical direction to a DIFFERENT location.
   Set: kind="move", direction one of "north","south","east","west","northeast","northwest","southeast","southwest","up","down".
   All other fields null.
+  IMPORTANT: "move closer", "approach X", "step toward", "position myself" and any other relative movement WITHIN the current location are NOT move — they are emote (the engine has no concept of intra-location positioning).
   Example "head south" -> { "kind":"move", "direction":"south", "targetKind":null, "targetRef":null, "itemRef":null, "targetAgentRef":null, "utterance":null, "reason":null }.
 
 - look: a bare glance at something already visible. The target can be the room, an item, another character, or an exit.
@@ -89,6 +90,8 @@ Available actions:
   Example "kick the door" -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"kick the door" }.
   Example "read the fire map" (actor holds it) -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"read the fire map" }.
   Example "light the lantern" (actor holds it) -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"light the lantern" }.
+  Example "I move closer to Paff" -> { "kind":"emote", "targetAgentRef":"Paff", "emoteDescription":"move closer" }.
+  Example "step toward the fire" -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"step toward the fire" }.
   (Remember to fill every other field with null, per the output shape.)
 
 - equip: put on / wear / wield / draw an item the actor is carrying. The item moves into an "equipped" state — still in their inventory, but actively worn or wielded. Reserved for clothes, armour, weapons, accessories — things meant to be worn or held in a way that affects how the actor presents. NOT for consuming, breaking, opening, or merely interacting with held items (those are emote).

@@ -8,7 +8,7 @@ You write a world. The engine breathes life into it.
 
 ## What makes it different
 
-**The world notices things.** After anything significant happens — a key item is taken, a fight breaks out, a door is forced open — a consequence engine surveys the event and decides whether any room descriptions should change to reflect it. Pick up the only torch in a dark cellar, and the room description might update to note the darkness that followed. The world's memory is durable.
+**The world notices things.** After anything significant happens — a key item is taken, a fight breaks out, a door is forced open — a consequence engine surveys the event and decides whether any room descriptions should change to reflect it. Launch a fireball that misses its target, and the room description might update to note the scorch mark on the wall. The world's memory is durable.
 
 **NPCs have their own agenda.** Characters in the world take autonomous turns. They move, act, speak, and respond to events without being driven by the player. Share a location with an NPC and you'll witness them going about their business.
 

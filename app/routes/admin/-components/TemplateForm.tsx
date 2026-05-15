@@ -164,7 +164,7 @@ export function TemplateForm({ tree, templateId, onSaved, onDeleted }: TemplateF
                 className="row-editor__input"
                 value={v.hpMax}
                 min={1}
-                onChange={(e) => setV({ ...v, hpMax: Number(e.target.value) })
+                onChange={(e) => setV({ ...v, hpMax: Number(e.target.value) })}
               />
             </div>
             <div className="row-editor__field" style={{ gridColumn: 'span 12' }}>
