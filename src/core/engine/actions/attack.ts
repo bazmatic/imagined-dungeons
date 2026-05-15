@@ -1,8 +1,8 @@
 import type { Action } from '@core/domain/actions';
 import type { DomainEvent } from '@core/domain/events';
-import { AttackOutcome, EventKind } from '@core/domain/kinds';
+import { AttackOutcome, EventKind, OwnerKind } from '@core/domain/kinds';
 import { Err, Ok, type Result } from '@core/domain/result';
-import { SegmentKind } from '@core/domain/segments';
+import { type Segment, SegmentKind } from '@core/domain/segments';
 import { nextEventId } from '../ids-gen';
 import { perceive } from '../perception';
 import type { Repository } from '../repository';
@@ -47,9 +47,10 @@ export async function handleAttack(
   await repo.setRngSeed(rng.seed);
 
   const witnesses = (await repo.agentsAt(view.location.id)).map((a) => a.id);
+  const worldId = await repo.getWorldId();
   const event: DomainEvent = {
     id: nextEventId(),
-    worldId: await repo.getWorldId(),
+    worldId,
     actorId: action.actorId,
     kind: EventKind.Attack,
     witnesses,
@@ -58,6 +59,35 @@ export async function handleAttack(
     outcome,
     damageDealt,
   };
-  // Placeholder render — runTurn replaces this with the actor's narration.
-  return Ok({ render: [{ kind: SegmentKind.Narration, text: '…' }], event });
+
+  // If the target is killed, drop their inventory and emit a Death event.
+  if (hit && target.hp - damageDealt <= 0) {
+    const targetItems = await repo.itemsOwnedBy({ kind: OwnerKind.Agent, id: target.id });
+    for (const item of targetItems) {
+      await repo.transferItem(item.id, { kind: OwnerKind.Location, id: view.location.id });
+    }
+    const deathEvent: DomainEvent = {
+      id: nextEventId(),
+      worldId,
+      actorId: action.actorId,
+      kind: EventKind.Death,
+      witnesses,
+      createdAt: new Date(),
+      targetAgentId: action.targetAgentId,
+      locationId: view.location.id,
+    };
+    await repo.appendEvent(deathEvent);
+  }
+
+  const render: Segment[] = [];
+  if (hit) {
+    render.push({ kind: SegmentKind.Hit, text: `You hit ${target.label} for ${damageDealt} damage.` });
+    if (target.hp - damageDealt <= 0) {
+      render.push({ kind: SegmentKind.Death, text: `${target.label} is slain!` });
+    }
+  } else {
+    render.push({ kind: SegmentKind.Miss, text: `You miss ${target.label}.` });
+  }
+
+  return Ok({ render, event });
 }

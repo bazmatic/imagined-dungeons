@@ -157,6 +157,8 @@ function summariseEvent(event: DomainEvent): string {
       return event.accepted
         ? `${event.buyerId} bought ${event.itemId} from ${event.sellerId} for ${event.price} gold`
         : `${event.sellerId} refused to sell ${event.itemId} to ${event.buyerId} for ${event.price} gold`;
+    case EventKind.Death:
+      return `${event.actorId} slew ${event.targetAgentId}`;
   }
 }
 

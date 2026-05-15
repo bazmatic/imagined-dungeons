@@ -123,6 +123,14 @@ function Page() {
         return { color: '#ffaa44', fontWeight: 700 };
       case SegmentKind.Error:
         return { color: '#ff9999', fontWeight: 700 };
+      case SegmentKind.Hit:
+        return { color: '#ffcc44', fontWeight: 700 };
+      case SegmentKind.Miss:
+        return { color: '#999999', fontStyle: 'italic' };
+      case SegmentKind.Damage:
+        return { color: '#ff6666' };
+      case SegmentKind.Death:
+        return { color: '#ff3333', fontWeight: 700, textTransform: 'uppercase' as const };
     }
   };
 
