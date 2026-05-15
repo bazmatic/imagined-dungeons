@@ -103,7 +103,7 @@ function Page() {
 
   const styleForSegment = (kind: SegmentKind): React.CSSProperties => {
     switch (kind) {
-      case SegmentKind.LocationName:        return { fontSize: 22, fontWeight: 600, letterSpacing: 0.5 };
+      case SegmentKind.LocationName:        return { fontSize: 22, fontWeight: 600, letterSpacing: 0.5, marginTop: 12 };
       case SegmentKind.LocationDescription: return { fontStyle: 'italic' };
       case SegmentKind.Narration:           return { fontStyle: 'italic' };
       case SegmentKind.Error:               return { color: '#ff9999' };

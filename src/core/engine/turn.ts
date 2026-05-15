@@ -98,7 +98,7 @@ export async function runTurn(
       }
     }
     const errorSegs = renderParseError(parsed);
-    const reason = errorSegs[0]?.text ?? '';
+    const reason = errorSegs.map((s) => s.text).join(' ');
     const failed: DomainEvent = {
       id: nextEventId(),
       worldId: await repo.getWorldId(),
@@ -144,7 +144,7 @@ export async function runTurn(
   );
   if (!r.ok) {
     const errorSegs = renderActionError(r.error);
-    const reason = errorSegs[0]?.text ?? r.error;
+    const reason = errorSegs.map((s) => s.text).join(' ');
     const failed: DomainEvent = {
       id: nextEventId(),
       worldId: await repo.getWorldId(),
