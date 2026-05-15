@@ -11,6 +11,9 @@ export type JsonSchema = {
   readonly const?: string | number | boolean | null;
   readonly oneOf?: readonly JsonSchema[];
   readonly items?: JsonSchema;
+  readonly maxItems?: number;
+  readonly minimum?: number;
+  readonly maximum?: number;
 };
 
 export interface LanguageModelRequest {

@@ -72,14 +72,24 @@ const SYSTEM_PROMPT_LINES: readonly string[] = [
   '',
   'updatedStorySoFar:',
   '- Only set `updatedStorySoFar` for events that meaningfully change the campaign — a major character dying, a quest resolving, a faction shifting. Routine moves, conversations, and inventory changes leave it null.',
+  '',
+  'World Expansion:',
+  'You may create and delete entities when events durably alter the world — a secret passage is discovered, a merchant arrives, a wall is blasted open, a building collapses.',
+  '',
+  'Do NOT create entities for transient events (a candle flickering, a guard walking past). Created entities persist for the rest of the session.',
+  '',
+  "IDs: Invent a short snake_case id prefixed by kind (loc_, agent_, item_, exit_). You may reference a just-created ID in a later action in the same batch.",
+  '',
+  "Spawning agents: Use create_agent with an existing templateKey from the world's monster templates. Do not invent stats. If no template fits, prefer description updates over spawning.",
+  '',
+  'Enriching sparse locations: When a location has empty or minimal descriptions (a newly generated stub), treat any player action there as a signal to generate full content — proper label, descriptions, atmosphere, and any items or agents that belong there. You may plant exits with to=null to suggest depth beyond the current scene.',
+  '',
+  "create/delete limits: No more than 3 create or delete actions per batch. Maximum 5 total consequences. When in doubt, don't create — a good description update is often better than a new entity.",
 ];
 
 const SYSTEM_PROMPT = SYSTEM_PROMPT_LINES.join('\n');
 
 export const CONSEQUENCE_SCHEMA_NAME = 'ConsequenceResponse';
-
-const TARGET_KINDS = [OwnerKind.Location, OwnerKind.Item, OwnerKind.Agent] as const;
-const CONSEQUENCE_KINDS = [ActionKind.UpdateDescription, ActionKind.RevealItem] as const;
 
 export const CONSEQUENCE_SCHEMA: JsonSchema = {
   type: 'object',
@@ -89,34 +99,107 @@ export const CONSEQUENCE_SCHEMA: JsonSchema = {
     updatedStorySoFar: { type: ['string', 'null'] },
     consequences: {
       type: 'array',
+      maxItems: 5,
       items: {
-        type: 'object',
-        additionalProperties: false,
-        required: [
-          'kind',
-          'targetKind',
-          'targetRef',
-          'shortDescription',
-          'longDescription',
-          'mood',
-          'shortTermIntent',
+        oneOf: [
+          {
+            type: 'object',
+            additionalProperties: false,
+            required: ['kind', 'targetKind', 'targetRef', 'shortDescription', 'longDescription', 'mood', 'shortTermIntent'],
+            properties: {
+              kind: { const: 'update_description' },
+              targetKind: { enum: ['location', 'item', 'agent'] },
+              targetRef: { type: 'string' },
+              shortDescription: { type: ['string', 'null'] },
+              longDescription: { type: ['string', 'null'] },
+              mood: { type: ['string', 'null'] },
+              shortTermIntent: { type: ['string', 'null'] },
+            },
+          },
+          {
+            type: 'object',
+            additionalProperties: false,
+            required: ['kind', 'targetRef'],
+            properties: {
+              kind: { const: 'reveal_item' },
+              targetKind: { type: 'string' },
+              targetRef: { type: 'string' },
+            },
+          },
+          {
+            type: 'object',
+            additionalProperties: false,
+            required: ['kind', 'id', 'label', 'shortDescription', 'longDescription', 'secretDescription', 'tags'],
+            properties: {
+              kind: { const: 'create_location' },
+              id: { type: 'string' },
+              label: { type: 'string' },
+              shortDescription: { type: 'string' },
+              longDescription: { type: 'string' },
+              secretDescription: { type: 'string' },
+              tags: { type: 'array', items: { type: 'string' } },
+            },
+          },
+          {
+            type: 'object',
+            additionalProperties: false,
+            required: ['kind', 'id', 'from', 'direction', 'label', 'locked'],
+            properties: {
+              kind: { const: 'create_exit' },
+              id: { type: 'string' },
+              from: { type: 'string' },
+              to: { type: ['string', 'null'] },
+              direction: { type: 'string' },
+              label: { type: 'string' },
+              locked: { type: 'boolean' },
+            },
+          },
+          {
+            type: 'object',
+            additionalProperties: false,
+            required: ['kind', 'templateKey', 'locationId'],
+            properties: {
+              kind: { const: 'create_agent' },
+              templateKey: { type: 'string' },
+              locationId: { type: 'string' },
+              count: { type: 'integer', minimum: 1, maximum: 3 },
+            },
+          },
+          {
+            type: 'object',
+            additionalProperties: false,
+            required: ['kind', 'id', 'label', 'shortDescription', 'longDescription', 'ownerKind', 'ownerId', 'weight', 'hidden', 'tags'],
+            properties: {
+              kind: { const: 'create_item' },
+              id: { type: 'string' },
+              label: { type: 'string' },
+              shortDescription: { type: 'string' },
+              longDescription: { type: 'string' },
+              ownerKind: { enum: ['location', 'agent'] },
+              ownerId: { type: 'string' },
+              weight: { type: 'integer', minimum: 0 },
+              hidden: { type: 'boolean' },
+              tags: { type: 'array', items: { type: 'string' } },
+            },
+          },
+          {
+            type: 'object',
+            additionalProperties: false,
+            required: ['kind', 'targetKind', 'entityId'],
+            properties: {
+              kind: { const: 'delete_entity' },
+              targetKind: { enum: ['location', 'exit', 'agent', 'item'] },
+              entityId: { type: 'string' },
+            },
+          },
         ],
-        properties: {
-          kind: { enum: [...CONSEQUENCE_KINDS] },
-          targetKind: { enum: [...TARGET_KINDS] },
-          targetRef: { type: 'string' },
-          shortDescription: { type: ['string', 'null'] },
-          longDescription: { type: ['string', 'null'] },
-          mood: { type: ['string', 'null'] },
-          shortTermIntent: { type: ['string', 'null'] },
-        },
       },
     },
   },
 };
 
 /** Hard cap on consequence actions returned per pass (§12 boundedness). */
-export const MAX_CONSEQUENCES_PER_PASS = 3;
+export const MAX_CONSEQUENCES_PER_PASS = 5;
 
 /** Cap on consequence-pass recursion depth (§9 termination). */
 export const MAX_CONSEQUENCE_DEPTH = 1;
@@ -134,6 +217,47 @@ type RawConsequence =
   | {
       readonly kind: 'reveal_item';
       readonly targetRef: string;
+    }
+  | {
+      readonly kind: 'create_location';
+      readonly id: string;
+      readonly label: string;
+      readonly shortDescription: string;
+      readonly longDescription: string;
+      readonly secretDescription: string;
+      readonly tags: readonly string[];
+    }
+  | {
+      readonly kind: 'create_exit';
+      readonly id: string;
+      readonly from: string;
+      readonly to: string | null;
+      readonly direction: string;
+      readonly label: string;
+      readonly locked: boolean;
+    }
+  | {
+      readonly kind: 'create_agent';
+      readonly templateKey: string;
+      readonly locationId: string;
+      readonly count: number;
+    }
+  | {
+      readonly kind: 'create_item';
+      readonly id: string;
+      readonly label: string;
+      readonly shortDescription: string;
+      readonly longDescription: string;
+      readonly ownerKind: 'location' | 'agent';
+      readonly ownerId: string;
+      readonly weight: number;
+      readonly hidden: boolean;
+      readonly tags: readonly string[];
+    }
+  | {
+      readonly kind: 'delete_entity';
+      readonly targetKind: 'location' | 'exit' | 'agent' | 'item';
+      readonly entityId: string;
     };
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>
@@ -146,51 +270,103 @@ function parseResponse(parsed: unknown): readonly RawConsequence[] {
   const out: RawConsequence[] = [];
   for (const entry of list) {
     if (!isRecord(entry)) continue;
-    if (entry.kind === ActionKind.RevealItem) {
+    const kind = entry.kind;
+
+    if (kind === ActionKind.RevealItem) {
       const targetRef = entry.targetRef;
       if (typeof targetRef !== 'string' || targetRef.length === 0) continue;
       out.push({ kind: ActionKind.RevealItem, targetRef });
       continue;
     }
-    if (entry.kind !== ActionKind.UpdateDescription) continue;
-    const targetKind = entry.targetKind;
-    if (
-      targetKind !== OwnerKind.Location &&
-      targetKind !== OwnerKind.Item &&
-      targetKind !== OwnerKind.Agent
-    ) {
+
+    if (kind === ActionKind.CreateLocation) {
+      const id = entry.id;
+      const label = entry.label;
+      const short = entry.shortDescription;
+      const long = entry.longDescription;
+      const secret = entry.secretDescription ?? '';
+      const tags = Array.isArray(entry.tags) ? (entry.tags as string[]) : [];
+      if (typeof id !== 'string' || typeof label !== 'string' || typeof short !== 'string' || typeof long !== 'string') {
+        console.warn('[consequence] create_location missing required fields; dropping');
+        continue;
+      }
+      out.push({ kind: ActionKind.CreateLocation, id, label, shortDescription: short, longDescription: long, secretDescription: typeof secret === 'string' ? secret : '', tags });
       continue;
     }
+
+    if (kind === ActionKind.CreateExit) {
+      const id = entry.id;
+      const from = entry.from;
+      const to = entry.to ?? null;
+      const direction = entry.direction;
+      const label = entry.label ?? '';
+      const locked = Boolean(entry.locked);
+      if (typeof id !== 'string' || typeof from !== 'string' || typeof direction !== 'string') {
+        console.warn('[consequence] create_exit missing required fields; dropping');
+        continue;
+      }
+      if (to !== null && typeof to !== 'string') continue;
+      out.push({ kind: ActionKind.CreateExit, id, from, to: typeof to === 'string' ? to : null, direction, label: typeof label === 'string' ? label : '', locked });
+      continue;
+    }
+
+    if (kind === ActionKind.CreateAgent) {
+      const templateKey = entry.templateKey;
+      const locationId = entry.locationId;
+      const count = typeof entry.count === 'number' ? Math.max(1, Math.floor(entry.count)) : 1;
+      if (typeof templateKey !== 'string' || typeof locationId !== 'string') {
+        console.warn('[consequence] create_agent missing templateKey or locationId; dropping');
+        continue;
+      }
+      out.push({ kind: ActionKind.CreateAgent, templateKey, locationId, count });
+      continue;
+    }
+
+    if (kind === ActionKind.CreateItem) {
+      const id = entry.id;
+      const label = entry.label;
+      const short = entry.shortDescription;
+      const long = entry.longDescription;
+      const ownerKind = entry.ownerKind;
+      const ownerId = entry.ownerId;
+      const weight = typeof entry.weight === 'number' ? entry.weight : 0;
+      const hidden = Boolean(entry.hidden);
+      const tags = Array.isArray(entry.tags) ? (entry.tags as string[]) : [];
+      if (typeof id !== 'string' || typeof label !== 'string' || typeof short !== 'string' || typeof long !== 'string' || typeof ownerId !== 'string') {
+        console.warn('[consequence] create_item missing required fields; dropping');
+        continue;
+      }
+      if (ownerKind !== OwnerKind.Location && ownerKind !== OwnerKind.Agent) continue;
+      out.push({ kind: ActionKind.CreateItem, id, label, shortDescription: short, longDescription: long, ownerKind, ownerId, weight, hidden, tags });
+      continue;
+    }
+
+    if (kind === ActionKind.DeleteEntity) {
+      const targetKind = entry.targetKind;
+      const entityId = entry.entityId;
+      if (typeof entityId !== 'string' || entityId.length === 0) continue;
+      if (targetKind !== 'location' && targetKind !== 'exit' && targetKind !== 'agent' && targetKind !== 'item') continue;
+      out.push({ kind: ActionKind.DeleteEntity, targetKind, entityId });
+      continue;
+    }
+
+    if (kind !== ActionKind.UpdateDescription) continue;
+    const targetKind = entry.targetKind;
+    if (targetKind !== OwnerKind.Location && targetKind !== OwnerKind.Item && targetKind !== OwnerKind.Agent) continue;
     const targetRef = entry.targetRef;
     if (typeof targetRef !== 'string' || targetRef.length === 0) continue;
     const shortDescription = entry.shortDescription;
     const longDescription = entry.longDescription;
     if (shortDescription !== null && typeof shortDescription !== 'string') continue;
     if (longDescription !== null && typeof longDescription !== 'string') continue;
-    // mood is optional in older fakes/tests; default to null.
     const moodRaw = 'mood' in entry ? entry.mood : null;
     if (moodRaw !== null && typeof moodRaw !== 'string') continue;
     const isAgent = targetKind === OwnerKind.Agent;
-    // mood is only meaningful for agents; drop on non-agents silently.
     const mood = isAgent ? (moodRaw as string | null) : null;
-    // shortTermIntent is owned by the agent's own mind, NOT the consequence
-    // engine — always force it to null here regardless of what the LLM
-    // emitted. This is the hard guard that keeps the agent's plan from
-    // being overwritten by a third-party judgment.
     const shortTermIntent = null;
-    // A consequence must change SOMETHING. For agents an empty-string mood
-    // counts as a change (clear). For non-agents only the descriptions count.
     const agentSideChange = isAgent && mood !== null;
     if (shortDescription === null && longDescription === null && !agentSideChange) continue;
-    out.push({
-      kind: ActionKind.UpdateDescription,
-      targetKind,
-      targetRef,
-      shortDescription,
-      longDescription,
-      mood,
-      shortTermIntent,
-    });
+    out.push({ kind: ActionKind.UpdateDescription, targetKind, targetRef, shortDescription, longDescription, mood, shortTermIntent });
   }
   return out;
 }
@@ -557,6 +733,9 @@ export async function consequencesFor(
       actions.push({ kind: ActionKind.RevealItem, actorId: SYSTEM_AGENT_ID, itemId: item.id });
       continue;
     }
+    // New world-expansion kinds (create_location, create_exit, create_agent,
+    // create_item, delete_entity) are handled in Task 10. Skip them here.
+    if (raw.kind !== ActionKind.UpdateDescription) continue;
     const target = await resolveTarget(raw, events, repo);
     if (!target) continue;
     actions.push({
