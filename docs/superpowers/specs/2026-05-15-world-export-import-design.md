@@ -14,12 +14,31 @@ Piggyback on the existing snapshot infrastructure. The snapshot mechanism (`save
 
 No changes to the `SnapshotBlob` format or the `worldSnapshots` table schema.
 
+## Constants
+
+All values used in comparisons, switch cases, or dispatch must be derived from `as const` objects — no raw string literals in logic.
+
+```ts
+export const WorldExportFormat = {
+  Format: 'imagined-dungeons-world-export',
+  Version: 1,
+} as const;
+
+export const ImportMode = {
+  Create: 'create',
+  Overwrite: 'overwrite',
+} as const;
+export type ImportMode = (typeof ImportMode)[keyof typeof ImportMode];
+```
+
+Client-side validation uses `WorldExportFormat.Format` and `WorldExportFormat.Version`; the orchestrator uses `ImportMode.Create` / `ImportMode.Overwrite`.
+
 ## Export File Format
 
 ```ts
 interface WorldExportBundle {
-  version: 1;
-  format: 'imagined-dungeons-world-export';
+  version: typeof WorldExportFormat.Version;
+  format: typeof WorldExportFormat.Format;
   exportedAt: string;          // ISO8601
   worldMeta: {
     displayName: string;
@@ -54,15 +73,15 @@ The user chooses at export time whether to include the live world.
 
 ### `importWorld(repo, bundle, { mode, targetDraftId? })` — orchestrator
 
-- `mode: 'create'`: calls `createWorld({ displayName, label })` (appends numeric suffix if label is taken, e.g. `midvale-2`), then `importWorldData` for draft and, if `bundle.live` is present, for the live sibling.
-- `mode: 'overwrite'`: calls `importWorldData` for the target draft. If `bundle.live` is present, imports live too. **World metadata (`displayName`, `label`, `rngSeed`, `coverImageUrl`) is not overwritten** — the user keeps their existing metadata.
+- `ImportMode.Create`: calls `createWorld({ displayName, label })` (appends numeric suffix if label is taken, e.g. `midvale-2`), then `importWorldData` for draft and, if `bundle.live` is present, for the live sibling.
+- `ImportMode.Overwrite`: calls `importWorldData` for the target draft. If `bundle.live` is present, imports live too. **World metadata (`displayName`, `label`, `rngSeed`, `coverImageUrl`) is not overwritten** — the user keeps their existing metadata.
 
 ## Server Functions (`app/server/admin/worlds.ts`)
 
 Two new server functions wrapping the core logic:
 
 - `exportWorld({ worldId, includeLive })` — returns `WorldExportBundle`.
-- `importWorld({ bundle, mode, targetDraftId? })` — returns `{ worldId }` of the created/updated draft.
+- `importWorld({ bundle, mode: ImportMode, targetDraftId? })` — returns `{ worldId }` of the created/updated draft.
 
 ## UI (`app/routes/admin/`)
 
@@ -79,7 +98,7 @@ Two new server functions wrapping the core logic:
   1. File picker (`.json` only). On file selected, parse and validate the bundle client-side (check `format` and `version`); show the world name from `worldMeta.displayName`.
   2. Mode choice: **Create new world** (default) or **Replace existing world** (dropdown of existing draft worlds).
 - On submit: calls `importWorld`.
-- On success: redirect to (or highlight) the imported/updated world.
+- On success: navigate to the imported/updated world's editor page (`/admin/$worldId`).
 
 No new routes needed.
 
@@ -92,13 +111,13 @@ No new routes needed.
 
 ### Import — client-side
 
-- Validate `format === 'imagined-dungeons-world-export'` and `version === 1`; show a clear error otherwise.
+- Validate `format === WorldExportFormat.Format` and `version === WorldExportFormat.Version`; show a clear error otherwise.
 - No deep entity validation client-side.
 
 ### Import — server-side
 
-- `mode: 'overwrite'` with a missing or non-draft `targetDraftId` → return error.
-- `mode: 'create'` with a conflicting label → append numeric suffix rather than fail.
+- `ImportMode.Overwrite` with a missing or non-draft `targetDraftId` → return error.
+- `ImportMode.Create` with a conflicting label → append numeric suffix rather than fail.
 - Entire import runs in a transaction; any failure rolls back completely.
 - Unknown/extra fields in the blob are ignored via `parseSnapshot`'s existing `?? []` defaults.
 
@@ -109,7 +128,7 @@ Integration tests using `BuilderMemoryRepository`, following the existing patter
 - **`buildExportBundle`**: draft-only export excludes `live`; draft+live includes both; world metadata populated correctly.
 - **`importWorldData`**: wipe+repopulate works; snapshot table updated to match imported blob.
 - **`importWorld`**:
-  - `mode: 'create'` produces a new world with correct entities; label conflict appends suffix.
-  - `mode: 'overwrite'` replaces entities; world metadata unchanged; live imported if present; partial failure rolls back.
+  - `ImportMode.Create` produces a new world with correct entities; label conflict appends suffix.
+  - `ImportMode.Overwrite` replaces entities; world metadata unchanged; live imported if present; partial failure rolls back.
 
 No UI tests for the file download/upload plumbing.
