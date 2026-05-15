@@ -119,6 +119,8 @@ function Page() {
         return { color: '#cfcfcf', opacity: 0.8 };
       case SegmentKind.Inventory:
         return { color: '#aaaaaa', fontSize: 13, fontStyle: 'italic' };
+      case SegmentKind.Spawn:
+        return { color: '#ffaa44', fontWeight: 700 };
       case SegmentKind.Error:
         return { color: '#ff9999', fontWeight: 700 };
     }

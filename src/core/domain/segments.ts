@@ -9,6 +9,7 @@ export const SegmentKind = {
   Narration:           'narration',
   Error:               'error',
   Inventory:           'inventory',
+  Spawn:               'spawn',
 } as const;
 export type SegmentKind = (typeof SegmentKind)[keyof typeof SegmentKind];
 
