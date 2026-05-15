@@ -6,6 +6,7 @@ import { type AgentId, type LocationId, SYSTEM_AGENT_ID, type WorldId } from '@c
 import { EventKind, NpcFallbackIntent, OwnerKind } from '@core/domain/kinds';
 import { type Segment, SegmentKind } from '@core/domain/segments';
 import { log } from '@core/log';
+import { generateSpawnNarration } from '@core/spawning/narration';
 import { runSpawnTickPass } from '@core/spawning/tick-pass';
 import type { PerceptionView } from '@core/spawning/triggers';
 import { dispatch } from './actions/registry';
@@ -550,6 +551,14 @@ export async function runTick(
       const line = await renderWitnessForPlayer(ev, playerId, repo);
       if (line !== null && line.length > 0) witnessed.push(line);
     }
+    // Transient LLM narration describing the arrival — does not update stored descriptions
+    const spawnNarrations = await generateSpawnNarration({
+      spawnEvents: spawnResult.events,
+      playerId,
+      repo,
+      llm,
+    });
+    for (const line of spawnNarrations) witnessed.push(line);
   }
 
   // 7. Sleep any woken NPCs (awake && !autonomous) whose shortTermIntent
