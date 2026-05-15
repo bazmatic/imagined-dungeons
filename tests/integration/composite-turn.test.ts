@@ -1,5 +1,6 @@
 import type { Agent, Exit, Item, Location } from '@core/domain/entities';
 import { asAgentId, asExitId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
+import { SegmentKind } from '@core/domain/segments';
 import { makeCompositeParser } from '@core/engine/parser/composite';
 import { runTurn } from '@core/engine/turn';
 import { MemoryRepository } from '@infra/memory-repository';
@@ -91,7 +92,7 @@ describe('composite parser through runTurn', () => {
     });
     const parse = makeCompositeParser({ llm });
     const r = await runTurn(paff.id, 'grab the fire map off the table', repo, parse);
-    expect(r.render.toLowerCase()).toBe('taken: fire map.');
+    expect(r.render[0]?.text.toLowerCase()).toBe('taken: fire map.');
     expect(r.events).toHaveLength(1);
     expect(llm.calls).toHaveLength(1);
   });
@@ -111,7 +112,7 @@ describe('composite parser through runTurn', () => {
     });
     const parse = makeCompositeParser({ llm });
     const r = await runTurn(paff.id, 'head out the south door', repo, parse);
-    expect(r.render).toBe('You go south.');
+    expect(r.render).toEqual([{ kind: SegmentKind.Feedback, text: 'You go south.' }]);
     expect(r.events).toHaveLength(1);
   });
 
@@ -132,8 +133,8 @@ describe('composite parser through runTurn', () => {
     const r = await runTurn(paff.id, 'do a backflip', repo, parse);
     // Rule-based parser quotes the unknown verb ("do"), not the trailing words.
     // The point of the assertion is that the LLM's reason ("combat...") never reaches the user.
-    expect(r.render.toLowerCase()).toContain('do');
-    expect(r.render.toLowerCase()).not.toContain('combat');
+    expect(r.render.some((s) => s.text.toLowerCase().includes('do'))).toBe(true);
+    expect(r.render.every((s) => !s.text.toLowerCase().includes('combat'))).toBe(true);
   });
 
   it('routes "look around me" through the LLM and renders the room view', async () => {
@@ -158,9 +159,9 @@ describe('composite parser through runTurn', () => {
     const r = await runTurn(paff.id, 'look around me', repo, parse);
     expect(llm.calls).toHaveLength(1);
     expect(llm.calls[0]?.user).toContain('look around me');
-    expect(r.render).toContain('Tavern');
-    expect(r.render).toContain('A tavern.');
-    expect(r.render).toContain('fire map');
+    expect(r.render[0]).toEqual({ kind: SegmentKind.LocationName, text: 'Tavern' });
+    expect(r.render.some((s) => s.text.includes('A tavern.'))).toBe(true);
+    expect(r.render.some((s) => s.text.includes('fire map'))).toBe(true);
     expect(r.events).toHaveLength(1);
   });
 
@@ -180,7 +181,7 @@ describe('composite parser through runTurn', () => {
     const parse = makeCompositeParser({ llm });
     const r = await runTurn(paff.id, 'take the elusive whatsit', repo, parse);
     expect(llm.calls).toHaveLength(1);
-    expect(r.render.toLowerCase()).toBe('taken: fire map.');
+    expect(r.render[0]?.text.toLowerCase()).toBe('taken: fire map.');
   });
 
   it('never calls the LLM when the rule-based parser succeeds', async () => {
@@ -195,7 +196,7 @@ describe('composite parser through runTurn', () => {
     });
     const parse = makeCompositeParser({ llm });
     const r = await runTurn(paff.id, 'south', repo, parse);
-    expect(r.render).toBe('You go south.');
+    expect(r.render).toEqual([{ kind: SegmentKind.Feedback, text: 'You go south.' }]);
     expect(llm.calls).toHaveLength(0);
   });
 });

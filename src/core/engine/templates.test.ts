@@ -2,6 +2,7 @@ import type { Agent, Exit, Item, Location } from '@core/domain/entities';
 import type { DomainEvent } from '@core/domain/events';
 import { asAgentId, asExitId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
 import { asEventId } from '@core/domain/ids';
+import { SegmentKind } from '@core/domain/segments';
 import { describe, expect, it } from 'vitest';
 import {
   renderActionError,
@@ -97,52 +98,53 @@ describe('templates', () => {
       agents: [npc],
       exits: [exitN, exitS],
     });
-    expect(out).toContain('The Goblet');
-    expect(out).toContain('A tavern with one wall aflame.');
-    expect(out).toContain('You see: fire map.');
-    expect(out).toContain('Also here: Spark.');
-    expect(out).toContain('Exits:');
-    expect(out).toContain('north (Tavern Back Door, locked)');
-    expect(out).toContain('south (Tavern Front Door)');
+    expect(out[0]).toEqual({ kind: SegmentKind.LocationName, text: 'The Goblet' });
+    expect(out[1]).toEqual({ kind: SegmentKind.LocationDescription, text: 'A tavern with one wall aflame.' });
+    expect(out.some((s) => s.text.includes('You see: fire map.'))).toBe(true);
+    expect(out.some((s) => s.text.includes('Also here: Spark.'))).toBe(true);
+    expect(out.some((s) => s.text.includes('Exits:'))).toBe(true);
+    expect(out.some((s) => s.text.includes('north (Tavern Back Door, locked)'))).toBe(true);
+    expect(out.some((s) => s.text.includes('south (Tavern Front Door)'))).toBe(true);
   });
 
   it('renderLook with no items/agents omits those lines', () => {
     const out = renderLook({ actor: npc, location: loc, items: [], agents: [], exits: [exitS] });
-    expect(out).not.toContain('You see:');
-    expect(out).not.toContain('Also here:');
+    expect(out.every((s) => !s.text.includes('You see:'))).toBe(true);
+    expect(out.every((s) => !s.text.includes('Also here:'))).toBe(true);
   });
 
   it('renderMoveSelf names the direction', () => {
-    expect(renderMoveSelf('north')).toBe('You go north.');
+    expect(renderMoveSelf('north')).toEqual([{ kind: SegmentKind.Feedback, text: 'You go north.' }]);
   });
 
   it('renderTakeSelf and renderDropSelf name the item', () => {
-    expect(renderTakeSelf(itemA)).toBe('Taken: fire map.');
-    expect(renderDropSelf(itemA)).toBe('Dropped: fire map.');
+    expect(renderTakeSelf(itemA)).toEqual([{ kind: SegmentKind.Feedback, text: 'Taken: fire map.' }]);
+    expect(renderDropSelf(itemA)).toEqual([{ kind: SegmentKind.Feedback, text: 'Dropped: fire map.' }]);
   });
 
   it('renderInventory lists items or says empty', () => {
-    expect(renderInventory([])).toBe('You are carrying nothing.');
-    expect(renderInventory([itemA])).toBe('You are carrying: fire map.');
+    expect(renderInventory([])).toEqual([{ kind: SegmentKind.Inventory, text: 'You are carrying nothing.' }]);
+    expect(renderInventory([itemA])).toEqual([{ kind: SegmentKind.Inventory, text: 'You are carrying: fire map.' }]);
   });
 
   it('renderParseError covers all variants', () => {
-    expect(renderParseError({ kind: 'empty' })).toMatch(/type a command/i);
-    expect(renderParseError({ kind: 'unknown_verb', verb: 'frobnicate' })).toContain('frobnicate');
-    expect(renderParseError({ kind: 'missing_argument', verb: 'take' })).toContain('take');
-    expect(renderParseError({ kind: 'unknown_direction', raw: 'sideways' })).toContain('sideways');
-    expect(renderParseError({ kind: 'no_such_target', ref: 'unicorn' })).toContain('unicorn');
+    expect(renderParseError({ kind: 'empty' })[0]?.text).toMatch(/type a command/i);
+    expect(renderParseError({ kind: 'unknown_verb', verb: 'frobnicate' })[0]?.text).toContain('frobnicate');
+    expect(renderParseError({ kind: 'missing_argument', verb: 'take' })[0]?.text).toContain('take');
+    expect(renderParseError({ kind: 'unknown_direction', raw: 'sideways' })[0]?.text).toContain('sideways');
+    expect(renderParseError({ kind: 'no_such_target', ref: 'unicorn' })[0]?.text).toContain('unicorn');
     expect(
       renderParseError({
         kind: 'ambiguous_target',
         ref: 'key',
         candidates: ['rusty key', 'silver key'],
-      }),
+      })[0]?.text,
     ).toContain('rusty key');
+    expect(renderParseError({ kind: 'empty' })[0]?.kind).toBe(SegmentKind.Error);
   });
 
   it('renderActionError returns the supplied reason', () => {
-    expect(renderActionError("You can't go that way.")).toBe("You can't go that way.");
+    expect(renderActionError("You can't go that way.")).toEqual([{ kind: SegmentKind.Error, text: "You can't go that way." }]);
   });
 });
 

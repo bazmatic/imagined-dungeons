@@ -1,6 +1,7 @@
 import type { Agent, Item, Location } from '@core/domain/entities';
 import { asAgentId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
 import { ActionKind, EventKind, OwnerKind } from '@core/domain/kinds';
+import { SegmentKind } from '@core/domain/segments';
 import { MemoryRepository } from '@infra/memory-repository';
 import { describe, expect, it } from 'vitest';
 import type { LanguageModel } from '../language-model';
@@ -151,7 +152,7 @@ describe('handleBuy', () => {
     );
     if (!r.ok) throw new Error(r.error);
     expect(r.value.event.kind).toBe(EventKind.Trade);
-    expect(r.value.render).toContain('Deal');
+    expect(r.value.render[0]?.text).toContain('Deal');
     expect((await repo.getAgent(BUYER)).gold).toBe(5);
     expect((await repo.getAgent(SELLER)).gold).toBe(5);
     const itAfter = await repo.getItem(KEY);
@@ -174,7 +175,7 @@ describe('handleBuy', () => {
     );
     if (!r.ok) throw new Error(r.error);
     expect(r.value.event.kind).toBe(EventKind.Trade);
-    expect(r.value.render).toContain('Not for that');
+    expect(r.value.render[0]?.text).toContain('Not for that');
     expect((await repo.getAgent(BUYER)).gold).toBe(10);
     expect((await repo.getAgent(SELLER)).gold).toBe(0);
     const itAfter = await repo.getItem(KEY);

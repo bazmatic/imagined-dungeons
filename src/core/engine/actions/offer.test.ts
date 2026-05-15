@@ -1,6 +1,7 @@
 import type { Agent, Item, Location } from '@core/domain/entities';
 import { asAgentId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
 import { ActionKind, OwnerKind } from '@core/domain/kinds';
+import { SegmentKind } from '@core/domain/segments';
 import { MemoryRepository } from '@infra/memory-repository';
 import { describe, expect, it } from 'vitest';
 import { handleOffer } from './offer';
@@ -21,7 +22,7 @@ describe('handleOffer', () => {
     const repo = new MemoryRepository(W, { locations: [loc], exits: [], items: [heldCloak], agents: [actor] });
     const r = await handleOffer({ kind: ActionKind.Offer, actorId: ACTOR, itemId: ITEM, price: 5 }, repo);
     if (!r.ok) throw new Error(r.error);
-    expect(r.value.render).toBe('You set the price of the cloak at 5 gold.');
+    expect(r.value.render).toEqual([{ kind: SegmentKind.Feedback, text: 'You set the price of the cloak at 5 gold.' }]);
     expect((await repo.getItem(ITEM)).priceTag).toBe(5);
   });
 

@@ -1,6 +1,7 @@
 import type { Agent, Item, Location } from '@core/domain/entities';
 import { asAgentId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
 import { ActionKind, EventKind, OwnerKind } from '@core/domain/kinds';
+import { SegmentKind } from '@core/domain/segments';
 import { MemoryRepository } from '@infra/memory-repository';
 import { describe, expect, it } from 'vitest';
 import { handleEquip, handleUnequip } from './equip';
@@ -71,7 +72,7 @@ describe('handleEquip', () => {
       repo,
     );
     if (!r.ok) throw new Error(r.error);
-    expect(r.value.render).toBe('You put on the fireproof cloak.');
+    expect(r.value.render).toEqual([{ kind: SegmentKind.Feedback, text: 'You put on the fireproof cloak.' }]);
     expect(r.value.event.kind).toBe(EventKind.Equip);
     const item = await repo.getItem(cloak.id);
     expect(item.equipped).toBe(true);
@@ -121,7 +122,7 @@ describe('handleUnequip', () => {
       repo,
     );
     if (!r.ok) throw new Error(r.error);
-    expect(r.value.render).toBe('You take off the fireproof cloak.');
+    expect(r.value.render).toEqual([{ kind: SegmentKind.Feedback, text: 'You take off the fireproof cloak.' }]);
     expect(r.value.event.kind).toBe(EventKind.Unequip);
     const item = await repo.getItem(cloak.id);
     expect(item.equipped).toBe(false);

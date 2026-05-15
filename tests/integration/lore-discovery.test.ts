@@ -139,6 +139,6 @@ describe('lore + generative discovery — end-to-end', () => {
     expect(items.some((i) => i.label === 'tarnished locket')).toBe(true);
 
     // Sanity: the player render came from the discovery narration.
-    expect(result.render.toLowerCase()).toContain('locket');
+    expect(result.render.some((s) => s.text.toLowerCase().includes('locket'))).toBe(true);
   });
 });

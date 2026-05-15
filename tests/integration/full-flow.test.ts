@@ -1,5 +1,6 @@
 import { BURNING_DISTRICT_CAMPAIGN } from '@campaigns/burning-district';
 import { asAgentId } from '@core/domain/ids';
+import { SegmentKind } from '@core/domain/segments';
 import { runTurn } from '@core/engine/turn';
 import { openDb } from '@infra/db';
 import { seedIfEmpty } from '@infra/seed/seeder';
@@ -16,10 +17,10 @@ describe('full flow against seeded burning district', () => {
       await seedIfEmpty(h.db, BURNING_DISTRICT_CAMPAIGN);
       const repo = new SqliteRepository(h.db, BURNING_DISTRICT_CAMPAIGN.worldId);
       const r = await runTurn(PAFF, 'look', repo);
-      expect(r.render).toContain('The Flaming Goblet');
-      expect(r.render.toLowerCase()).toContain('fire map');
-      expect(r.render).toContain('Spark');
-      expect(r.render.toLowerCase()).toContain('exits');
+      expect(r.render[0]).toEqual({ kind: SegmentKind.LocationName, text: 'The Flaming Goblet' });
+      expect(r.render.some((s) => s.text.toLowerCase().includes('fire map'))).toBe(true);
+      expect(r.render.some((s) => s.text.includes('Spark'))).toBe(true);
+      expect(r.render.some((s) => s.text.toLowerCase().includes('exits'))).toBe(true);
     } finally {
       h.close();
     }
@@ -31,7 +32,7 @@ describe('full flow against seeded burning district', () => {
       await seedIfEmpty(h.db, BURNING_DISTRICT_CAMPAIGN);
       const repo = new SqliteRepository(h.db, BURNING_DISTRICT_CAMPAIGN.worldId);
       const r = await runTurn(PAFF, 'north', repo);
-      expect(r.render.toLowerCase()).toContain('locked');
+      expect(r.render.some((s) => s.text.toLowerCase().includes('locked'))).toBe(true);
     } finally {
       h.close();
     }
@@ -43,9 +44,9 @@ describe('full flow against seeded burning district', () => {
       await seedIfEmpty(h.db, BURNING_DISTRICT_CAMPAIGN);
       const repo = new SqliteRepository(h.db, BURNING_DISTRICT_CAMPAIGN.worldId);
       const move = await runTurn(PAFF, 'south', repo);
-      expect(move.render).toBe('You go south.');
+      expect(move.render).toEqual([{ kind: SegmentKind.Feedback, text: 'You go south.' }]);
       const look = await runTurn(PAFF, 'look', repo);
-      expect(look.render).toContain('Dockside Markets');
+      expect(look.render.some((s) => s.text.includes('Dockside Markets'))).toBe(true);
     } finally {
       h.close();
     }
@@ -57,11 +58,11 @@ describe('full flow against seeded burning district', () => {
       await seedIfEmpty(h.db, BURNING_DISTRICT_CAMPAIGN);
       const repo = new SqliteRepository(h.db, BURNING_DISTRICT_CAMPAIGN.worldId);
       const take = await runTurn(PAFF, 'take fire map', repo);
-      expect(take.render.toLowerCase()).toBe('taken: fire map.');
+      expect(take.render[0]?.text.toLowerCase()).toBe('taken: fire map.');
       const inv = await runTurn(PAFF, 'i', repo);
-      expect(inv.render.toLowerCase()).toContain('fire map');
+      expect(inv.render.some((s) => s.text.toLowerCase().includes('fire map'))).toBe(true);
       const drop = await runTurn(PAFF, 'drop fire map', repo);
-      expect(drop.render.toLowerCase()).toBe('dropped: fire map.');
+      expect(drop.render[0]?.text.toLowerCase()).toBe('dropped: fire map.');
     } finally {
       h.close();
     }
@@ -137,7 +138,7 @@ describe('full flow against seeded burning district', () => {
       expect(event.description).toBe('shrugs');
       expect(event.targetAgentId).toBeNull();
       // Mechanical fallback for the actor's own POV.
-      expect(r.render).toBe('You shrugs.');
+      expect(r.render[0]?.text).toBe('You shrugs.');
     } finally {
       h.close();
     }
@@ -166,7 +167,7 @@ describe('full flow against seeded burning district', () => {
       expect(event.narrations?.[PAFF]).toBeTruthy();
       expect(event.narrations?.[spark.id]).toBeTruthy();
       // The render returned to the actor matches the actor's narration.
-      expect(r.render).toBe(event.narrations?.[PAFF]);
+      expect(r.render[0]?.text).toBe(event.narrations?.[PAFF]);
     } finally {
       h.close();
     }

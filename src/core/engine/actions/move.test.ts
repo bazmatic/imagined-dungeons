@@ -1,5 +1,6 @@
 import type { Agent, Exit, Location } from '@core/domain/entities';
 import { asAgentId, asExitId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
+import { SegmentKind } from '@core/domain/segments';
 import { MemoryRepository } from '@infra/memory-repository';
 import { describe, expect, it } from 'vitest';
 import { handleMove } from './move';
@@ -77,7 +78,7 @@ describe('handleMove', () => {
     const r = await handleMove({ kind: 'move', actorId: paff.id, direction: 'north' }, repo);
     expect(r.ok).toBe(true);
     if (!r.ok) throw new Error();
-    expect(r.value.render).toBe('You go north.');
+    expect(r.value.render).toEqual([{ kind: SegmentKind.Feedback, text: 'You go north.' }]);
     expect((await repo.getAgent(paff.id)).locationId).toBe('loc_b');
     const events = await repo.recentEvents(10);
     expect(events.map((e) => e.kind)).toEqual(['move']);

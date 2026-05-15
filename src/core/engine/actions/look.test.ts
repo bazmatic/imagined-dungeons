@@ -1,5 +1,6 @@
 import type { Agent, Item, Location } from '@core/domain/entities';
 import { asAgentId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
+import { SegmentKind } from '@core/domain/segments';
 import { MemoryRepository } from '@infra/memory-repository';
 import { describe, expect, it } from 'vitest';
 import { handleLook } from './look';
@@ -63,9 +64,9 @@ describe('handleLook', () => {
     });
     const r = await handleLook({ kind: 'look', actorId: paff.id, target: { kind: 'room' } }, repo);
     if (!r.ok) throw new Error();
-    expect(r.value.render).toContain('The Goblet');
-    expect(r.value.render).toContain('A tavern.');
-    expect(r.value.render).toContain('fire map');
+    expect(r.value.render[0]).toEqual({ kind: SegmentKind.LocationName, text: 'The Goblet' });
+    expect(r.value.render.some((s) => s.text.includes('A tavern.'))).toBe(true);
+    expect(r.value.render.some((s) => s.text.includes('fire map'))).toBe(true);
   });
 
   it('with a resolved item id, returns its long description', async () => {
@@ -80,6 +81,6 @@ describe('handleLook', () => {
       repo,
     );
     if (!r.ok) throw new Error();
-    expect(r.value.render).toBe('A real-time map.');
+    expect(r.value.render[0]?.text).toBe('A real-time map.');
   });
 });

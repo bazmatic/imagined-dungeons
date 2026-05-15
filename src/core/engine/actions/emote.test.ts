@@ -1,5 +1,6 @@
 import type { Agent, Location } from '@core/domain/entities';
 import { asAgentId, asLocationId, asWorldId } from '@core/domain/ids';
+import { SegmentKind } from '@core/domain/segments';
 import { MemoryRepository } from '@infra/memory-repository';
 import { describe, expect, it } from 'vitest';
 import { handleEmote } from './emote';
@@ -88,7 +89,7 @@ describe('handleEmote', () => {
     expect(r.value.event.description).toBe('wave');
     expect(r.value.event.targetAgentId).toBe(spark.id);
     expect(r.value.event.witnesses).toEqual(expect.arrayContaining([paff.id, spark.id]));
-    expect(r.value.render).toBe('…');
+    expect(r.value.render).toEqual([{ kind: SegmentKind.Narration, text: '…' }]);
     // Handler does not persist — runTurn appends after enriching with narrations.
     const events = await repo.recentEvents(10);
     expect(events).toHaveLength(0);

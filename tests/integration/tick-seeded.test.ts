@@ -1,5 +1,6 @@
 import { BURNING_DISTRICT_CAMPAIGN } from '@campaigns/burning-district';
 import { asAgentId } from '@core/domain/ids';
+import { SegmentKind } from '@core/domain/segments';
 import { makeCompositeParser } from '@core/engine/parser/composite';
 import { runTick } from '@core/engine/tick';
 import { openDb } from '@infra/db';
@@ -32,7 +33,7 @@ describe('runTick against the seeded burning district', () => {
       const parse = makeCompositeParser({ llm: null });
       const r = await runTick(PAFF, 'look', repo, { parse, llm });
 
-      expect(r.render).toContain('The Flaming Goblet');
+      expect(r.render[0]).toEqual({ kind: SegmentKind.LocationName, text: 'The Flaming Goblet' });
       // Player witnessed Spark picking up the fire map.
       const witnessed = r.witnessed.find((l) => l.toLowerCase().includes('spark'));
       expect(witnessed).toBeTruthy();
@@ -50,7 +51,7 @@ describe('runTick against the seeded burning district', () => {
       const parse = makeCompositeParser({ llm: null });
       const r = await runTick(PAFF, 'look', repo, { parse, llm: null });
       // The player's look still works.
-      expect(r.render).toContain('The Flaming Goblet');
+      expect(r.render[0]).toEqual({ kind: SegmentKind.LocationName, text: 'The Flaming Goblet' });
       // No witnessed lines because "wait" is rejected by the parser as an
       // unknown verb — NPCs effectively do nothing.
       expect(r.witnessed).toEqual([]);
@@ -68,8 +69,8 @@ describe('runTick against the seeded burning district', () => {
       const r = await runTick(PAFF, 'look at spark', repo, { parse, llm: null });
       // Spark's seeded backstory mentions hair that crackles with static
       // electricity; the mood ("Energetic") is appended by the template.
-      expect(r.render.toLowerCase()).toContain('halfling');
-      expect(r.render.toLowerCase()).toContain('energetic');
+      expect(r.render.some((s) => s.text.toLowerCase().includes('halfling'))).toBe(true);
+      expect(r.render.some((s) => s.text.toLowerCase().includes('energetic'))).toBe(true);
     } finally {
       h.close();
     }
@@ -84,7 +85,7 @@ describe('runTick against the seeded burning district', () => {
       const r = await runTick(PAFF, 'look at the fire map', repo, { parse, llm: null });
       expect(r.render.length).toBeGreaterThan(0);
       // Sanity: must NOT be the room view's first line.
-      expect(r.render).not.toContain('The Flaming Goblet\n');
+      expect(r.render.every((s) => !s.text.startsWith('The Flaming Goblet'))).toBe(true);
     } finally {
       h.close();
     }
@@ -98,10 +99,12 @@ describe('runTick against the seeded burning district', () => {
       const parse = makeCompositeParser({ llm: null });
       const r = await runTick(PAFF, 'look at the tavern back door', repo, { parse, llm: null });
       // Exit prose mentions the label and a direction.
-      expect(r.render.toLowerCase()).toContain('back door');
-      expect(r.render).toMatch(
-        /(north|south|east|west|up|down|northeast|northwest|southeast|southwest)/,
-      );
+      expect(r.render.some((s) => s.text.toLowerCase().includes('back door'))).toBe(true);
+      expect(
+        r.render.some((s) =>
+          /(north|south|east|west|up|down|northeast|northwest|southeast|southwest)/.test(s.text),
+        ),
+      ).toBe(true);
     } finally {
       h.close();
     }
@@ -131,7 +134,7 @@ describe('runTick against the seeded burning district', () => {
       const r = await runTick(PAFF, 'say hello to spark', repo, { parse, llm });
 
       // Player's narration came back.
-      expect(r.render).toBeTruthy();
+      expect(r.render.length).toBeGreaterThan(0);
       // Spark's reply landed in `witnessed`.
       const sparkLine = r.witnessed.find((l) => l.toLowerCase().includes('spark'));
       expect(sparkLine).toBeTruthy();
@@ -194,7 +197,7 @@ describe('runTick against the seeded burning district', () => {
       // With null LLM, NPCs always wait too — so events stays empty and the
       // player's render is the friendly placeholder, not a "no such verb" error.
       const r = await runTick(PAFF, 'wait', repo, { parse, llm: null });
-      expect(r.render).toBe('You wait.');
+      expect(r.render[0]?.text).toBe('You wait.');
       // No player turn was dispatched, so no events from the player either.
       expect(r.events).toHaveLength(0);
     } finally {

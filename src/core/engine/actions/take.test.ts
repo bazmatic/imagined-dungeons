@@ -1,5 +1,6 @@
 import type { Agent, Item, Location } from '@core/domain/entities';
 import { asAgentId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
+import { SegmentKind } from '@core/domain/segments';
 import { MemoryRepository } from '@infra/memory-repository';
 import { describe, expect, it } from 'vitest';
 import { handleTake } from './take';
@@ -80,7 +81,7 @@ describe('handleTake', () => {
     });
     const r = await handleTake({ kind: 'take', actorId: paff.id, itemId: map.id }, repo);
     if (!r.ok) throw new Error();
-    expect(r.value.render).toBe('Taken: fire map.');
+    expect(r.value.render).toEqual([{ kind: SegmentKind.Feedback, text: 'Taken: fire map.' }]);
     const owned = await repo.itemsOwnedBy({ kind: 'agent', id: paff.id });
     expect(owned.map((i) => i.id)).toEqual(['item_map']);
   });

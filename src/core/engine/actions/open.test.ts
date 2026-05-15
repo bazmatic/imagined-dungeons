@@ -1,6 +1,7 @@
 import type { Agent, Item, Location } from '@core/domain/entities';
 import { asAgentId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
 import { ActionKind, EventKind, OwnerKind } from '@core/domain/kinds';
+import { SegmentKind } from '@core/domain/segments';
 import { MemoryRepository } from '@infra/memory-repository';
 import { describe, expect, it } from 'vitest';
 import { handleOpen } from './open';
@@ -94,7 +95,7 @@ describe('handleOpen', () => {
     });
     const r = await handleOpen({ kind: ActionKind.Open, actorId: ACTOR, itemId: BOX }, repo);
     if (!r.ok) throw new Error(r.error);
-    expect(r.value.render).toBe('You open the wooden box. Inside: rusty key.');
+    expect(r.value.render).toEqual([{ kind: SegmentKind.Feedback, text: 'You open the wooden box. Inside: rusty key.' }]);
     expect(r.value.event.kind).toBe(EventKind.Open);
     const updated = await repo.getItem(BOX);
     expect(updated.opened).toBe(true);
@@ -109,7 +110,7 @@ describe('handleOpen', () => {
     });
     const r = await handleOpen({ kind: ActionKind.Open, actorId: ACTOR, itemId: BOX }, repo);
     if (!r.ok) throw new Error(r.error);
-    expect(r.value.render).toBe('You open the wooden box. It is empty.');
+    expect(r.value.render).toEqual([{ kind: SegmentKind.Feedback, text: 'You open the wooden box. It is empty.' }]);
   });
 
   it('is a no-op when the container is already open', async () => {
@@ -122,7 +123,7 @@ describe('handleOpen', () => {
     });
     const r = await handleOpen({ kind: ActionKind.Open, actorId: ACTOR, itemId: BOX }, repo);
     if (!r.ok) throw new Error(r.error);
-    expect(r.value.render).toBe('The wooden box is already open.');
+    expect(r.value.render).toEqual([{ kind: SegmentKind.Feedback, text: 'The wooden box is already open.' }]);
   });
 
   it('fails when the target is not a container', async () => {
@@ -147,7 +148,7 @@ describe('handleOpen', () => {
     });
     const r = await handleOpen({ kind: ActionKind.Open, actorId: ACTOR, itemId: BOX }, repo);
     if (!r.ok) throw new Error(r.error);
-    expect(r.value.render).toMatch(/^You unlock the wooden box and open it\./);
+    expect(r.value.render[0]?.text).toMatch(/^You unlock the wooden box and open it\./);
     const updated = await repo.getItem(BOX);
     expect(updated.locked).toBe(false);
     expect(updated.opened).toBe(true);

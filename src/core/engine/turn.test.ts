@@ -1,6 +1,7 @@
 import type { Agent, Exit, Item, Location } from '@core/domain/entities';
 import { asAgentId, asExitId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
 import { EventKind } from '@core/domain/kinds';
+import { SegmentKind } from '@core/domain/segments';
 import { MemoryBuilderRepository } from '@infra/builder-memory-repository';
 import { MemoryRepository } from '@infra/memory-repository';
 import { describe, expect, it } from 'vitest';
@@ -86,7 +87,7 @@ describe('runTurn', () => {
       agents: [paff],
     });
     const r = await runTurn(paff.id, 'take fire map', repo);
-    expect(r.render).toBe('Taken: fire map.');
+    expect(r.render).toEqual([{ kind: SegmentKind.Feedback, text: 'Taken: fire map.' }]);
     expect(r.events).toHaveLength(1);
   });
 
@@ -98,7 +99,7 @@ describe('runTurn', () => {
       agents: [paff],
     });
     const r = await runTurn(paff.id, 'frobnicate', repo);
-    expect(r.render).toContain('frobnicate');
+    expect(r.render.some((s) => s.text.includes('frobnicate'))).toBe(true);
     // A failed parse now emits a private `failed` event so the actor remembers
     // the mistake on their next turn (NPCs were previously dumbly retrying).
     expect(r.events).toHaveLength(1);
@@ -126,7 +127,7 @@ describe('runTurn', () => {
       }),
     });
     const r = await runTurn(paff.id, 'look ghost', repo, { llm, builderRepo });
-    expect(r.render).toBe('A faint shimmer in the air, but nothing more.');
+    expect(r.render[0]?.text).toBe('A faint shimmer in the air, but nothing more.');
     expect(r.events[0]?.kind).toBe(EventKind.Look);
     expect(llm.calls.length).toBe(1);
   });
@@ -140,7 +141,7 @@ describe('runTurn', () => {
     });
     const r = await runTurn(paff.id, 'look ghost', repo);
     expect(r.events[0]?.kind).toBe(EventKind.Failed);
-    expect(r.render).toContain('ghost');
+    expect(r.render.some((s) => s.text.includes('ghost'))).toBe(true);
   });
 
   it('returns an action-error message when the action fails', async () => {
@@ -151,7 +152,7 @@ describe('runTurn', () => {
       agents: [paff],
     });
     const r = await runTurn(paff.id, 'north', repo);
-    expect(r.render).toMatch(/can't go that way/i);
+    expect(r.render[0]?.text).toMatch(/can't go that way/i);
   });
 });
 
@@ -165,7 +166,7 @@ describe('runTurn with injected parse', () => {
     });
     const fakeParse: ParseFn = async () => ({ kind: 'inventory', actorId: paff.id });
     const r = await runTurn(paff.id, 'literal-garbage', repo, fakeParse);
-    expect(r.render.toLowerCase()).toContain('carrying');
+    expect(r.render[0]?.text.toLowerCase()).toContain('carrying');
   });
 });
 
@@ -206,7 +207,7 @@ describe('runTurn with narrated events', () => {
     expect(event.narrations?.[paff.id]).toContain('You say');
     expect(event.narrations?.[spark.id]).toContain('Paff says');
     // Render is the actor's narration.
-    expect(r.render).toBe(event.narrations?.[paff.id]);
+    expect(r.render[0]?.text).toBe(event.narrations?.[paff.id]);
   });
 
   it('persists the event with narrations exactly once', async () => {

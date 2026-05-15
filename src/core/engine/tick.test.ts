@@ -9,6 +9,7 @@ import {
   asWorldId,
 } from '@core/domain/ids';
 import { EventKind, ExaminableKind, OwnerKind } from '@core/domain/kinds';
+import { SegmentKind } from '@core/domain/segments';
 import { MemoryBuilderRepository } from '@infra/builder-memory-repository';
 import { MemoryRepository } from '@infra/memory-repository';
 import { describe, expect, it } from 'vitest';
@@ -135,7 +136,7 @@ describe('runTick', () => {
     });
     const parse = makeCompositeParser({ llm: null }); // rule parser is enough for "go north"
     const r = await runTick(player.id, 'look', repo, { parse, llm });
-    expect(r.render).toContain('Tavern');
+    expect(r.render[0]).toEqual({ kind: SegmentKind.LocationName, text: 'Tavern' });
     expect(r.witnessed).toContain('Spark goes north.');
   });
 
@@ -183,7 +184,7 @@ describe('runTick', () => {
     const parse = makeCompositeParser({ llm: null });
     const r = await runTick(player.id, 'look', repo, { parse, llm: null });
     // NPC mind returned "wait" → unknown verb → failed event → no observable witness line.
-    expect(r.render).toContain('Tavern');
+    expect(r.render[0]).toEqual({ kind: SegmentKind.LocationName, text: 'Tavern' });
     expect(r.witnessed).toEqual([]);
     // No throw, no infinite loop.
   });
@@ -268,7 +269,7 @@ describe('runTick', () => {
     expect(descUpdates).toHaveLength(1);
     // Subsequent `look` returns the new long description.
     const look = await runTick(player.id, 'look', repo, { parse, llm });
-    expect(look.render).toContain('A tavern, now darker without the lantern.');
+    expect(look.render.some((s) => s.text.includes('A tavern, now darker without the lantern.'))).toBe(true);
   });
 
   it('with a null llm, the consequence pass is a no-op (slice-4 baseline)', async () => {

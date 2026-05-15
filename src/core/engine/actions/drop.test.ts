@@ -1,5 +1,6 @@
 import type { Agent, Item, Location } from '@core/domain/entities';
 import { asAgentId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
+import { SegmentKind } from '@core/domain/segments';
 import { MemoryRepository } from '@infra/memory-repository';
 import { describe, expect, it } from 'vitest';
 import { handleDrop } from './drop';
@@ -63,7 +64,7 @@ describe('handleDrop', () => {
     });
     const r = await handleDrop({ kind: 'drop', actorId: paff.id, itemId: heldMap.id }, repo);
     if (!r.ok) throw new Error();
-    expect(r.value.render).toBe('Dropped: fire map.');
+    expect(r.value.render).toEqual([{ kind: SegmentKind.Feedback, text: 'Dropped: fire map.' }]);
     const onFloor = await repo.itemsOwnedBy({ kind: 'location', id: A });
     expect(onFloor.map((i) => i.id)).toEqual(['item_map']);
   });
