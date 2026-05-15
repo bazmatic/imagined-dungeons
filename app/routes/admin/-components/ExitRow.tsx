@@ -5,7 +5,7 @@ export interface ExitDraft {
   readonly id: string;
   readonly direction: string;
   readonly label: string;
-  readonly toLocationId: string;
+  readonly toLocationId: string | null;
   readonly locked: boolean;
   readonly lockedByItemId: string | null;
   readonly isNew: boolean;
@@ -25,7 +25,7 @@ export function exitToDraft(e: Exit): ExitDraft {
     id: e.id as string,
     direction: e.direction,
     label: e.label,
-    toLocationId: e.to as string,
+    toLocationId: e.to === null ? null : (e.to as string),
     locked: e.locked,
     lockedByItemId: e.lockedByItem === null ? null : (e.lockedByItem as string),
     isNew: false,
@@ -45,8 +45,16 @@ export function ExitRow({
 
   const destinationOptions = locations.filter((l) => (l.id as string) !== sourceLocationId);
 
+  const toSelectValue = v.toLocationId === null ? '__auto__' : (v.toLocationId ?? '');
+
+  const handleDestChange = (e: React.ChangeEvent<HTMLSelectElement>): void => {
+    const val = e.target.value;
+    setV({ ...v, toLocationId: val === '__auto__' ? null : val });
+  };
+
   const save = async (): Promise<void> => {
     if (busy) return;
+    // Allow null (auto-generate) but not empty string (nothing selected)
     if (v.direction.trim() === '' || v.toLocationId === '') return;
     setBusy(true);
     try {
@@ -89,10 +97,11 @@ export function ExitRow({
           <select
             id={`dest-${v.id}`}
             className="row-editor__select"
-            value={v.toLocationId}
-            onChange={(e) => setV({ ...v, toLocationId: e.target.value })}
+            value={toSelectValue}
+            onChange={handleDestChange}
           >
             <option value="">— pick a location —</option>
+            <option value="__auto__">(auto-generate)</option>
             {destinationOptions.map((l) => (
               <option key={l.id as string} value={l.id as string}>
                 {l.label}
