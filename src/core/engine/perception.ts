@@ -54,7 +54,7 @@ export async function perceive(actorId: AgentId, repo: Repository): Promise<Perc
   const agentsHere = await repo.agentsAt(location.id);
   // Filter out the actor themselves and the synthetic `system` agent — the
   // latter is "the world" and never visible to characters in the fiction.
-  const agents = agentsHere.filter((a) => a.id !== actorId && a.id !== SYSTEM_AGENT_ID);
+  const agents = agentsHere.filter((a) => a.id !== actorId && a.id !== SYSTEM_AGENT_ID && a.hp > 0);
   const exits = await repo.exitsFrom(location.id);
   return { actor, location, items, agents, exits };
 }

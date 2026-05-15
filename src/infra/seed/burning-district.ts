@@ -792,6 +792,34 @@ export const BURNING_DISTRICT = {
       "autonomous": false,
       "shortDescription": "Magnificent bird with feathers of dancing flames. Symbol of hope.",
       "longDescription": "Magnificent bird with feathers of dancing flames. Symbol of hope."
+    },
+    {
+      "id": "char_fire_hound_01",
+      "label": "Fire Hound",
+      "locationId": "loc_inferno_alley",
+      "hp": 8,
+      "damage": 5,
+      "defense": 3,
+      "capacity": 0,
+      "mood": "Aggressive",
+      "goal": "Attack intruders",
+      "autonomous": false,
+      "shortDescription": "A vicious dog-sized creature of living flame and obsidian bone, growling with molten teeth bared.",
+      "longDescription": "A vicious dog-sized creature of living flame and obsidian bone, growling with molten teeth bared. Its eyes glow like coals and it guards the alley with mindless aggression."
+    },
+    {
+      "id": "char_ember_wraith_01",
+      "label": "Ember Wraith",
+      "locationId": "loc_burning_street",
+      "hp": 12,
+      "damage": 4,
+      "defense": 2,
+      "capacity": 0,
+      "mood": "Malevolent",
+      "goal": "Consume all warmth and life",
+      "autonomous": false,
+      "shortDescription": "A wisp of concentrated heat in roughly humanoid form, flickering between visibility and translucency.",
+      "longDescription": "A wisp of concentrated heat in roughly humanoid form, flickering between visibility and translucency. It radiates intense malevolence and attacks any living creature that strays too close."
     }
   ]
 } as const;

@@ -76,6 +76,7 @@ export const EventKind = {
   Open: 'open',
   Close: 'close',
   Trade: 'trade',
+  Death: 'death',
 } as const;
 export type EventKind = (typeof EventKind)[keyof typeof EventKind];
 
