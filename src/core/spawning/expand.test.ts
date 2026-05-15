@@ -46,4 +46,26 @@ describe('expandSpawn', () => {
     if (!first) throw new Error('expected one insert');
     expect(first.tags).toEqual(['goblin', 'cult']);
   });
+
+  it('uses provided labels array instead of template.label', () => {
+    const labels = ['[Tall] goblin', '[Short] goblin', '[Old] goblin'];
+    const inserts = expandSpawn({ template: tpl, locationId: asLocationId('loc_a'), count: 3, labels });
+    expect(inserts.map((a) => a.label)).toEqual(labels);
+  });
+
+  it('falls back to template.label when labels array is shorter than count', () => {
+    const labels = ['[Tall] goblin'];
+    const inserts = expandSpawn({ template: tpl, locationId: asLocationId('loc_a'), count: 3, labels });
+    expect(inserts[0]?.label).toBe('[Tall] goblin');
+    expect(inserts[1]?.label).toBe('goblin');
+    expect(inserts[2]?.label).toBe('goblin');
+  });
+
+  it('rolls hp within hpMin/hpMax range', () => {
+    const fixedTpl: MonsterTemplate = { ...tpl, hpMin: 5, hpMax: 5 };
+    const inserts = expandSpawn({ template: fixedTpl, locationId: asLocationId('loc_a'), count: 5 });
+    for (const a of inserts) {
+      expect(a.hp).toBe(5);
+    }
+  });
 });
