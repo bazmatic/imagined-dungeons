@@ -4,17 +4,6 @@ A generative, multi-agent text adventure engine. The world's *structure* is stor
 
 This repository is the staged build-out of the design in [abstract-design.md](abstract-design.md), beginning with a fully deterministic core and adding generative layers one slice at a time.
 
-## Status — Slice 5 (current)
-
-Slices 1–4 plus the consequence engine. After the player's turn and after autonomous NPC ticks, a fourth model role — the consequence engine — surveys the events that just happened and decides whether the world's stored descriptions should change to reflect them durably. Description updates are issued as `update_description` actions by a synthetic `system` agent through the same dispatch pipeline as everything else.
-
-- Engine: player turn → consequence pass → NPC ticks → consequence pass → witnessed render
-- Bounded use: 1 LLM call per consequence pass; max 3 actions per pass; recursion depth capped at 1 (so at most 2 consequence calls per tick).
-- The closed action vocabulary now includes `update_description`, but it is reserved for the consequence engine — player and NPC interpreters cannot emit it by design.
-- Conservative prompt: routine moves/looks/inventory checks never produce consequences. Only events that genuinely change the room (taking a key item, combat damage, etc.) prompt a description update.
-- Mechanical fallback: with `OPENAI_API_KEY` unset, the consequence pass returns `[]` and behaviour is identical to slice 4.
-- 183 tests, TypeScript strict, biome clean
-
 ## Stack
 
 - **TanStack Start** (Vite plugin) — server-rendered React, server functions
