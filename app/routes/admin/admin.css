@@ -96,28 +96,33 @@
 
 /* Buttons */
 .admin-root .btn {
+  display: inline-flex;
+  align-items: center;
   background: transparent;
-  border: none;
-  border-bottom: 1px solid var(--border);
+  border: 1px solid var(--border);
   color: var(--parchment);
   font-family: var(--font-data);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  padding: var(--s-2) 0;
+  padding: var(--s-2) var(--s-3);
   cursor: pointer;
 }
 .admin-root .btn:hover {
-  border-bottom-color: var(--gold-bright);
+  border-color: var(--gold-bright);
   color: var(--gold-bright);
 }
+.admin-root .btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 .admin-root .btn--primary {
-  border-bottom-color: var(--crimson);
+  border-color: var(--crimson);
   color: var(--crimson-bright);
 }
 .admin-root .btn--primary:hover {
-  border-bottom-color: var(--crimson-bright);
+  border-color: var(--crimson-bright);
   color: var(--crimson-bright);
 }
 /* Save-status visual hints, set by data-save-status on submit buttons. */
@@ -126,7 +131,7 @@
   cursor: progress;
 }
 .admin-root .btn[data-save-status="saved"] {
-  border-bottom-color: #8db98d;
+  border-color: #8db98d;
   color: #8db98d;
 }
 
@@ -391,6 +396,8 @@
   color: var(--parchment);
   border: 1px solid var(--border);
   box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+}
+.admin-root .assistant-modal-dialog[open] {
   display: flex;
   flex-direction: column;
 }
@@ -485,7 +492,7 @@
   display: grid;
   grid-template-columns: 224px 1fr;
   grid-template-rows: 64px 1fr;
-  min-height: 100vh;
+  height: 100vh;
 }
 .admin-root .shell--no-sidenav {
   grid-template-columns: 1fr;
@@ -592,20 +599,6 @@
 .admin-root .top-bar__version-select:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-.admin-root .top-bar__publish {
-  background: var(--crimson-container);
-  color: var(--crimson-bright);
-  border: none;
-  font-family: var(--font-data);
-  font-size: 12px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  padding: 6px var(--s-4);
-  cursor: pointer;
-}
-.admin-root .top-bar__publish:hover {
-  opacity: 0.9;
 }
 
 /* Side nav */
@@ -728,7 +721,7 @@
 }
 
 .admin-root .shell__content {
-  overflow: hidden;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
 }
@@ -1351,34 +1344,33 @@
   gap: var(--s-2);
 }
 
-/* Footnote bar */
+/* Footnote bar — sticky action strip at the bottom of the detail pane */
 .admin-root .footnote-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  /* escape detail-pane-v2__inner's side padding so the bar spans full pane width */
+  margin-left: calc(-1 * var(--s-6));
+  margin-right: calc(-1 * var(--s-6));
+  margin-top: var(--s-6);
+  padding: var(--s-3) var(--s-6);
+  background: var(--charcoal);
   border-top: 1px solid var(--border);
-  padding-top: var(--s-5);
-  margin-top: var(--s-5);
+  box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.45);
 }
-.admin-root .footnote-bar__stats {
+.admin-root .footnote-bar__left {
   display: flex;
-  gap: var(--s-6);
+  align-items: center;
 }
-.admin-root .footnote-bar__stat {
-  display: flex;
-  flex-direction: column;
-}
-.admin-root .footnote-bar__stat-label {
+.admin-root .footnote-bar__dirty {
   font-family: var(--font-label);
   font-size: 10px;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--parchment-dim);
-}
-.admin-root .footnote-bar__stat-value {
-  font-family: var(--font-data);
-  font-size: 12px;
-  color: var(--parchment);
+  color: var(--amber, #c8882a);
 }
 .admin-root .footnote-bar__actions {
   display: flex;

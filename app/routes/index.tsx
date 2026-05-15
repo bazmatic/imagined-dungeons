@@ -119,8 +119,13 @@ function Page() {
   ];
   const isListLine = (s: string): boolean => LIST_PREFIXES.some((p) => s.startsWith(p));
 
-  const styleForSystemSubline = (subline: string, index: number): React.CSSProperties => {
-    if (index === 0 && subline.trim().length > 0 && !isListLine(subline)) {
+  const isNarrationLine = (s: string): boolean => s.trim().endsWith('.');
+
+  const styleForSystemSubline = (subline: string, index: number, sublines: string[]): React.CSSProperties => {
+    const headingIdx = sublines.findIndex(
+      (s) => s.trim().length > 0 && !isListLine(s) && !isNarrationLine(s),
+    );
+    if (index === headingIdx) {
       return { fontSize: 22, fontWeight: 600, letterSpacing: 0.5 };
     }
     if (!isListLine(subline)) return { fontStyle: 'italic' };
@@ -200,7 +205,7 @@ function Page() {
               return (
                 <div key={l.id} style={baseStyle}>
                   {sublines.map((sl, i) => (
-                    <div key={i} style={styleForSystemSubline(sl, i)}>
+                    <div key={i} style={styleForSystemSubline(sl, i, sublines)}>
                       {sl}
                     </div>
                   ))}

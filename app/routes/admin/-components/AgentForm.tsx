@@ -13,12 +13,11 @@ import { SaveStatus, useSaveStatus } from './useSaveStatus';
 export interface AgentFormProps {
   readonly tree: WorldTree;
   readonly agentId: string;
-  readonly problemCount: number;
   readonly onSaved: () => Promise<void> | void;
   readonly onDeleted: () => void;
 }
 
-export function AgentForm({ tree, agentId, problemCount, onSaved, onDeleted }: AgentFormProps) {
+export function AgentForm({ tree, agentId, onSaved, onDeleted }: AgentFormProps) {
   const ag = tree.agents.find((a) => (a.id as string) === agentId);
   const [v, setV] = useState(
     ag
@@ -41,16 +40,17 @@ export function AgentForm({ tree, agentId, problemCount, onSaved, onDeleted }: A
         }
       : null,
   );
-  const { status, label, run } = useSaveStatus();
+  const { status, label, run, dirty, markDirty } = useSaveStatus();
   const saving = status === SaveStatus.Saving;
 
   if (!ag || !v) return <p className="t-metadata">Agent not found.</p>;
 
-  const authoredTags = [...tree.tagLore.map((t) => t.tag)].sort((a, b) => a.localeCompare(b));
+  const update = (patch: Partial<typeof v>): void => {
+    setV({ ...v, ...patch });
+    markDirty();
+  };
 
-  const wordCount =
-    v.longDescription.trim() === '' ? 0 : v.longDescription.trim().split(/\s+/).length;
-  const charCount = v.longDescription.length;
+  const authoredTags = [...tree.tagLore.map((t) => t.tag)].sort((a, b) => a.localeCompare(b));
 
   const save = async (): Promise<void> => {
     await run(async () => {
@@ -101,7 +101,7 @@ export function AgentForm({ tree, agentId, problemCount, onSaved, onDeleted }: A
               type="text"
               className="manuscript-input-v2 manuscript-input-v2--large"
               value={v.label}
-              onChange={(e) => setV({ ...v, label: e.target.value })}
+              onChange={(e) => update({ label: e.target.value })}
             />
           </div>
           <div>
@@ -112,7 +112,7 @@ export function AgentForm({ tree, agentId, problemCount, onSaved, onDeleted }: A
               id="ag-loc"
               className="row-editor__select"
               value={v.locationId}
-              onChange={(e) => setV({ ...v, locationId: e.target.value })}
+              onChange={(e) => update({ locationId: e.target.value })}
             >
               {tree.locations.map((l) => (
                 <option key={l.id as string} value={l.id as string}>
@@ -130,14 +130,14 @@ export function AgentForm({ tree, agentId, problemCount, onSaved, onDeleted }: A
               type="text"
               className="manuscript-input-v2 manuscript-input-v2--italic"
               value={v.shortDescription}
-              onChange={(e) => setV({ ...v, shortDescription: e.target.value })}
+              onChange={(e) => update({ shortDescription: e.target.value })}
             />
           </div>
           <div>
             <span className="form-grid__field-label">Long Description</span>
             <ManuscriptCard
               value={v.longDescription}
-              onChange={(next) => setV({ ...v, longDescription: next })}
+              onChange={(next) => update({ longDescription: next })}
             />
           </div>
           <div>
@@ -146,7 +146,7 @@ export function AgentForm({ tree, agentId, problemCount, onSaved, onDeleted }: A
               type="text"
               className="manuscript-input-v2"
               value={v.goal}
-              onChange={(e) => setV({ ...v, goal: e.target.value })}
+              onChange={(e) => update({ goal: e.target.value })}
             />
           </div>
           <div>
@@ -164,18 +164,8 @@ export function AgentForm({ tree, agentId, problemCount, onSaved, onDeleted }: A
               rows={4}
               placeholder="(secret)"
               value={v.secretDescription}
-              onChange={(e) => setV({ ...v, secretDescription: e.target.value })}
+              onChange={(e) => update({ secretDescription: e.target.value })}
             />
-          </div>
-          <div style={{ display: 'flex', gap: 16 }}>
-            <button
-              type="submit"
-              className="btn btn--primary"
-              disabled={saving}
-              data-save-status={status}
-            >
-              {label}
-            </button>
           </div>
         </div>
         <MetadataColumn>
@@ -189,7 +179,7 @@ export function AgentForm({ tree, agentId, problemCount, onSaved, onDeleted }: A
                 type="number"
                 className="row-editor__input"
                 value={v.hp}
-                onChange={(e) => setV({ ...v, hp: Number(e.target.value) })}
+                onChange={(e) => update({ hp: Number(e.target.value) })}
               />
             </div>
             <div className="row-editor__field" style={{ gridColumn: 'span 6' }}>
@@ -201,7 +191,7 @@ export function AgentForm({ tree, agentId, problemCount, onSaved, onDeleted }: A
                 type="number"
                 className="row-editor__input"
                 value={v.capacity}
-                onChange={(e) => setV({ ...v, capacity: Number(e.target.value) })}
+                onChange={(e) => update({ capacity: Number(e.target.value) })}
               />
             </div>
             <div className="row-editor__field" style={{ gridColumn: 'span 6' }}>
@@ -213,7 +203,7 @@ export function AgentForm({ tree, agentId, problemCount, onSaved, onDeleted }: A
                 type="number"
                 className="row-editor__input"
                 value={v.damage}
-                onChange={(e) => setV({ ...v, damage: Number(e.target.value) })}
+                onChange={(e) => update({ damage: Number(e.target.value) })}
               />
             </div>
             <div className="row-editor__field" style={{ gridColumn: 'span 6' }}>
@@ -225,7 +215,7 @@ export function AgentForm({ tree, agentId, problemCount, onSaved, onDeleted }: A
                 type="number"
                 className="row-editor__input"
                 value={v.defense}
-                onChange={(e) => setV({ ...v, defense: Number(e.target.value) })}
+                onChange={(e) => update({ defense: Number(e.target.value) })}
               />
             </div>
             <div className="row-editor__field" style={{ gridColumn: 'span 6' }}>
@@ -239,7 +229,7 @@ export function AgentForm({ tree, agentId, problemCount, onSaved, onDeleted }: A
                 className="row-editor__input"
                 value={v.gold}
                 onChange={(e) =>
-                  setV({ ...v, gold: Math.max(0, Math.trunc(Number(e.target.value))) })
+                  update({ gold: Math.max(0, Math.trunc(Number(e.target.value))) })
                 }
               />
             </div>
@@ -253,7 +243,7 @@ export function AgentForm({ tree, agentId, problemCount, onSaved, onDeleted }: A
                 className="row-editor__input"
                 value={v.mood}
                 placeholder="(optional)"
-                onChange={(e) => setV({ ...v, mood: e.target.value })}
+                onChange={(e) => update({ mood: e.target.value })}
               />
             </div>
             <label
@@ -290,15 +280,16 @@ export function AgentForm({ tree, agentId, problemCount, onSaved, onDeleted }: A
             <TagSelectorPanel
               tags={v.tags}
               availableTags={authoredTags}
-              onChange={(next) => setV({ ...v, tags: next })}
+              onChange={(next) => update({ tags: next })}
             />
           </div>
         </MetadataColumn>
       </form>
       <FootnoteBar
-        wordCount={wordCount}
-        charCount={charCount}
-        problemCount={problemCount}
+        dirty={dirty}
+        onSave={save}
+        saveLabel={label}
+        saveDisabled={saving}
         onDelete={async () => {
           await deleteEntity({
             data: {

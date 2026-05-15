@@ -18,12 +18,11 @@ type ItemOwnerKind =
 export interface ItemFormProps {
   readonly tree: WorldTree;
   readonly itemId: string;
-  readonly problemCount: number;
   readonly onSaved: () => Promise<void> | void;
   readonly onDeleted: () => void;
 }
 
-export function ItemForm({ tree, itemId, problemCount, onSaved, onDeleted }: ItemFormProps) {
+export function ItemForm({ tree, itemId, onSaved, onDeleted }: ItemFormProps) {
   const item = tree.items.find((i) => (i.id as string) === itemId);
   const [v, setV] = useState(
     item
@@ -45,16 +44,17 @@ export function ItemForm({ tree, itemId, problemCount, onSaved, onDeleted }: Ite
         }
       : null,
   );
-  const { status, label, run } = useSaveStatus();
+  const { status, label, run, dirty, markDirty } = useSaveStatus();
   const saving = status === SaveStatus.Saving;
 
   if (!item || !v) return <p className="t-metadata">Item not found.</p>;
 
-  const authoredTags = [...tree.tagLore.map((t) => t.tag)].sort((a, b) => a.localeCompare(b));
+  const update = (patch: Partial<typeof v>): void => {
+    setV({ ...v, ...patch });
+    markDirty();
+  };
 
-  const wordCount =
-    v.longDescription.trim() === '' ? 0 : v.longDescription.trim().split(/\s+/).length;
-  const charCount = v.longDescription.length;
+  const authoredTags = [...tree.tagLore.map((t) => t.tag)].sort((a, b) => a.localeCompare(b));
 
   const save = async (): Promise<void> => {
     if (v.ownerId === '') return;
@@ -115,7 +115,7 @@ export function ItemForm({ tree, itemId, problemCount, onSaved, onDeleted }: Ite
               type="text"
               className="manuscript-input-v2 manuscript-input-v2--large"
               value={v.label}
-              onChange={(e) => setV({ ...v, label: e.target.value })}
+              onChange={(e) => update({ label: e.target.value })}
             />
           </div>
           <div className="row-editor__grid">
@@ -126,7 +126,7 @@ export function ItemForm({ tree, itemId, problemCount, onSaved, onDeleted }: Ite
                   type="radio"
                   name="owner-kind"
                   checked={v.ownerKind === OwnerKind.Location}
-                  onChange={() => setV({ ...v, ownerKind: OwnerKind.Location, ownerId: '' })}
+                  onChange={() => update({ ownerKind: OwnerKind.Location, ownerId: '' })}
                 />
                 Location
               </label>
@@ -135,7 +135,7 @@ export function ItemForm({ tree, itemId, problemCount, onSaved, onDeleted }: Ite
                   type="radio"
                   name="owner-kind"
                   checked={v.ownerKind === OwnerKind.Agent}
-                  onChange={() => setV({ ...v, ownerKind: OwnerKind.Agent, ownerId: '' })}
+                  onChange={() => update({ ownerKind: OwnerKind.Agent, ownerId: '' })}
                 />
                 Agent
               </label>
@@ -144,7 +144,7 @@ export function ItemForm({ tree, itemId, problemCount, onSaved, onDeleted }: Ite
                   type="radio"
                   name="owner-kind"
                   checked={v.ownerKind === OwnerKind.Item}
-                  onChange={() => setV({ ...v, ownerKind: OwnerKind.Item, ownerId: '' })}
+                  onChange={() => update({ ownerKind: OwnerKind.Item, ownerId: '' })}
                 />
                 Item (container)
               </label>
@@ -157,7 +157,7 @@ export function ItemForm({ tree, itemId, problemCount, onSaved, onDeleted }: Ite
                 id="it-owner"
                 className="row-editor__select"
                 value={v.ownerId}
-                onChange={(e) => setV({ ...v, ownerId: e.target.value })}
+                onChange={(e) => update({ ownerId: e.target.value })}
               >
                 <option value="">— pick an owner —</option>
                 {ownerOptions.map((o) => (
@@ -177,25 +177,15 @@ export function ItemForm({ tree, itemId, problemCount, onSaved, onDeleted }: Ite
               type="text"
               className="manuscript-input-v2 manuscript-input-v2--italic"
               value={v.shortDescription}
-              onChange={(e) => setV({ ...v, shortDescription: e.target.value })}
+              onChange={(e) => update({ shortDescription: e.target.value })}
             />
           </div>
           <div>
             <span className="form-grid__field-label">Long Description</span>
             <ManuscriptCard
               value={v.longDescription}
-              onChange={(next) => setV({ ...v, longDescription: next })}
+              onChange={(next) => update({ longDescription: next })}
             />
-          </div>
-          <div style={{ display: 'flex', gap: 16 }}>
-            <button
-              type="submit"
-              className="btn btn--primary"
-              disabled={saving || v.ownerId === ''}
-              data-save-status={status}
-            >
-              {label}
-            </button>
           </div>
         </div>
         <MetadataColumn>
@@ -209,14 +199,14 @@ export function ItemForm({ tree, itemId, problemCount, onSaved, onDeleted }: Ite
                 type="number"
                 className="row-editor__input"
                 value={v.weight}
-                onChange={(e) => setV({ ...v, weight: Number(e.target.value) })}
+                onChange={(e) => update({ weight: Number(e.target.value) })}
               />
             </div>
             <label className="row-editor__checkbox" style={{ gridColumn: 'span 12' }}>
               <input
                 type="checkbox"
                 checked={v.hidden}
-                onChange={(e) => setV({ ...v, hidden: e.target.checked })}
+                onChange={(e) => update({ hidden: e.target.checked })}
               />
               Hidden
             </label>
@@ -225,8 +215,7 @@ export function ItemForm({ tree, itemId, problemCount, onSaved, onDeleted }: Ite
                 type="checkbox"
                 checked={v.container}
                 onChange={(e) =>
-                  setV({
-                    ...v,
+                  update({
                     container: e.target.checked,
                     // Reset container-only state when toggling off.
                     opened: e.target.checked ? v.opened : true,
@@ -242,8 +231,7 @@ export function ItemForm({ tree, itemId, problemCount, onSaved, onDeleted }: Ite
                 type="checkbox"
                 checked={v.priceTag !== null}
                 onChange={(e) =>
-                  setV({
-                    ...v,
+                  update({
                     priceTag: e.target.checked
                       ? typeof v.priceTag === 'number' && v.priceTag > 0
                         ? v.priceTag
@@ -266,10 +254,7 @@ export function ItemForm({ tree, itemId, problemCount, onSaved, onDeleted }: Ite
                   className="row-editor__input"
                   value={v.priceTag}
                   onChange={(e) =>
-                    setV({
-                      ...v,
-                      priceTag: Math.max(1, Math.trunc(Number(e.target.value))),
-                    })
+                    update({ priceTag: Math.max(1, Math.trunc(Number(e.target.value))) })
                   }
                 />
               </div>
@@ -280,7 +265,7 @@ export function ItemForm({ tree, itemId, problemCount, onSaved, onDeleted }: Ite
                   <input
                     type="checkbox"
                     checked={v.opened}
-                    onChange={(e) => setV({ ...v, opened: e.target.checked })}
+                    onChange={(e) => update({ opened: e.target.checked })}
                   />
                   Starts opened
                 </label>
@@ -289,8 +274,7 @@ export function ItemForm({ tree, itemId, problemCount, onSaved, onDeleted }: Ite
                     type="checkbox"
                     checked={v.locked}
                     onChange={(e) =>
-                      setV({
-                        ...v,
+                      update({
                         locked: e.target.checked,
                         lockedByItem: e.target.checked ? v.lockedByItem : null,
                       })
@@ -308,10 +292,7 @@ export function ItemForm({ tree, itemId, problemCount, onSaved, onDeleted }: Ite
                       className="row-editor__select"
                       value={v.lockedByItem ?? ''}
                       onChange={(e) =>
-                        setV({
-                          ...v,
-                          lockedByItem: e.target.value === '' ? null : e.target.value,
-                        })
+                        update({ lockedByItem: e.target.value === '' ? null : e.target.value })
                       }
                     >
                       <option value="">(none)</option>
@@ -331,15 +312,16 @@ export function ItemForm({ tree, itemId, problemCount, onSaved, onDeleted }: Ite
             <TagSelectorPanel
               tags={v.tags}
               availableTags={authoredTags}
-              onChange={(next) => setV({ ...v, tags: next })}
+              onChange={(next) => update({ tags: next })}
             />
           </div>
         </MetadataColumn>
       </form>
       <FootnoteBar
-        wordCount={wordCount}
-        charCount={charCount}
-        problemCount={problemCount}
+        dirty={dirty}
+        onSave={save}
+        saveLabel={label}
+        saveDisabled={saving || v.ownerId === ''}
         onDelete={async () => {
           await deleteEntity({
             data: {

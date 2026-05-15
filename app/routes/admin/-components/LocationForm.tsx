@@ -18,18 +18,11 @@ import { SaveStatus, useSaveStatus } from './useSaveStatus';
 export interface LocationFormProps {
   readonly tree: WorldTree;
   readonly locationId: string;
-  readonly problemCount: number;
   readonly onSaved: () => Promise<void> | void;
   readonly onDeleted: () => void;
 }
 
-export function LocationForm({
-  tree,
-  locationId,
-  problemCount,
-  onSaved,
-  onDeleted,
-}: LocationFormProps) {
+export function LocationForm({ tree, locationId, onSaved, onDeleted }: LocationFormProps) {
   const loc = tree.locations.find((l) => (l.id as string) === locationId);
   const initial = loc
     ? {
@@ -42,16 +35,18 @@ export function LocationForm({
       }
     : null;
   const [v, setV] = useState(initial);
-  const { status, label, run } = useSaveStatus();
+  const { status, label, run, dirty, markDirty } = useSaveStatus();
   const saving = status === SaveStatus.Saving;
 
   if (!loc || !v) return <p className="t-metadata">Location not found.</p>;
 
+  const update = (patch: Partial<typeof v>): void => {
+    setV({ ...v, ...patch });
+    markDirty();
+  };
+
   const authoredTags = [...tree.tagLore.map((t) => t.tag)].sort((a, b) => a.localeCompare(b));
 
-  const wordCount =
-    v.longDescription.trim() === '' ? 0 : v.longDescription.trim().split(/\s+/).length;
-  const charCount = v.longDescription.length;
 
   const save = async (): Promise<void> => {
     await run(async () => {
@@ -94,7 +89,7 @@ export function LocationForm({
               type="text"
               className="manuscript-input-v2 manuscript-input-v2--large"
               value={v.label}
-              onChange={(e) => setV({ ...v, label: e.target.value })}
+              onChange={(e) => update({ label: e.target.value })}
             />
           </div>
           <div>
@@ -106,14 +101,14 @@ export function LocationForm({
               type="text"
               className="manuscript-input-v2 manuscript-input-v2--italic"
               value={v.shortDescription}
-              onChange={(e) => setV({ ...v, shortDescription: e.target.value })}
+              onChange={(e) => update({ shortDescription: e.target.value })}
             />
           </div>
           <div>
             <span className="form-grid__field-label">Long Description</span>
             <ManuscriptCard
               value={v.longDescription}
-              onChange={(next) => setV({ ...v, longDescription: next })}
+              onChange={(next) => update({ longDescription: next })}
             />
           </div>
           <div>
@@ -131,18 +126,8 @@ export function LocationForm({
               rows={4}
               placeholder="(secret)"
               value={v.secretDescription}
-              onChange={(e) => setV({ ...v, secretDescription: e.target.value })}
+              onChange={(e) => update({ secretDescription: e.target.value })}
             />
-          </div>
-          <div style={{ display: 'flex', gap: 16 }}>
-            <button
-              type="submit"
-              className="btn btn--primary"
-              disabled={saving}
-              data-save-status={status}
-            >
-              {label}
-            </button>
           </div>
         </div>
         <MetadataColumn>
@@ -156,7 +141,7 @@ export function LocationForm({
             <TagSelectorPanel
               tags={v.tags}
               availableTags={authoredTags}
-              onChange={(next) => setV({ ...v, tags: next })}
+              onChange={(next) => update({ tags: next })}
             />
           </div>
         </MetadataColumn>
@@ -234,9 +219,10 @@ export function LocationForm({
       />
 
       <FootnoteBar
-        wordCount={wordCount}
-        charCount={charCount}
-        problemCount={problemCount}
+        dirty={dirty}
+        onSave={save}
+        saveLabel={label}
+        saveDisabled={saving}
         onDelete={async () => {
           await deleteEntity({
             data: {

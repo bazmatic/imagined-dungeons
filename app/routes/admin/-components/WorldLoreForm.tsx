@@ -7,14 +7,13 @@ import { SaveStatus, useSaveStatus } from './useSaveStatus';
 
 export interface WorldLoreFormProps {
   readonly tree: WorldTree;
-  readonly problemCount: number;
   readonly onSaved: () => Promise<void> | void;
 }
 
-export function WorldLoreForm({ tree, problemCount, onSaved }: WorldLoreFormProps) {
+export function WorldLoreForm({ tree, onSaved }: WorldLoreFormProps) {
   const [worldOverview, setWorldOverview] = useState(tree.worldLore.worldOverview);
   const [storySoFar, setStorySoFar] = useState(tree.worldLore.storySoFar);
-  const { status, label, run } = useSaveStatus();
+  const { status, label, run, dirty, markDirty } = useSaveStatus();
   const saving = status === SaveStatus.Saving;
 
   const save = async (): Promise<void> => {
@@ -29,10 +28,6 @@ export function WorldLoreForm({ tree, problemCount, onSaved }: WorldLoreFormProp
       await onSaved();
     });
   };
-
-  const combined = `${worldOverview}\n${storySoFar}`;
-  const wordCount = combined.trim() === '' ? 0 : combined.trim().split(/\s+/).length;
-  const charCount = combined.length;
 
   return (
     <>
@@ -54,7 +49,7 @@ export function WorldLoreForm({ tree, problemCount, onSaved }: WorldLoreFormProp
               className="manuscript-input-v2"
               rows={6}
               value={worldOverview}
-              onChange={(e) => setWorldOverview(e.target.value)}
+              onChange={(e) => { setWorldOverview(e.target.value); markDirty(); }}
             />
           </div>
           <div>
@@ -69,22 +64,17 @@ export function WorldLoreForm({ tree, problemCount, onSaved }: WorldLoreFormProp
               className="manuscript-input-v2"
               rows={10}
               value={storySoFar}
-              onChange={(e) => setStorySoFar(e.target.value)}
+              onChange={(e) => { setStorySoFar(e.target.value); markDirty(); }}
             />
-          </div>
-          <div style={{ display: 'flex', gap: 16 }}>
-            <button
-              type="submit"
-              className="btn btn--primary"
-              disabled={saving}
-              data-save-status={status}
-            >
-              {label}
-            </button>
           </div>
         </div>
       </form>
-      <FootnoteBar wordCount={wordCount} charCount={charCount} problemCount={problemCount} />
+      <FootnoteBar
+        dirty={dirty}
+        onSave={save}
+        saveLabel={label}
+        saveDisabled={saving}
+      />
     </>
   );
 }

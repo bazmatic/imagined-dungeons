@@ -8,7 +8,6 @@ import { SaveStatus, useSaveStatus } from './useSaveStatus';
 export interface TagLoreFormProps {
   readonly tree: WorldTree;
   readonly tag: string;
-  readonly problemCount: number;
   readonly onSaved: () => Promise<void> | void;
   readonly onDeleted: () => void;
 }
@@ -17,12 +16,12 @@ function randomTagLoreId(): string {
   return `tlr_${Math.random().toString(36).slice(2, 10)}`;
 }
 
-export function TagLoreForm({ tree, tag, problemCount, onSaved, onDeleted }: TagLoreFormProps) {
+export function TagLoreForm({ tree, tag, onSaved, onDeleted }: TagLoreFormProps) {
   const existing = tree.tagLore.find((t) => t.tag === tag);
   const [id] = useState<string>(existing ? (existing.id as string) : randomTagLoreId());
   const [title, setTitle] = useState(existing?.title ?? '');
   const [description, setDescription] = useState(existing?.description ?? '');
-  const { status: saveStatus, label: saveLabel, run } = useSaveStatus();
+  const { status: saveStatus, label: saveLabel, run, dirty, markDirty } = useSaveStatus();
   const saving = saveStatus === SaveStatus.Saving;
   const [deleting, setDeleting] = useState(false);
   const busy = saving || deleting;
@@ -60,9 +59,6 @@ export function TagLoreForm({ tree, tag, problemCount, onSaved, onDeleted }: Tag
     }
   };
 
-  const wordCount = description.trim() === '' ? 0 : description.trim().split(/\s+/).length;
-  const charCount = description.length;
-
   return (
     <>
       <EntityHeader kindLabel="Tag Lore" title={tag} id={id} />
@@ -87,7 +83,7 @@ export function TagLoreForm({ tree, tag, problemCount, onSaved, onDeleted }: Tag
               type="text"
               className="manuscript-input-v2 manuscript-input-v2--large"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => { setTitle(e.target.value); markDirty(); }}
             />
           </div>
           <div>
@@ -99,25 +95,16 @@ export function TagLoreForm({ tree, tag, problemCount, onSaved, onDeleted }: Tag
               className="manuscript-input-v2"
               rows={12}
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => { setDescription(e.target.value); markDirty(); }}
             />
-          </div>
-          <div style={{ display: 'flex', gap: 16 }}>
-            <button
-              type="submit"
-              className="btn btn--primary"
-              disabled={busy}
-              data-save-status={saveStatus}
-            >
-              {saveLabel}
-            </button>
           </div>
         </div>
       </form>
       <FootnoteBar
-        wordCount={wordCount}
-        charCount={charCount}
-        problemCount={problemCount}
+        dirty={dirty}
+        onSave={save}
+        saveLabel={saveLabel}
+        saveDisabled={busy}
         {...(existing ? { onDelete: remove } : {})}
       />
     </>

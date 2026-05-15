@@ -83,7 +83,6 @@ function AdminWorld() {
     tree: t,
     category: search.cat,
     ...(search.sel !== undefined ? { selectedId: search.sel } : {}),
-    problems,
     onSelect: setSelected,
     onSaved: refresh,
     onDeleted: () => {

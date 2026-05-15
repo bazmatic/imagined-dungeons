@@ -36,11 +36,20 @@ export function MasterList({
 
   return (
     <>
+      <div className="master-pane__footer">
+        <input
+          type="text"
+          className="master-pane__filter"
+          placeholder={filterPlaceholder ?? 'Filter…'}
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+        />
+      </div>
       <div className="master-pane__body">
         {header ? <div className="master-pane__header-slot">{header}</div> : null}
         {visible.length === 0 ? (
           <p className="t-metadata" style={{ fontStyle: 'italic', padding: 'var(--s-3)' }}>
-            {q === '' ? (emptyHint ?? 'No entries yet — use + New above.') : 'No matches.'}
+            {q === '' ? (emptyHint ?? 'No entries yet.') : 'No matches.'}
           </p>
         ) : (
           visible.map((item) => (
@@ -62,15 +71,6 @@ export function MasterList({
             </button>
           ))
         )}
-      </div>
-      <div className="master-pane__footer">
-        <input
-          type="text"
-          className="master-pane__filter"
-          placeholder={filterPlaceholder ?? 'Filter…'}
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        />
       </div>
     </>
   );

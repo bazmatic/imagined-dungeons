@@ -9,28 +9,20 @@ export type SaveStatus = (typeof SaveStatus)[keyof typeof SaveStatus];
 
 const SAVED_FLASH_MS = 1800;
 
-/**
- * Tracks the save lifecycle for an admin form. Returns a tri-state
- * `status`, a `run` wrapper that flips the status during/after the
- * async save call, and a `label` ('Save' | 'Saving…' | 'Saved ✓').
- *
- * Use `disabled={status === 'saving'}` on the submit button and render
- * `label` as its text. The 'saved' state self-clears back to 'idle'
- * after a short flash so the next edit can re-Save without manual reset.
- *
- * Errors thrown inside the wrapped fn revert the status to 'idle' and
- * rethrow so the caller can surface them.
- */
 export function useSaveStatus(): {
   readonly status: SaveStatus;
   readonly label: string;
   readonly run: (fn: () => Promise<void>) => Promise<void>;
+  readonly dirty: boolean;
+  readonly markDirty: () => void;
 } {
   const [status, setStatus] = useState<SaveStatus>(SaveStatus.Idle);
-  // Cancel an in-flight saved-flash timer if a new save starts before the
-  // timer fires; otherwise the Idle overwrite could race with a newly-set
-  // Saving.
+  const [dirty, setDirty] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const markDirty = useCallback((): void => {
+    setDirty(true);
+  }, []);
 
   const run = useCallback(async (fn: () => Promise<void>): Promise<void> => {
     if (timer.current !== null) {
@@ -41,6 +33,7 @@ export function useSaveStatus(): {
     try {
       await fn();
       setStatus(SaveStatus.Saved);
+      setDirty(false);
       timer.current = setTimeout(() => {
         setStatus(SaveStatus.Idle);
         timer.current = null;
@@ -53,5 +46,5 @@ export function useSaveStatus(): {
 
   const label =
     status === SaveStatus.Saving ? 'Saving…' : status === SaveStatus.Saved ? 'Saved ✓' : 'Save';
-  return { status, label, run };
+  return { status, label, run, dirty, markDirty };
 }

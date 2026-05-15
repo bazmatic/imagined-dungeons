@@ -1,4 +1,4 @@
-import type { Problem, WorldTree } from '@core/domain/builder-types';
+import type { WorldTree } from '@core/domain/builder-types';
 import { type ReactNode, useState } from 'react';
 import { upsertTagLore } from '~/server/admin/lore';
 import { AgentForm } from './AgentForm';
@@ -17,7 +17,6 @@ export interface CategoryRouterProps {
   readonly tree: WorldTree;
   readonly category: Category;
   readonly selectedId?: string;
-  readonly problems: readonly Problem[];
   readonly onSelect: (id: string | undefined) => void;
   /**
    * Refresh the world tree. Awaited by flows that need the tree to include
@@ -32,7 +31,6 @@ export function useCategoryRouter({
   tree,
   category,
   selectedId,
-  problems,
   onSelect,
   onSaved,
   onDeleted,
@@ -99,7 +97,6 @@ export function useCategoryRouter({
     tree,
     category,
     selectedId: effectiveSelectedId,
-    problems,
     jsonFallback,
     onJsonFallback: setJsonFallback,
     onSaved,
@@ -144,13 +141,12 @@ function renderDetail(args: {
   tree: WorldTree;
   category: Category;
   selectedId: string | undefined;
-  problems: readonly Problem[];
   jsonFallback: string | null;
   onJsonFallback: (id: string | null) => void;
   onSaved: () => void;
   onDeleted: () => void;
 }): ReactNode {
-  const { tree, category, selectedId, problems, onJsonFallback, onSaved, onDeleted } = args;
+  const { tree, category, selectedId, onJsonFallback, onSaved, onDeleted } = args;
   if (selectedId === undefined) {
     return (
       <p className="t-metadata" style={{ fontStyle: 'italic' }}>
@@ -158,19 +154,15 @@ function renderDetail(args: {
       </p>
     );
   }
-  const problemCount = problems.filter((p) => p.entityId === selectedId).length;
   if (category === CategoryKind.Lore) {
     if (selectedId === WORLD_LORE_SEL) {
-      return (
-        <WorldLoreForm key="world-lore" tree={tree} problemCount={problemCount} onSaved={onSaved} />
-      );
+      return <WorldLoreForm key="world-lore" tree={tree} onSaved={onSaved} />;
     }
     return (
       <TagLoreForm
         key={`tag-lore-${selectedId}`}
         tree={tree}
         tag={selectedId}
-        problemCount={problemCount}
         onSaved={onSaved}
         onDeleted={onDeleted}
       />
@@ -182,7 +174,6 @@ function renderDetail(args: {
         key={selectedId}
         tree={tree}
         locationId={selectedId}
-        problemCount={problemCount}
         onSaved={onSaved}
         onDeleted={onDeleted}
       />
@@ -194,7 +185,6 @@ function renderDetail(args: {
         key={selectedId}
         tree={tree}
         templateId={selectedId}
-        problemCount={problemCount}
         onSaved={onSaved}
         onDeleted={onDeleted}
       />
@@ -206,7 +196,6 @@ function renderDetail(args: {
         key={selectedId}
         tree={tree}
         agentId={selectedId}
-        problemCount={problemCount}
         onSaved={onSaved}
         onDeleted={onDeleted}
       />
@@ -218,7 +207,6 @@ function renderDetail(args: {
       key={selectedId}
       tree={tree}
       itemId={selectedId}
-      problemCount={problemCount}
       onSaved={onSaved}
       onDeleted={onDeleted}
     />
