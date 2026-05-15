@@ -45,7 +45,7 @@ export async function dispatch(
 ): Promise<Result<ActionOutcome, string>> {
   switch (action.kind) {
     case ActionKind.Move:
-      return handleMove(action, repo);
+      return handleMove(action, repo, deps);
     case ActionKind.Look:
       return handleLook(action, repo);
     case ActionKind.Take:
