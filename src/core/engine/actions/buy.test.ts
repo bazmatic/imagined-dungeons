@@ -152,7 +152,7 @@ describe('handleBuy', () => {
     );
     if (!r.ok) throw new Error(r.error);
     expect(r.value.event.kind).toBe(EventKind.Trade);
-    expect(r.value.render[0]?.text).toContain('Deal');
+    expect(r.value.render).toEqual([{ kind: SegmentKind.Narration, text: expect.stringContaining('Deal') }]);
     expect((await repo.getAgent(BUYER)).gold).toBe(5);
     expect((await repo.getAgent(SELLER)).gold).toBe(5);
     const itAfter = await repo.getItem(KEY);
@@ -175,7 +175,7 @@ describe('handleBuy', () => {
     );
     if (!r.ok) throw new Error(r.error);
     expect(r.value.event.kind).toBe(EventKind.Trade);
-    expect(r.value.render[0]?.text).toContain('Not for that');
+    expect(r.value.render).toEqual([{ kind: SegmentKind.Narration, text: expect.stringContaining('Not for that') }]);
     expect((await repo.getAgent(BUYER)).gold).toBe(10);
     expect((await repo.getAgent(SELLER)).gold).toBe(0);
     const itAfter = await repo.getItem(KEY);

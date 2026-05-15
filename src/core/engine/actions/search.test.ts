@@ -92,7 +92,7 @@ describe('handleSearch', () => {
       { llm, builderRepo: builder, worldId: W },
     );
     if (!r.ok) throw new Error(r.error);
-    expect(r.value.render[0]?.text).toBe('A spider scuttles into a crack.');
+    expect(r.value.render).toEqual([{ kind: SegmentKind.Narration, text: 'A spider scuttles into a crack.' }]);
     expect(r.value.event.kind).toBe(EventKind.Look);
     expect((await builder.listItems(W)).length).toBe(0);
     expect((await builder.listAgents(W)).length).toBe(0);
@@ -137,7 +137,7 @@ describe('handleSearch', () => {
     const items = await builder.listItems(W);
     expect(items.length).toBe(1);
     expect(items[0]?.label).toBe('tarnished coin');
-    expect(r.value.render.some((s) => s.text.includes('tarnished coin'))).toBe(true);
+    expect(r.value.render.some((s) => s.kind === SegmentKind.Narration && s.text.includes('tarnished coin'))).toBe(true);
   });
 
   it('matchedItemId for a visible authored item → narration includes the authored description', async () => {
@@ -160,7 +160,7 @@ describe('handleSearch', () => {
       { llm, builderRepo: builder, worldId: W },
     );
     if (!r.ok) throw new Error(r.error);
-    expect(r.value.render.some((s) => s.text.includes('A real-time map of fire.'))).toBe(true);
+    expect(r.value.render.some((s) => s.kind === SegmentKind.Narration && s.text.includes('A real-time map of fire.'))).toBe(true);
     expect(r.value.event.kind).toBe(EventKind.Look);
     // Event target is the matched item.
     if (r.value.event.kind === EventKind.Look) {
@@ -208,7 +208,7 @@ describe('handleSearch', () => {
     );
     if (!r.ok) throw new Error(r.error);
     // Narration still surfaces.
-    expect(r.value.render[0]?.text).toBe('A breeze whispers past — but nothing tangible.');
+    expect(r.value.render).toEqual([{ kind: SegmentKind.Narration, text: 'A breeze whispers past — but nothing tangible.' }]);
     expect(r.value.event.kind).toBe(EventKind.Look);
     // The malformed spawn was silently dropped — nothing persisted.
     expect((await builder.listItems(W)).length).toBe(0);
@@ -236,9 +236,9 @@ describe('handleSearch', () => {
     );
     if (!r.ok) throw new Error(r.error);
     // Player gets a signal that the item was just revealed, not merely examined.
-    expect(r.value.render.some((s) => s.text.includes("hadn't noticed before"))).toBe(true);
+    expect(r.value.render.some((s) => s.kind === SegmentKind.Narration && s.text.includes("hadn't noticed before"))).toBe(true);
     // The description still surfaces so the player sees what they found.
-    expect(r.value.render.some((s) => s.text.includes('A real-time map of fire.'))).toBe(true);
+    expect(r.value.render.some((s) => s.kind === SegmentKind.Narration && s.text.includes('A real-time map of fire.'))).toBe(true);
     // The flag was flipped — subsequent perception will include the item.
     const after = await engine.getItem(hiddenMap.id);
     expect(after.hidden).toBe(false);
@@ -264,7 +264,7 @@ describe('handleSearch', () => {
       { llm, builderRepo: builder, worldId: W },
     );
     if (!r.ok) throw new Error(r.error);
-    expect(r.value.render[0]?.text).toBe('You see nothing of consequence.');
+    expect(r.value.render).toEqual([{ kind: SegmentKind.Narration, text: 'You see nothing of consequence.' }]);
     expect((await builder.listItems(W)).length).toBe(0);
   });
 });

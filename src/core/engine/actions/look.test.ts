@@ -81,6 +81,6 @@ describe('handleLook', () => {
       repo,
     );
     if (!r.ok) throw new Error();
-    expect(r.value.render[0]?.text).toBe('A real-time map.');
+    expect(r.value.render).toEqual([{ kind: SegmentKind.Narration, text: 'A real-time map.' }]);
   });
 });
