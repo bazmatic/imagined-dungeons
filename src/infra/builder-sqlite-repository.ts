@@ -582,7 +582,7 @@ const toExit = (r: typeof schema.exits.$inferSelect, w: WorldId): Exit => ({
   id: asExitId(r.id),
   worldId: w,
   from: asLocationId(r.fromLocationId),
-  to: asLocationId(r.toLocationId),
+  to: r.toLocationId ? asLocationId(r.toLocationId) : null,
   direction: r.direction as Direction,
   label: r.label,
   locked: r.locked,
