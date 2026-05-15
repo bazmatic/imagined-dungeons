@@ -3,6 +3,7 @@ import type { DomainEvent } from '@core/domain/events';
 import type { ItemId, LocationId } from '@core/domain/ids';
 import { EventKind, OwnerKind } from '@core/domain/kinds';
 import { Err, Ok, type Result } from '@core/domain/result';
+import { SegmentKind } from '@core/domain/segments';
 import { nextEventId } from '../ids-gen';
 import type { Repository } from '../repository';
 import type { ActionOutcome } from './types';
@@ -156,5 +157,5 @@ export async function handleUpdateDescription(
     shortTermIntentAfter,
   };
   await repo.appendEvent(event);
-  return Ok({ render: 'The description has been updated.', event });
+  return Ok({ render: [{ kind: SegmentKind.Feedback, text: 'The description has been updated.' }], event });
 }
