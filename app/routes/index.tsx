@@ -103,11 +103,26 @@ function Page() {
 
   const styleForSegment = (kind: SegmentKind): React.CSSProperties => {
     switch (kind) {
-      case SegmentKind.LocationName:        return { fontSize: 22, fontWeight: 600, letterSpacing: 0.5, marginTop: 12 };
-      case SegmentKind.LocationDescription: return { fontStyle: 'italic' };
-      case SegmentKind.Narration:           return { fontStyle: 'italic' };
-      case SegmentKind.Error:               return { color: '#ff9999' };
-      default:                              return {};
+      case SegmentKind.LocationName:
+        return { color: '#ffffff', fontSize: 18, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1.5, marginTop: 12 };
+      case SegmentKind.LocationDescription:
+        return { fontStyle: 'italic', color: '#cfcfcf', borderLeft: '2px solid #333', paddingLeft: 8 };
+      case SegmentKind.Narration:
+        return { fontStyle: 'italic', color: '#cfcfcf', borderLeft: '2px solid #444', paddingLeft: 8 };
+      case SegmentKind.ItemList:
+        return { color: '#aaaaaa', fontSize: 13 };
+      case SegmentKind.CharacterList:
+        return { color: '#aaaaaa', fontSize: 13 };
+      case SegmentKind.ExitList:
+        return { color: '#aaaaaa', fontSize: 13 };
+      case SegmentKind.NoExits:
+        return { color: '#666666', fontSize: 13, fontStyle: 'italic' };
+      case SegmentKind.Feedback:
+        return { color: '#cfcfcf', opacity: 0.8 };
+      case SegmentKind.Inventory:
+        return { color: '#aaaaaa', fontSize: 13, fontStyle: 'italic' };
+      case SegmentKind.Error:
+        return { color: '#ff9999', fontWeight: 700 };
     }
   };
 
