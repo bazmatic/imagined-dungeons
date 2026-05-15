@@ -1,10 +1,12 @@
-import { BuilderErrorKind, WorldKind } from '@core/domain/builder-kinds';
+import { BuilderErrorKind, ImportMode, WorldExportFormat, WorldKind } from '@core/domain/builder-kinds';
 import { OwnerKind } from '@core/domain/kinds';
 import type {
   BuilderError,
   CreateDraftInput,
+  ImportWorldOptions,
   LocationSpawnTrigger,
   MonsterTemplate,
+  SnapshotBlob,
   UpsertAgentInput,
   UpsertExitInput,
   UpsertItemInput,
@@ -12,6 +14,7 @@ import type {
   UpsertLocationSpawnTriggerInput,
   UpsertMonsterTemplateInput,
   UpsertTagLoreInput,
+  WorldExportBundle,
   WorldLore,
   WorldTree,
 } from '@core/domain/builder-types';
@@ -453,22 +456,6 @@ const asTriggerInput = (t: LocationSpawnTrigger): UpsertLocationSpawnTriggerInpu
   fireOnInitialPublish: t.fireOnInitialPublish,
 });
 
-interface SnapshotBlob {
-  readonly locations: readonly Location[];
-  readonly exits: readonly Exit[];
-  readonly items: readonly Item[];
-  readonly agents: readonly Agent[];
-  readonly templates: readonly MonsterTemplate[];
-  readonly triggers: readonly LocationSpawnTrigger[];
-  readonly worldLore: { readonly worldOverview: string; readonly storySoFar: string };
-  readonly tagLore: ReadonlyArray<{
-    readonly id: TagLoreId;
-    readonly tag: string;
-    readonly title: string;
-    readonly description: string;
-  }>;
-}
-
 function snapshotJson(tree: WorldTree): string {
   const blob: SnapshotBlob = {
     locations: tree.locations,
@@ -645,6 +632,126 @@ export async function resetLiveFromStartingState(
     await tx.writeTriggerFireState(liveId, { byTriggerId: {} });
     return Ok(undefined);
   });
+}
+
+// ---------------------------------------------------------------------------
+// Export / Import
+// ---------------------------------------------------------------------------
+
+export async function buildExportBundle(
+  repo: BuilderRepository,
+  draftWorldId: WorldId,
+  options: { includeLive: boolean },
+): Promise<WorldExportBundle> {
+  const summary = await repo.getWorldSummary(draftWorldId);
+  if (!summary) throw new Error(`world not found: ${draftWorldId}`);
+
+  const draftTree = await getWorldTree(repo, draftWorldId);
+  if (!draftTree.ok) throw new Error(draftTree.error.message);
+
+  let liveBlob: SnapshotBlob | null = null;
+  if (options.includeLive) {
+    const liveId = await findLiveForScratch(repo, draftWorldId);
+    if (!liveId) throw new Error(`no live world linked to draft ${draftWorldId}`);
+    const liveTree = await getWorldTree(repo, liveId);
+    if (!liveTree.ok) throw new Error(liveTree.error.message);
+    liveBlob = treeToBlob(liveTree.value);
+  }
+
+  return {
+    version: WorldExportFormat.Version,
+    format: WorldExportFormat.Format,
+    exportedAt: new Date().toISOString(),
+    worldMeta: {
+      displayName: summary.displayName,
+      label: summary.label,
+      coverImageUrl: summary.coverImageUrl,
+    },
+    draft: treeToBlob(draftTree.value),
+    live: liveBlob,
+  };
+}
+
+function treeToBlob(tree: WorldTree): SnapshotBlob {
+  return {
+    locations: tree.locations,
+    exits: tree.exits,
+    items: tree.items,
+    agents: tree.agents,
+    templates: tree.templates,
+    triggers: tree.triggers,
+    worldLore: {
+      worldOverview: tree.worldLore.worldOverview,
+      storySoFar: tree.worldLore.storySoFar,
+    },
+    tagLore: tree.tagLore.map((r) => ({
+      id: r.id,
+      tag: r.tag,
+      title: r.title,
+      description: r.description,
+    })),
+  };
+}
+
+export async function importWorldData(
+  repo: BuilderRepository,
+  worldId: WorldId,
+  blob: SnapshotBlob,
+): Promise<void> {
+  await repo.transaction(async (tx) => {
+    await wipeWorldEntities(tx, worldId);
+    await copyBlobIntoWorld(tx, blob, worldId);
+  });
+  await repo.writeSnapshot(worldId, JSON.stringify(blob), Date.now());
+}
+
+export async function importWorld(
+  repo: BuilderRepository,
+  bundle: WorldExportBundle,
+  options: ImportWorldOptions,
+): Promise<Result<WorldId, BuilderError>> {
+  if (options.mode === ImportMode.Create) {
+    const label = await resolveUniqueLabel(repo, bundle.worldMeta.label);
+    const r = await createWorld(repo, { displayName: bundle.worldMeta.displayName, label });
+    if (!r.ok) return r;
+    const newDraftId = r.value;
+    await importWorldData(repo, newDraftId, bundle.draft);
+    if (bundle.live !== null) {
+      const liveId = await findLiveForScratch(repo, newDraftId);
+      if (liveId) await importWorldData(repo, liveId, bundle.live);
+    }
+    return Ok(newDraftId);
+  }
+
+  // ImportMode.Overwrite
+  const targetId = options.targetDraftId;
+  if (!targetId) {
+    return Err(err(BuilderErrorKind.WorldNotFound, 'targetDraftId required for overwrite mode'));
+  }
+  const summary = await repo.getWorldSummary(targetId);
+  if (!summary) {
+    return Err(err(BuilderErrorKind.WorldNotFound, `target world not found: ${targetId}`));
+  }
+  if (summary.kind !== WorldKind.Draft) {
+    return Err(
+      err(BuilderErrorKind.WorldKindMismatch, `target world ${targetId} is not a draft world`),
+    );
+  }
+  await importWorldData(repo, targetId, bundle.draft);
+  if (bundle.live !== null) {
+    const liveId = await findLiveForScratch(repo, targetId);
+    if (liveId) await importWorldData(repo, liveId, bundle.live);
+  }
+  return Ok(targetId);
+}
+
+async function resolveUniqueLabel(repo: BuilderRepository, base: string): Promise<string> {
+  const worlds = await repo.listWorlds();
+  const labels = new Set(worlds.map((w) => w.label));
+  if (!labels.has(base)) return base;
+  let n = 2;
+  while (labels.has(`${base}-${n}`)) n++;
+  return `${base}-${n}`;
 }
 
 // Internal helper exposed so the seeder can create the paired live world for

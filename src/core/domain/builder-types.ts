@@ -3,6 +3,7 @@ import type {
   DiscoverySubjectKind,
   DiscoveryTriggerKind,
   EntityKind,
+  ImportMode,
   ProblemKind,
   PublishOutcomeKind,
   SkipReasonKind,
@@ -318,4 +319,38 @@ export interface TriggerFireRecord {
 }
 export interface TriggerFireState {
   readonly byTriggerId: Readonly<Record<string, TriggerFireRecord>>;
+}
+
+export interface SnapshotBlob {
+  readonly locations: readonly Location[];
+  readonly exits: readonly Exit[];
+  readonly items: readonly Item[];
+  readonly agents: readonly Agent[];
+  readonly templates: readonly MonsterTemplate[];
+  readonly triggers: readonly LocationSpawnTrigger[];
+  readonly worldLore: { readonly worldOverview: string; readonly storySoFar: string };
+  readonly tagLore: ReadonlyArray<{
+    readonly id: TagLoreId;
+    readonly tag: string;
+    readonly title: string;
+    readonly description: string;
+  }>;
+}
+
+export interface WorldExportBundle {
+  readonly version: 1;
+  readonly format: 'imagined-dungeons-world-export';
+  readonly exportedAt: string;
+  readonly worldMeta: {
+    readonly displayName: string;
+    readonly label: string;
+    readonly coverImageUrl: string | null;
+  };
+  readonly draft: SnapshotBlob;
+  readonly live: SnapshotBlob | null;
+}
+
+export interface ImportWorldOptions {
+  readonly mode: ImportMode;
+  readonly targetDraftId?: WorldId;
 }

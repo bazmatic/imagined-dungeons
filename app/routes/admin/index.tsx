@@ -4,7 +4,9 @@ import { Link, createFileRoute, useRouter } from '@tanstack/react-router';
 import { useState } from 'react';
 import { createWorld, listWorlds, resetLiveFromStartingState } from '~/server/admin/worlds';
 import { AdminShell } from './-components/AdminShell';
+import { ExportWorldDialog } from './-components/ExportWorldDialog';
 import { Fonts } from './-components/Fonts';
+import { ImportWorldModal } from './-components/ImportWorldModal';
 import { NewWorldCard } from './-components/NewWorldCard';
 import { CategoryKind } from './-components/category-helpers';
 
@@ -60,6 +62,8 @@ function AdminIndex() {
   const router = useRouter();
   const cards = groupIntoCampaigns(worlds);
   const [createOpen, setCreateOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [exportingWorldId, setExportingWorldId] = useState<string | null>(null);
 
   const onCreate = async (input: { displayName: string; label: string }): Promise<void> => {
     await createWorld({ data: input });
@@ -120,13 +124,20 @@ function AdminIndex() {
                 </span>
               </header>
 
-              <div style={{ margin: 'var(--s-4) 0' }}>
+              <div style={{ margin: 'var(--s-4) 0', display: 'flex', gap: 8 }}>
                 <button
                   type="button"
                   className="btn btn--primary"
                   onClick={() => setCreateOpen(true)}
                 >
                   Create new world
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => setImportOpen(true)}
+                >
+                  Import World
                 </button>
               </div>
 
@@ -151,6 +162,77 @@ function AdminIndex() {
                       ×
                     </button>
                     <NewWorldCard onCreate={onCreate} />
+                  </div>
+                </div>
+              ) : null}
+
+              {importOpen ? (
+                <div
+                  className="modal-backdrop"
+                  onClick={(e) => {
+                    if (e.target === e.currentTarget) setImportOpen(false);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') setImportOpen(false);
+                  }}
+                  role="presentation"
+                >
+                  <div className="modal-panel" role="dialog" aria-modal="true">
+                    <button
+                      type="button"
+                      className="modal-close"
+                      onClick={() => setImportOpen(false)}
+                      aria-label="Close"
+                    >
+                      ×
+                    </button>
+                    <ImportWorldModal
+                      drafts={worlds.filter((w) => w.kind === WorldKind.Draft)}
+                      onClose={() => {
+                        setImportOpen(false);
+                        router.invalidate();
+                      }}
+                    />
+                  </div>
+                </div>
+              ) : null}
+
+              {exportingWorldId !== null ? (
+                <div
+                  className="modal-backdrop"
+                  onClick={(e) => {
+                    if (e.target === e.currentTarget) setExportingWorldId(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') setExportingWorldId(null);
+                  }}
+                  role="presentation"
+                >
+                  <div className="modal-panel" role="dialog" aria-modal="true">
+                    <button
+                      type="button"
+                      className="modal-close"
+                      onClick={() => setExportingWorldId(null)}
+                      aria-label="Close"
+                    >
+                      ×
+                    </button>
+                    {(() => {
+                      const card = cards.find(
+                        (c) =>
+                          (c.scratch?.id as string) === exportingWorldId ||
+                          (c.live?.id as string) === exportingWorldId,
+                      );
+                      const primary = card?.scratch ?? card?.live;
+                      return primary ? (
+                        <ExportWorldDialog
+                          worldId={exportingWorldId}
+                          worldLabel={primary.label}
+                          hasLive={card?.live !== null && card?.live !== undefined}
+                          onClose={() => setExportingWorldId(null)}
+                        />
+                      ) : null;
+                    })()}
                   </div>
                 </div>
               ) : null}
@@ -225,6 +307,16 @@ function AdminIndex() {
                               title="Reset the live world to the saved starting state"
                             >
                               Reset
+                            </button>
+                          ) : null}
+                          {card.scratch ? (
+                            <button
+                              type="button"
+                              className="btn"
+                              onClick={() => setExportingWorldId(card.scratch?.id as string)}
+                              title="Export this world to a JSON file"
+                            >
+                              Export
                             </button>
                           ) : null}
                         </div>

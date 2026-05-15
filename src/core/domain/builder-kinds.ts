@@ -93,3 +93,14 @@ export const DiscoveryTriggerKind = {
   Search: 'search',
 } as const;
 export type DiscoveryTriggerKind = (typeof DiscoveryTriggerKind)[keyof typeof DiscoveryTriggerKind];
+
+export const WorldExportFormat = {
+  Format: 'imagined-dungeons-world-export',
+  Version: 1,
+} as const;
+
+export const ImportMode = {
+  Create: 'create',
+  Overwrite: 'overwrite',
+} as const;
+export type ImportMode = (typeof ImportMode)[keyof typeof ImportMode];
