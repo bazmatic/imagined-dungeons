@@ -1,12 +1,16 @@
 import {
+  buildExportBundle as buildExportBundleCore,
   createWorld as createWorldCore,
   getWorldTree,
+  importWorld as importWorldCore,
   listWorlds as listWorldsCore,
   loadStartingState as loadStartingStateCore,
   resetLiveFromStartingState as resetLiveCore,
   saveStartingState as saveStartingStateCore,
   updateWorldCover as updateWorldCoverCore,
 } from '@core/builder/index';
+import { ImportMode } from '@core/domain/builder-kinds';
+import type { WorldExportBundle } from '@core/domain/builder-types';
 import { type AgentId, asAgentId, asWorldId } from '@core/domain/ids';
 import { createServerFn } from '@tanstack/react-start';
 import { getBuilderRepo } from './repo';
@@ -140,4 +144,50 @@ export const updateWorldCover = createServerFn({ method: 'POST' })
   })
   .handler(async ({ data }) =>
     updateWorldCoverCore(await getBuilderRepo(), asWorldId(data.id), data.coverImageUrl),
+  );
+
+export const exportWorld = createServerFn({ method: 'POST' })
+  .inputValidator((d: unknown) => {
+    if (
+      typeof d !== 'object' ||
+      d === null ||
+      typeof (d as { id?: unknown }).id !== 'string' ||
+      typeof (d as { includeLive?: unknown }).includeLive !== 'boolean'
+    ) {
+      throw new Error('Expected { id: string, includeLive: boolean }');
+    }
+    return d as { id: string; includeLive: boolean };
+  })
+  .handler(async ({ data }) =>
+    buildExportBundleCore(await getBuilderRepo(), asWorldId(data.id), {
+      includeLive: data.includeLive,
+    }),
+  );
+
+export const importWorldFn = createServerFn({ method: 'POST' })
+  .inputValidator((d: unknown) => {
+    if (typeof d !== 'object' || d === null) {
+      throw new Error('Expected import payload object');
+    }
+    const raw = d as { bundle?: unknown; mode?: unknown; targetDraftId?: unknown };
+    if (typeof raw.bundle !== 'object' || raw.bundle === null) {
+      throw new Error('Expected bundle object');
+    }
+    if (raw.mode !== ImportMode.Create && raw.mode !== ImportMode.Overwrite) {
+      throw new Error(`mode must be '${ImportMode.Create}' or '${ImportMode.Overwrite}'`);
+    }
+    if (raw.targetDraftId !== undefined && typeof raw.targetDraftId !== 'string') {
+      throw new Error('targetDraftId must be a string if provided');
+    }
+    return d as {
+      bundle: WorldExportBundle;
+      mode: typeof ImportMode.Create | typeof ImportMode.Overwrite;
+      targetDraftId?: string;
+    };
+  })
+  .handler(async ({ data }) =>
+    importWorldCore(await getBuilderRepo(), data.bundle, {
+      mode: data.mode,
+      targetDraftId: data.targetDraftId ? asWorldId(data.targetDraftId) : undefined,
+    }),
   );

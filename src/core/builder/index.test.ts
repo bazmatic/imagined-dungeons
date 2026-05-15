@@ -1,4 +1,4 @@
-import { BuilderErrorKind, TriggerEventKind, WorldKind } from '@core/domain/builder-kinds';
+import { BuilderErrorKind, ImportMode, TriggerEventKind, WorldExportFormat, WorldKind } from '@core/domain/builder-kinds';
 import {
   asAgentId,
   asItemId,
@@ -12,12 +12,16 @@ import { OwnerKind } from '@core/domain/kinds';
 import { MemoryBuilderRepository } from '@infra/builder-memory-repository';
 import { describe, expect, it } from 'vitest';
 import {
+  buildExportBundle,
   createDraft,
   createLiveForScratch,
+  createWorld,
   deleteLocation,
   deleteTagLore,
   getWorldLore,
   getWorldTree,
+  importWorld,
+  importWorldData,
   loadStartingState,
   resetLiveFromStartingState,
   saveStartingState,
@@ -520,5 +524,219 @@ describe('upsertItem — owner-chain cycle rejection', () => {
     });
     if (r.ok) throw new Error('expected self-cycle rejection');
     expect(r.error.kind).toBe(BuilderErrorKind.ItemOwnerCycle);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Export / Import
+// ---------------------------------------------------------------------------
+
+const locInput = () => ({
+  id: asLocationId('loc_a'),
+  label: 'Tavern',
+  shortDescription: 'a warm tavern',
+  longDescription: 'a very warm tavern',
+  tags: ['social'],
+  secretDescription: '',
+});
+
+async function worldWithLocation(repo: MemoryBuilderRepository) {
+  const r = await createWorld(repo, { displayName: 'Test World', label: 'test-world' });
+  if (!r.ok) throw new Error('createWorld failed');
+  const draftId = r.value;
+  await upsertLocation(repo, draftId, locInput());
+  await saveStartingState(repo, draftId);
+  await resetLiveFromStartingState(repo, draftId);
+  return draftId;
+}
+
+describe('buildExportBundle', () => {
+  it('draft-only export: live is null, draft blob has entities, worldMeta populated', async () => {
+    const repo = new MemoryBuilderRepository();
+    const draftId = await worldWithLocation(repo);
+
+    const bundle = await buildExportBundle(repo, draftId, { includeLive: false });
+
+    expect(bundle.format).toBe(WorldExportFormat.Format);
+    expect(bundle.version).toBe(WorldExportFormat.Version);
+    expect(bundle.live).toBeNull();
+    expect(bundle.draft.locations).toHaveLength(1);
+    expect(bundle.draft.locations[0]?.label).toBe('Tavern');
+    expect(bundle.worldMeta.displayName).toBe('Test World');
+    expect(bundle.worldMeta.label).toBe('test-world');
+  });
+
+  it('draft+live export: both blobs present with entities', async () => {
+    const repo = new MemoryBuilderRepository();
+    const draftId = await worldWithLocation(repo);
+
+    const bundle = await buildExportBundle(repo, draftId, { includeLive: true });
+
+    expect(bundle.draft.locations).toHaveLength(1);
+    expect(bundle.live).not.toBeNull();
+    expect(bundle.live!.locations).toHaveLength(1);
+  });
+
+  it('errors when includeLive requested but no live sibling exists', async () => {
+    const repo = new MemoryBuilderRepository();
+    const r = await createDraft(repo, { displayName: 'Orphan', label: 'orphan' });
+    if (!r.ok) throw new Error('createDraft failed');
+
+    await expect(buildExportBundle(repo, r.value, { includeLive: true })).rejects.toThrow();
+  });
+});
+
+describe('importWorldData', () => {
+  it('wipes existing entities and repopulates from bundle', async () => {
+    const repo = new MemoryBuilderRepository();
+    const draftId = await worldWithLocation(repo);
+    // add a second location to the live world entities
+    await upsertLocation(repo, draftId, {
+      ...locInput(),
+      id: asLocationId('loc_extra'),
+      label: 'Extra',
+    });
+
+    const blob = {
+      locations: [{ ...locInput(), worldId: draftId, secretDescription: '' }],
+      exits: [],
+      items: [],
+      agents: [],
+      templates: [],
+      triggers: [],
+      worldLore: { worldOverview: 'overview', storySoFar: '' },
+      tagLore: [],
+    };
+
+    await importWorldData(repo, draftId, blob as never);
+
+    const tree = await getWorldTree(repo, draftId);
+    if (!tree.ok) throw new Error('getWorldTree failed');
+    expect(tree.value.locations).toHaveLength(1);
+    expect(tree.value.locations[0]?.label).toBe('Tavern');
+    expect(tree.value.worldLore.worldOverview).toBe('overview');
+  });
+
+  it('updates the snapshot table to match the imported blob', async () => {
+    const repo = new MemoryBuilderRepository();
+    const draftId = await worldWithLocation(repo);
+
+    const blob = {
+      locations: [],
+      exits: [],
+      items: [],
+      agents: [],
+      templates: [],
+      triggers: [],
+      worldLore: { worldOverview: 'imported overview', storySoFar: '' },
+      tagLore: [],
+    };
+
+    await importWorldData(repo, draftId, blob as never);
+
+    const snap = await repo.readSnapshot(draftId);
+    expect(snap).not.toBeNull();
+    const parsed = JSON.parse(snap!.json);
+    expect(parsed.worldLore.worldOverview).toBe('imported overview');
+  });
+});
+
+describe('importWorld', () => {
+  it('Create mode: creates a new world with entities from bundle', async () => {
+    const repo = new MemoryBuilderRepository();
+    const sourceDraftId = await worldWithLocation(repo);
+    const bundle = await buildExportBundle(repo, sourceDraftId, { includeLive: false });
+
+    const result = await importWorld(repo, bundle, { mode: ImportMode.Create });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const tree = await getWorldTree(repo, result.value);
+    if (!tree.ok) throw new Error('getWorldTree failed');
+    expect(tree.value.locations).toHaveLength(1);
+    expect(tree.value.locations[0]?.label).toBe('Tavern');
+    expect(tree.value.summary.displayName).toBe('Test World');
+  });
+
+  it('Create mode: appends suffix when label is already taken', async () => {
+    const repo = new MemoryBuilderRepository();
+    const sourceDraftId = await worldWithLocation(repo);
+    const bundle = await buildExportBundle(repo, sourceDraftId, { includeLive: false });
+
+    const r1 = await importWorld(repo, bundle, { mode: ImportMode.Create });
+    const r2 = await importWorld(repo, bundle, { mode: ImportMode.Create });
+
+    expect(r1.ok).toBe(true);
+    expect(r2.ok).toBe(true);
+    if (!r1.ok || !r2.ok) return;
+    const s1 = await repo.getWorldSummary(r1.value);
+    const s2 = await repo.getWorldSummary(r2.value);
+    expect(s1?.label).not.toBe(s2?.label);
+  });
+
+  it('Overwrite mode: replaces entities, world metadata unchanged', async () => {
+    const repo = new MemoryBuilderRepository();
+    const sourceDraftId = await worldWithLocation(repo);
+    const bundle = await buildExportBundle(repo, sourceDraftId, { includeLive: false });
+
+    // create a separate target world with different metadata
+    const targetR = await createWorld(repo, { displayName: 'Target World', label: 'target' });
+    if (!targetR.ok) throw new Error('createWorld failed');
+    const targetId = targetR.value;
+
+    const result = await importWorld(repo, bundle, {
+      mode: ImportMode.Overwrite,
+      targetDraftId: targetId,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const tree = await getWorldTree(repo, targetId);
+    if (!tree.ok) throw new Error('getWorldTree failed');
+    // entities replaced from bundle
+    expect(tree.value.locations).toHaveLength(1);
+    expect(tree.value.locations[0]?.label).toBe('Tavern');
+    // world metadata NOT overwritten
+    expect(tree.value.summary.displayName).toBe('Target World');
+    expect(tree.value.summary.label).toBe('target');
+  });
+
+  it('Overwrite mode: errors when targetDraftId is not a draft world', async () => {
+    const repo = new MemoryBuilderRepository();
+    const sourceDraftId = await worldWithLocation(repo);
+    const bundle = await buildExportBundle(repo, sourceDraftId, { includeLive: false });
+
+    const result = await importWorld(repo, bundle, {
+      mode: ImportMode.Overwrite,
+      targetDraftId: asWorldId('w_nonexistent'),
+    });
+
+    expect(result.ok).toBe(false);
+  });
+
+  it('Overwrite mode with live: imports live entities too', async () => {
+    const repo = new MemoryBuilderRepository();
+    const sourceDraftId = await worldWithLocation(repo);
+    const bundle = await buildExportBundle(repo, sourceDraftId, { includeLive: true });
+
+    const targetR = await createWorld(repo, { displayName: 'Target', label: 'target' });
+    if (!targetR.ok) throw new Error('createWorld failed');
+    const targetId = targetR.value;
+
+    const result = await importWorld(repo, bundle, {
+      mode: ImportMode.Overwrite,
+      targetDraftId: targetId,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // find the live world for target
+    const worlds = await repo.listWorlds();
+    const live = worlds.find((w) => w.kind === WorldKind.Live && w.parentDraftId === targetId);
+    expect(live).toBeDefined();
+    if (!live) return;
+    const liveTree = await getWorldTree(repo, live.id);
+    if (!liveTree.ok) throw new Error('getWorldTree failed');
+    expect(liveTree.value.locations).toHaveLength(1);
   });
 });
