@@ -552,13 +552,15 @@ export async function runTick(
       if (line !== null && line.length > 0) witnessed.push(line);
     }
     // Transient LLM narration describing the arrival — does not update stored descriptions
-    const spawnNarrations = await generateSpawnNarration({
-      spawnEvents: spawnResult.events,
-      playerId,
-      repo,
-      llm,
-    });
-    for (const line of spawnNarrations) witnessed.push(line);
+    if (spawnResult.events.length > 0) {
+      const spawnNarrations = await generateSpawnNarration({
+        spawnEvents: spawnResult.events,
+        playerId,
+        repo,
+        llm,
+      });
+      for (const line of spawnNarrations) witnessed.push(line);
+    }
   }
 
   // 7. Sleep any woken NPCs (awake && !autonomous) whose shortTermIntent
