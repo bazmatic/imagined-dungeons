@@ -548,8 +548,14 @@ export async function runTick(
     });
     for (const ev of spawnResult.events) {
       events.push(ev);
-      const line = await renderWitnessForPlayer(ev, playerId, repo);
-      if (line !== null && line.length > 0) witnessed.push(line);
+      if (ev.kind === EventKind.AgentSpawned && ev.witnesses.some((w) => w === playerId)) {
+        const spawned = await repo.getAgent(ev.spawnedAgentId);
+        const text = renderAgentSpawnedObserved(spawned.label);
+        playerRender = [...playerRender, { kind: SegmentKind.Spawn, text }];
+      } else {
+        const line = await renderWitnessForPlayer(ev, playerId, repo);
+        if (line !== null && line.length > 0) witnessed.push(line);
+      }
     }
     // Transient LLM narration describing the arrival — does not update stored descriptions
     if (spawnResult.events.length > 0) {

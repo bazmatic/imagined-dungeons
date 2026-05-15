@@ -18,6 +18,7 @@ import {
   asWorldId,
 } from '@core/domain/ids';
 import { EventKind } from '@core/domain/kinds';
+import { SegmentKind } from '@core/domain/segments';
 import { makeCompositeParser } from '@core/engine/parser/composite';
 import { runTick } from '@core/engine/tick';
 import { SqliteBuilderRepository } from '@infra/builder-sqlite-repository';
@@ -140,7 +141,7 @@ describe('spawning end-to-end (tick pass)', () => {
     const after = await engineRepo.agentsAt(LOC_SEWER);
     expect(after.filter((a) => a.label.startsWith('goblin'))).toHaveLength(1);
 
-    expect(result.witnessed.some((line) => line.toLowerCase().includes('goblin'))).toBe(true);
+    expect(result.render.some((s) => s.kind === SegmentKind.Spawn && s.text.toLowerCase().includes('goblin'))).toBe(true);
   });
 
   it('one-shot trigger does not re-fire when the player exits and returns', async () => {
