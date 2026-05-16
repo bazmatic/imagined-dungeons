@@ -33,19 +33,40 @@ Three conditions must all be true:
 
 `repo.recentEvents(100)` provides the event log. 100 events covers many turns of gameplay. Attack events reference specific agent IDs, so there is no cross-location confusion: a living, `awake` agent at the player's current location that appears in a past attack with the player is unambiguously "the enemy in this fight."
 
-## Approach: thread `playerId` through the dep chain
+## Approach: thread `playerId` through the dep chain; extract combat query
 
 The check only applies to the player, not to NPCs. `playerId` is added to the dep types and passed from `runTick` through `runTurn` and `dispatch` into `handleMove`.
+
+The detection logic is extracted into a single named function so the definition of "in combat" lives in exactly one place (DRY) and has a single responsibility (SOLID-S).
+
+### New module: `src/core/engine/combat.ts`
+
+```ts
+export async function isPlayerInCombat(
+  playerId: AgentId,
+  locationId: LocationId,
+  repo: Repository,
+): Promise<boolean>
+```
+
+**Algorithm:**
+1. Call `repo.agentsAt(locationId)` and collect IDs of agents that are not the player, alive (`hp > 0`), and `awake` → `livingAwakeEnemyIds`.
+2. Short-circuit: if `livingAwakeEnemyIds` is empty, return `false` immediately (no `recentEvents` call needed — the common non-combat case).
+3. Call `repo.recentEvents(100)` and scan for any `Attack` event where the player was actor or target and the other party is in `livingAwakeEnemyIds`.
+4. Return `true` if any such event is found, `false` otherwise.
+
+This function owns the entire definition of "in combat." Any future caller (e.g. a `flee` action, a UI status query) uses this function — no duplication.
 
 ### Files changed
 
 | File | Change |
 |------|--------|
+| `src/core/engine/combat.ts` | New file — `isPlayerInCombat` function |
+| `src/core/engine/combat.test.ts` | Unit tests for `isPlayerInCombat` in isolation |
 | `src/core/engine/turn.ts` | Add `playerId?: AgentId` to `RunTurnOptions` |
 | `src/core/engine/actions/registry.ts` | Add `playerId?: AgentId` to `DispatchDeps`; pass to `handleMove` |
-| `src/core/engine/actions/move.ts` | Add `playerId?: AgentId` to `MoveHandlerDeps`; implement combat guard |
+| `src/core/engine/actions/move.ts` | Add `playerId?: AgentId` to `MoveHandlerDeps`; call `isPlayerInCombat` |
 | `src/core/engine/tick.ts` | Pass `playerId` in `RunTurnOptions` for both player and NPC `runTurn` calls |
-| `src/core/engine/actions/move.test.ts` | New tests for the combat-lock rule |
 
 ### Guard location in `handleMove`
 
@@ -53,27 +74,13 @@ After `perceive()` resolves the actor's view (and the early return for unknown e
 
 ```ts
 if (deps.playerId && action.actorId === deps.playerId) {
-  const playerId = deps.playerId;
-  const here = await repo.agentsAt(view.location.id);
-  const livingAwakeEnemyIds = new Set(
-    here.filter((a) => a.id !== playerId && a.hp > 0 && a.awake).map((a) => a.id),
-  );
-  if (livingAwakeEnemyIds.size > 0) {
-    const recent = await repo.recentEvents(100);
-    const inCombat = recent.some((e) => {
-      if (e.kind !== EventKind.Attack) return false;
-      const playerIsActor = e.actorId === playerId;
-      const playerIsTarget = e.targetAgentId === playerId;
-      if (!playerIsActor && !playerIsTarget) return false;
-      const enemyId = playerIsActor ? e.targetAgentId : e.actorId;
-      return livingAwakeEnemyIds.has(enemyId);
-    });
-    if (inCombat) return Err("You can't leave while in combat.");
+  if (await isPlayerInCombat(deps.playerId, view.location.id, repo)) {
+    return Err("You can't leave while in combat.");
   }
 }
 ```
 
-The `livingAwakeEnemyIds.size > 0` short-circuit avoids the `recentEvents` call when there is no candidate enemy present — the common case for all non-combat movement.
+Clean, readable, and delegates all combat reasoning to the dedicated function.
 
 ## Error message
 
@@ -85,16 +92,25 @@ Consistent in register and punctuation with the existing locked-door messages in
 
 ## Tests
 
-New `describe` block in `move.test.ts`:
+`combat.test.ts` tests `isPlayerInCombat` directly against a mock/in-memory repo — no need to go through `handleMove` to test the detection logic.
 
-1. **Blocked** — player attacked the enemy; enemy is alive and `awake`; move is rejected.
-2. **Blocked** — enemy attacked the player; enemy is alive and `awake`; move is rejected.
-3. **Allowed** — enemy is alive and `awake` but there is no attack event involving the player (e.g. friendly NPC woken by a conversation); move succeeds.
-4. **Allowed** — there was an attack event but the enemy is now dead (`hp <= 0`); move succeeds.
-5. **Allowed** — there was an attack event, enemy is alive, but enemy is no longer `awake` (LLM ended combat); move succeeds.
-6. **Allowed** — enemy was attacked but has since moved to a different location; move succeeds.
-7. **Allowed** — no `playerId` in deps; guard is skipped; move succeeds.
-7. **NPC not blocked** — actor is an NPC (not the player); move succeeds even with a living, awake, previously-attacked enemy present.
+`move.test.ts` adds a single integration-level test confirming that `handleMove` rejects a move when `isPlayerInCombat` would return `true`, and passes when it would return `false`. The detailed case coverage lives in `combat.test.ts`.
+
+### `combat.test.ts` cases
+
+1. **True** — player attacked the enemy; enemy is alive and `awake`.
+2. **True** — enemy attacked the player; enemy is alive and `awake`.
+3. **False** — enemy is alive and `awake` but no attack event involves the player (friendly NPC woken by conversation).
+4. **False** — attack event exists but the enemy is dead (`hp <= 0`).
+5. **False** — attack event exists, enemy is alive, but enemy is no longer `awake` (LLM ended combat).
+6. **False** — attack event exists but the enemy has moved to a different location (not in `agentsAt`).
+7. **False** — no agents at the location at all.
+
+### `move.test.ts` additions
+
+8. **Blocked** — `handleMove` returns `Err` when combat is underway (player attacked an alive, awake enemy).
+9. **Allowed** — `handleMove` proceeds normally when no combat is underway.
+10. **NPC not blocked** — actor is an NPC (`actorId` does not match `playerId`); move succeeds even with combat underway.
 
 ## Out of scope
 
