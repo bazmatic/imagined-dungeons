@@ -294,25 +294,17 @@ export function renderLookObserved(actor: Agent): string {
 }
 
 /**
- * Player-perspective surface for a `description_updated` event the player
- * happened to witness. Deliberately subtle — we don't reveal the new prose
- * here; the next `look` will return the freshly stored description (§6.4).
- */
-export function renderDescriptionUpdatedObserved(): string {
-  return '...';
-}
-
-/**
  * Player-perspective surface for an agent-targeted `description_updated`
  * event where only the agent's mood changed (no description, no intent).
- * The new mood itself is NOT revealed — the next `look at <agent>` will pick
- * it up. Same conservative pattern as `renderDescriptionUpdatedObserved`.
  *
  * Intent-only changes are NOT witnessable; this function is not called for
  * them and the witness branching in `tick.ts` returns null instead.
  */
-export function renderAgentStateUpdatedObserved(actor: Agent): string {
-  return `(${actor.label}'s expression shifts.)`;
+export function renderAgentStateUpdatedObserved(actor: Agent, moodAfter: string | null): string {
+  if (moodAfter) {
+    return `(${actor.label} looks ${moodAfter.toLowerCase()}.)`;
+  }
+  return `(${actor.label}'s expression relaxes.)`;
 }
 
 /**

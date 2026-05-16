@@ -21,7 +21,6 @@ import {
   renderAgentSpawnedObserved,
   renderAgentStateUpdatedObserved,
   renderCloseObserved,
-  renderDescriptionUpdatedObserved,
   renderDropObserved,
   renderEquipObserved,
   renderGiveByActor,
@@ -172,22 +171,19 @@ async function renderWitnessForPlayer(
         event.shortBefore !== event.shortAfter || event.longBefore !== event.longAfter;
       const moodChanged = event.moodBefore !== event.moodAfter;
       const intentChanged = event.shortTermIntentBefore !== event.shortTermIntentAfter;
-      // Description changes are the broad "world shifts" line.
-      if (descriptionChanged) return renderDescriptionUpdatedObserved();
-      // Otherwise — for an agent target — a mood-only change is a subtle
-      // visible cue keyed on the *target* (whose mood changed), not the actor
+      if (descriptionChanged) return null;
+      // For an agent target, surface the mood change as a visible expression
+      // cue keyed on the *target* (whose mood changed), not the actor
       // (which is the synthetic system agent for consequence-emitted events).
       // Suppress entirely if:
       //   - the target is the system agent (bookkeeping; never narrate),
-      //   - the target IS the player (telling the player "your expression
-      //     shifts" reads weirdly in third person, and second-person would
-      //     leak the supposedly-private mood change anyway).
+      //   - the target IS the player (second-person reads weirdly here).
       if (event.target.kind === OwnerKind.Agent && moodChanged) {
         if (event.target.id === SYSTEM_AGENT_ID) return null;
         if (event.target.id === playerId) return null;
         try {
           const targetAgent = await repo.getAgent(event.target.id);
-          return renderAgentStateUpdatedObserved(targetAgent);
+          return renderAgentStateUpdatedObserved(targetAgent, event.moodAfter);
         } catch {
           return null;
         }
