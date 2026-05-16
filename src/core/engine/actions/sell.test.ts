@@ -3,6 +3,7 @@ import { asAgentId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
 import { ActionKind, EventKind, OwnerKind } from '@core/domain/kinds';
 import { MemoryRepository } from '@infra/memory-repository';
 import { describe, expect, it } from 'vitest';
+import { LlmGameAI } from '../game-ai';
 import type { LanguageModel } from '../language-model';
 import { handleSell } from './sell';
 
@@ -78,7 +79,7 @@ describe('handleSell', () => {
     const r = await handleSell(
       { kind: ActionKind.Sell, actorId: PLAYER, buyerId: NPC, itemId: CLOAK },
       repo,
-      { llm: accept },
+      { ai: new LlmGameAI(accept) },
     );
     if (r.ok) throw new Error('expected error');
     expect(r.error).toMatch(/aren't carrying/i);
@@ -95,7 +96,7 @@ describe('handleSell', () => {
     const r = await handleSell(
       { kind: ActionKind.Sell, actorId: PLAYER, buyerId: NPC, itemId: CLOAK },
       repo,
-      { llm: accept },
+      { ai: new LlmGameAI(accept) },
     );
     if (r.ok) throw new Error('expected error');
     expect(r.error).toMatch(/haven't priced/i);
@@ -112,7 +113,7 @@ describe('handleSell', () => {
     const r = await handleSell(
       { kind: ActionKind.Sell, actorId: PLAYER, buyerId: NPC, itemId: CLOAK },
       repo,
-      { llm: accept },
+      { ai: new LlmGameAI(accept) },
     );
     if (r.ok) throw new Error('expected error');
     expect(r.error).toMatch(/only has 2 gold/i);
@@ -128,7 +129,7 @@ describe('handleSell', () => {
     const r = await handleSell(
       { kind: ActionKind.Sell, actorId: PLAYER, buyerId: NPC, itemId: CLOAK },
       repo,
-      { llm: accept },
+      { ai: new LlmGameAI(accept) },
     );
     if (!r.ok) throw new Error(r.error);
     expect(r.value.event.kind).toBe(EventKind.Trade);
@@ -149,7 +150,7 @@ describe('handleSell', () => {
     const r = await handleSell(
       { kind: ActionKind.Sell, actorId: PLAYER, buyerId: NPC, itemId: CLOAK },
       repo,
-      { llm: refuse },
+      { ai: new LlmGameAI(refuse) },
     );
     if (!r.ok) throw new Error(r.error);
     expect(r.value.event.kind).toBe(EventKind.Trade);

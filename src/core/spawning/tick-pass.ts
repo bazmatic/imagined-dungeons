@@ -1,12 +1,13 @@
 import type { BuilderRepository } from '@core/builder/repository';
 import { TriggerEventKind } from '@core/domain/builder-kinds';
-import type { LocationSpawnTrigger } from '@core/domain/builder-types';
+import type { LocationSpawnTrigger, MonsterTemplate, TriggerFireState, UpsertAgentInput } from '@core/domain/builder-types';
 import type { DomainEvent } from '@core/domain/events';
 import {
   type AgentId,
   type LocationId,
   type MonsterTemplateId,
   SYSTEM_AGENT_ID,
+  type SpawnTriggerId,
   type WorldId,
   asEventId,
 } from '@core/domain/ids';
@@ -25,6 +26,79 @@ import {
 
 export interface TickSpawnResult {
   readonly events: readonly DomainEvent[];
+}
+
+export interface SpawnBatch {
+  readonly agents: readonly UpsertAgentInput[];
+  readonly triggerFires: ReadonlyMap<SpawnTriggerId, { firedAt: number }>;
+  readonly events: readonly DomainEvent[];
+}
+
+export interface PlanSpawnArgs {
+  readonly worldId: WorldId;
+  readonly hits: readonly TriggerHit[];
+  readonly fetchTemplate: (id: MonsterTemplateId) => Promise<MonsterTemplate | null>;
+  readonly fetchWitnesses: (locationId: LocationId) => Promise<readonly AgentId[]>;
+  readonly generateNames: (template: MonsterTemplate, count: number) => Promise<readonly string[]>;
+  readonly now?: () => number;
+}
+
+/** Pure planning phase: all decisions, no repo writes. */
+export async function planSpawnBatch(args: PlanSpawnArgs): Promise<SpawnBatch> {
+  const now = args.now ?? (() => Date.now());
+  const agents: UpsertAgentInput[] = [];
+  const triggerFires = new Map<SpawnTriggerId, { firedAt: number }>();
+  const events: DomainEvent[] = [];
+  let spawnCount = 0;
+
+  for (const hit of args.hits) {
+    if (spawnCount >= MAX_SPAWNS_PER_TICK) break;
+    const remainingBudget = MAX_SPAWNS_PER_TICK - spawnCount;
+    const count = Math.min(hit.trigger.count, remainingBudget);
+    if (count <= 0) continue;
+    const tpl = await args.fetchTemplate(hit.trigger.templateId);
+    if (!tpl) continue;
+    const labels = await args.generateNames(tpl, count);
+    const inserts = expandSpawn({ template: tpl, locationId: hit.trigger.locationId, count, labels });
+    // Snapshot witnesses before any inserts so spawned agents don't witness their own arrival.
+    const witnesses = await args.fetchWitnesses(hit.trigger.locationId);
+    for (const insert of inserts) {
+      agents.push(insert);
+      events.push(spawnedEvent({
+        worldId: args.worldId,
+        spawnedAgentId: insert.id,
+        locationId: hit.trigger.locationId,
+        templateId: hit.trigger.templateId,
+        ts: now(),
+        witnesses,
+      }));
+      spawnCount++;
+      if (spawnCount >= MAX_SPAWNS_PER_TICK) break;
+    }
+    triggerFires.set(hit.trigger.id, { firedAt: now() });
+  }
+
+  return { agents, triggerFires, events };
+}
+
+export interface ExecuteSpawnArgs {
+  readonly worldId: WorldId;
+  readonly builderRepo: BuilderRepository;
+  readonly previousFireState: TriggerFireState;
+}
+
+/** Execution phase: all writes. Agents first, then fire-state in one call. */
+export async function executeSpawnPlan(batch: SpawnBatch, args: ExecuteSpawnArgs): Promise<void> {
+  for (const agent of batch.agents) {
+    await args.builderRepo.upsertAgent(args.worldId, agent);
+  }
+  if (batch.triggerFires.size > 0) {
+    const newFireRecords: Record<string, { firedAt: number }> = { ...args.previousFireState.byTriggerId };
+    for (const [triggerId, record] of batch.triggerFires) {
+      newFireRecords[triggerId as string] = record;
+    }
+    await args.builderRepo.writeTriggerFireState(args.worldId, { byTriggerId: newFireRecords });
+  }
 }
 
 /**
@@ -63,8 +137,6 @@ export async function runSpawnTickPass(args: {
     perception: args.perception,
   });
 
-  // Judgement triggers are disjoint from mechanical (their kind is LlmJudgement,
-  // which the mechanical dispatcher returns null for), but filter by id for safety.
   const judgementCandidates = triggers.filter(
     (t: LocationSpawnTrigger) =>
       t.params.kind === TriggerEventKind.LlmJudgement &&
@@ -82,44 +154,22 @@ export async function runSpawnTickPass(args: {
   const allHits: TriggerHit[] = [...mechHits, ...judgeHits];
   if (allHits.length === 0) return { events: [] };
 
-  const out: DomainEvent[] = [];
-  let spawnCount = 0;
-  const newFireRecords: Record<string, { firedAt: number }> = { ...fireState.byTriggerId };
+  const batch = await planSpawnBatch({
+    worldId: args.worldId,
+    hits: allHits,
+    fetchTemplate: (id) => args.builderRepo.getMonsterTemplate(args.worldId, id),
+    fetchWitnesses: (locationId) => args.engineRepo.agentsAt(locationId).then((agents) => agents.map((a) => a.id)),
+    generateNames: (tpl, count) => generateAgentNames(tpl, count, args.llm),
+    now,
+  });
 
-  for (const hit of allHits) {
-    if (spawnCount >= MAX_SPAWNS_PER_TICK) break;
-    const remainingBudget = MAX_SPAWNS_PER_TICK - spawnCount;
-    const count = Math.min(hit.trigger.count, remainingBudget);
-    if (count <= 0) continue;
-    const tpl = await args.builderRepo.getMonsterTemplate(args.worldId, hit.trigger.templateId);
-    if (!tpl) continue;
-    const labels = await generateAgentNames(tpl, count, args.llm);
-    const inserts = expandSpawn({ template: tpl, locationId: hit.trigger.locationId, count, labels });
-    // Snapshot witnesses BEFORE inserts land so the just-spawned agents don't
-    // observe their own arrival.
-    const witnessesAtLoc = (await args.engineRepo.agentsAt(hit.trigger.locationId)).map(
-      (a) => a.id,
-    );
-    for (const insert of inserts) {
-      await args.builderRepo.upsertAgent(args.worldId, insert);
-      out.push(
-        spawnedEvent({
-          worldId: args.worldId,
-          spawnedAgentId: insert.id,
-          locationId: hit.trigger.locationId,
-          templateId: hit.trigger.templateId,
-          ts: now(),
-          witnesses: witnessesAtLoc,
-        }),
-      );
-      spawnCount += 1;
-      if (spawnCount >= MAX_SPAWNS_PER_TICK) break;
-    }
-    newFireRecords[hit.trigger.id as string] = { firedAt: now() };
-  }
+  await executeSpawnPlan(batch, {
+    worldId: args.worldId,
+    builderRepo: args.builderRepo,
+    previousFireState: fireState,
+  });
 
-  await args.builderRepo.writeTriggerFireState(args.worldId, { byTriggerId: newFireRecords });
-  return { events: out };
+  return { events: batch.events };
 }
 
 function spawnedEvent(args: {

@@ -4,7 +4,7 @@ import { EventKind, OwnerKind } from '@core/domain/kinds';
 import { Err, Ok, type Result } from '@core/domain/result';
 import { SegmentKind } from '@core/domain/segments';
 import { nextEventId } from '../ids-gen';
-import type { Repository } from '../repository';
+import type { HandlerRepo } from '../repository';
 import { renderRevealObserved } from '../templates';
 import type { ActionOutcome } from './types';
 
@@ -17,7 +17,7 @@ import type { ActionOutcome } from './types';
  */
 export async function handleRevealItem(
   action: Extract<Action, { kind: 'reveal_item' }>,
-  repo: Repository,
+  repo: HandlerRepo,
 ): Promise<Result<ActionOutcome, string>> {
   const item = await repo.getItem(action.itemId);
   // No-op if already visible — keeps the handler idempotent.

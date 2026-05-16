@@ -5,7 +5,7 @@ import { EventKind, OwnerKind } from '@core/domain/kinds';
 import { Err, Ok, type Result } from '@core/domain/result';
 import { SegmentKind } from '@core/domain/segments';
 import { nextEventId } from '../ids-gen';
-import type { Repository } from '../repository';
+import type { HandlerRepo } from '../repository';
 import type { ActionOutcome } from './types';
 
 /**
@@ -14,7 +14,7 @@ import type { ActionOutcome } from './types';
  * an agent, return the agent's location. Returns `null` only if the chain is
  * malformed (e.g. an item-of-item cycle); witnesses then collapse to empty.
  */
-async function locationOfItem(repo: Repository, itemId: ItemId): Promise<LocationId | null> {
+async function locationOfItem(repo: HandlerRepo, itemId: ItemId): Promise<LocationId | null> {
   let current = await repo.getItem(itemId);
   // Bound the walk so a corrupt chain cannot loop forever.
   for (let i = 0; i < 32; i++) {
@@ -41,7 +41,7 @@ function actionToRepoNullable(value: string | null): string | null | undefined {
 
 export async function handleUpdateDescription(
   action: Extract<Action, { kind: 'update_description' }>,
-  repo: Repository,
+  repo: HandlerRepo,
 ): Promise<Result<ActionOutcome, string>> {
   // For agent targets, an update may be purely mood/intent — descriptions can
   // both be null and the action is still meaningful. For location/item, we

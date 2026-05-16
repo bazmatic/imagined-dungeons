@@ -1,6 +1,6 @@
 import type { AgentId, LocationId } from '@core/domain/ids';
 import { EventKind } from '@core/domain/kinds';
-import type { Repository } from './repository';
+import type { HandlerRepo } from './repository';
 
 // Scans the last N *events* (not turns) for an attack involving the player.
 // In a busy tick many events fire, so this window may span only a few turns.
@@ -9,7 +9,7 @@ const RECENT_EVENT_WINDOW = 100;
 export async function isPlayerInCombat(
   playerId: AgentId,
   locationId: LocationId,
-  repo: Repository,
+  repo: HandlerRepo,
 ): Promise<boolean> {
   const here = await repo.agentsAt(locationId);
   const livingAwakeEnemyIds = new Set(

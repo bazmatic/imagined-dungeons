@@ -3,13 +3,13 @@ import type { DomainEvent } from '@core/domain/events';
 import { EventKind, OwnerKind } from '@core/domain/kinds';
 import { Ok, type Result } from '@core/domain/result';
 import { nextEventId } from '../ids-gen';
-import type { Repository } from '../repository';
+import type { HandlerRepo } from '../repository';
 import { renderDropSelf } from '../templates';
 import type { ActionOutcome } from './types';
 
 export async function handleDrop(
   action: Extract<Action, { kind: 'drop' }>,
-  repo: Repository,
+  repo: HandlerRepo,
 ): Promise<Result<ActionOutcome, string>> {
   const actor = await repo.getAgent(action.actorId);
   const item = await repo.getItem(action.itemId);

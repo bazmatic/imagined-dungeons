@@ -2,16 +2,17 @@ import type { Action } from '@core/domain/actions';
 import type { DomainEvent } from '@core/domain/events';
 import { ActionKind, EventKind, OwnerKind } from '@core/domain/kinds';
 import { Err, Ok, type Result } from '@core/domain/result';
+import type { GameAI } from '../game-ai';
 import { nextEventId } from '../ids-gen';
-import type { LanguageModel } from '../language-model';
-import { perceive } from '../perception';
-import type { Repository } from '../repository';
+import { perceive, type PerceptionView } from '../perception';
+import type { HandlerRepo } from '../repository';
 import { renderTradeSelf } from '../templates';
-import { TradeDirection, tradeDecide } from '../trade-decide';
+import { TradeDirection } from '../trade-decide';
 import type { ActionOutcome } from './types';
 
 export interface SellDeps {
-  readonly llm: LanguageModel;
+  readonly ai: GameAI;
+  readonly view?: PerceptionView;
 }
 
 /**
@@ -23,10 +24,10 @@ export interface SellDeps {
  */
 export async function handleSell(
   action: Extract<Action, { kind: typeof ActionKind.Sell }>,
-  repo: Repository,
+  repo: HandlerRepo,
   deps: SellDeps,
 ): Promise<Result<ActionOutcome, string>> {
-  const view = await perceive(action.actorId, repo);
+  const view = deps.view ?? await perceive(action.actorId, repo);
   const seller = view.actor;
   const buyer = await repo.getAgent(action.buyerId);
   const item = await repo.getItem(action.itemId);
@@ -45,9 +46,8 @@ export async function handleSell(
     return Err(`${buyer.label} only has ${buyer.gold} gold.`);
   }
 
-  const decision = await tradeDecide(
+  const decision = await deps.ai.tradeDecision(
     { buyer, seller, item, price, direction: TradeDirection.Sell },
-    deps.llm,
   );
 
   if (decision.accept) {

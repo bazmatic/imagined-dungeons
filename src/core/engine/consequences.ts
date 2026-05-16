@@ -1,14 +1,14 @@
-import type { BuilderRepository } from '@core/builder/repository';
 import type { Action, DescriptionTarget } from '@core/domain/actions';
+import type { MonsterTemplate, UpsertAgentInput, UpsertExitInput, UpsertItemInput, UpsertLocationInput, WorldLore } from '@core/domain/builder-types';
 import type { Agent, Item, Location } from '@core/domain/entities';
 import type { DomainEvent } from '@core/domain/events';
-import { asAgentId, asExitId, asItemId, asLocationId, type AgentId, SYSTEM_AGENT_ID, type WorldId } from '@core/domain/ids';
+import { asAgentId, asExitId, asItemId, asLocationId, type AgentId, type ExitId, type ItemId, type LocationId, SYSTEM_AGENT_ID, type WorldId } from '@core/domain/ids';
 import { expandSpawn } from '@core/spawning/expand';
 import { ActionKind, AttackOutcome, EventKind, OwnerKind } from '@core/domain/kinds';
 import { log } from '@core/log';
 import type { JsonSchema, LanguageModel } from './language-model';
 import { resolveAgent, resolveItem } from './parser';
-import type { Repository } from './repository';
+import type { HandlerRepo } from './repository';
 
 /**
  * The consequence engine (abstract-design §9, §10).
@@ -204,7 +204,7 @@ export const MAX_CONSEQUENCES_PER_PASS = 5;
 /** Cap on consequence-pass recursion depth (§9 termination). */
 export const MAX_CONSEQUENCE_DEPTH = 1;
 
-type RawConsequence =
+export type RawConsequence =
   | {
       readonly kind: 'update_description';
       readonly targetKind: 'location' | 'item' | 'agent';
@@ -263,7 +263,7 @@ type RawConsequence =
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
 
-function parseResponse(parsed: unknown): readonly RawConsequence[] {
+export function parseConsequenceResponse(parsed: unknown): readonly RawConsequence[] {
   if (!isRecord(parsed)) return [];
   const list = parsed.consequences;
   if (!Array.isArray(list)) return [];
@@ -398,7 +398,7 @@ async function applyWorldExpansion(
 
   // Step 2: create_item and create_agent
   const templates = await lore.builderRepo.listMonsterTemplates(lore.worldId);
-  const templateByKey = new Map(templates.map((t) => [t.templateKey, t]));
+  const templateByKey = new Map(templates.map((t: MonsterTemplate) => [t.templateKey, t]));
 
   for (const raw of raws) {
     if (raw.kind === ActionKind.CreateItem) {
@@ -502,13 +502,13 @@ async function applyWorldExpansion(
 async function locationExistsInLive(id: string, lore: ConsequenceLoreSink): Promise<boolean> {
   try {
     const locs = await lore.builderRepo.listLocations(lore.worldId);
-    return locs.some((l) => (l.id as string) === id);
+    return locs.some((l: Location) => (l.id as string) === id);
   } catch {
     return false;
   }
 }
 
-async function summarise(event: DomainEvent, repo: Repository): Promise<string> {
+async function summarise(event: DomainEvent, repo: HandlerRepo): Promise<string> {
   const labelOf = async (id: AgentId): Promise<string> => {
     try {
       return (await repo.getAgent(id)).label;
@@ -650,7 +650,7 @@ async function summarise(event: DomainEvent, repo: Repository): Promise<string> 
 /** Distinct location ids referenced by a batch of events, in order. */
 async function locationsInvolved(
   events: readonly DomainEvent[],
-  repo: Repository,
+  repo: HandlerRepo,
 ): Promise<readonly Location[]> {
   const seen = new Set<string>();
   const out: Location[] = [];
@@ -682,7 +682,7 @@ async function locationsInvolved(
 /** Items referenced directly by events (take/drop). */
 async function itemsInvolved(
   events: readonly DomainEvent[],
-  repo: Repository,
+  repo: HandlerRepo,
 ): Promise<readonly Item[]> {
   const seen = new Set<string>();
   const out: Item[] = [];
@@ -703,7 +703,7 @@ async function itemsInvolved(
 /** Agents referenced by events (actors, speak/attack targets). */
 async function agentsInvolved(
   events: readonly DomainEvent[],
-  repo: Repository,
+  repo: HandlerRepo,
 ): Promise<readonly Agent[]> {
   const seen = new Set<string>();
   const out: Agent[] = [];
@@ -728,7 +728,7 @@ async function agentsInvolved(
   return out;
 }
 
-async function buildUserPrompt(events: readonly DomainEvent[], repo: Repository): Promise<string> {
+async function buildUserPrompt(events: readonly DomainEvent[], repo: HandlerRepo): Promise<string> {
   const lines: string[] = ['Events that just happened:'];
   if (events.length === 0) {
     lines.push('- (none)');
@@ -783,49 +783,88 @@ async function buildUserPrompt(events: readonly DomainEvent[], repo: Repository)
   return lines.join('\n');
 }
 
-async function resolveTarget(
-  raw: Extract<RawConsequence, { kind: 'update_description' }>,
+/** Pre-fetched entity data for the pure resolve phases. */
+export interface ConsequenceContext {
+  readonly locations: readonly Location[];
+  readonly items: readonly Item[];
+  readonly agents: readonly Agent[];
+  readonly hiddenItems: readonly Item[];
+}
+
+/** Build a ConsequenceContext by fetching all entities referenced by the events. */
+export async function buildConsequenceContext(
   events: readonly DomainEvent[],
-  repo: Repository,
-): Promise<DescriptionTarget | null> {
+  repo: HandlerRepo,
+): Promise<ConsequenceContext> {
+  const locations = await locationsInvolved(events, repo);
+  const items = await itemsInvolved(events, repo);
+  const agents = await agentsInvolved(events, repo);
+  const hiddenItems: Item[] = [];
+  for (const loc of locations) {
+    const at = await repo.itemsOwnedBy({ kind: OwnerKind.Location, id: loc.id });
+    for (const it of at) {
+      if (it.hidden) hiddenItems.push(it);
+    }
+  }
+  return { locations, items, agents, hiddenItems };
+}
+
+/** Pure: resolve an update_description target ref against pre-fetched context. */
+export function resolveConsequenceTarget(
+  raw: Extract<RawConsequence, { kind: 'update_description' }>,
+  ctx: ConsequenceContext,
+): DescriptionTarget | null {
   if (raw.targetKind === OwnerKind.Location) {
-    const locs = await locationsInvolved(events, repo);
     const needle = raw.targetRef.toLowerCase();
-    const exact = locs.find((l) => l.label.toLowerCase() === needle);
+    const exact = ctx.locations.find((l) => l.label.toLowerCase() === needle);
     if (exact) return { kind: OwnerKind.Location, id: exact.id };
-    const partial = locs.find(
+    const partial = ctx.locations.find(
       (l) => l.label.toLowerCase().includes(needle) || needle.includes(l.label.toLowerCase()),
     );
-    if (partial) return { kind: OwnerKind.Location, id: partial.id };
-    return null;
+    return partial ? { kind: OwnerKind.Location, id: partial.id } : null;
   }
   if (raw.targetKind === OwnerKind.Item) {
-    const items = await itemsInvolved(events, repo);
-    const r = resolveItem(raw.targetRef, items);
-    if (!r.ok) return null;
-    return { kind: OwnerKind.Item, id: r.item.id };
+    const r = resolveItem(raw.targetRef, ctx.items);
+    return r.ok ? { kind: OwnerKind.Item, id: r.item.id } : null;
   }
   // agent
-  const agents = await agentsInvolved(events, repo);
-  const r = resolveAgent(raw.targetRef, agents);
+  const r = resolveAgent(raw.targetRef, ctx.agents);
   if (!r.ok) return null;
-  // The synthetic system agent is bookkeeping, not a character. The
-  // consequence engine must never durably mutate its mood / intent /
-  // descriptions — those changes would surface as nonsense witness lines
-  // ("System's expression shifts.") and pollute the prompt context for
-  // any future tick. Drop these silently.
+  // The synthetic system agent is bookkeeping, not a character. Never mutate it.
   if (r.agent.id === SYSTEM_AGENT_ID) return null;
   return { kind: OwnerKind.Agent, id: r.agent.id };
 }
 
+/** Pure: find a hidden item by name ref against pre-fetched context. */
+export function resolveHiddenConsequenceItem(targetRef: string, ctx: ConsequenceContext): Item | null {
+  const r = resolveItem(targetRef, ctx.hiddenItems);
+  return r.ok ? r.item : null;
+}
+
+/** Narrow write interface: only the methods the consequence engine actually calls. */
+export interface WorldExpansionSink {
+  upsertLocation(worldId: WorldId, input: UpsertLocationInput): Promise<void>;
+  upsertExit(worldId: WorldId, input: UpsertExitInput): Promise<void>;
+  upsertItem(worldId: WorldId, input: UpsertItemInput): Promise<void>;
+  upsertAgent(worldId: WorldId, input: UpsertAgentInput): Promise<void>;
+  deleteLocation(worldId: WorldId, id: LocationId): Promise<void>;
+  deleteExit(worldId: WorldId, id: ExitId): Promise<void>;
+  deleteItem(worldId: WorldId, id: ItemId): Promise<void>;
+  deleteAgent(worldId: WorldId, id: AgentId): Promise<void>;
+  listMonsterTemplates(worldId: WorldId): Promise<readonly MonsterTemplate[]>;
+  listLocations(worldId: WorldId): Promise<readonly Location[]>;
+  readWorldLore(worldId: WorldId): Promise<WorldLore>;
+  writeWorldLore(worldId: WorldId, lore: Omit<WorldLore, 'worldId'>): Promise<void>;
+}
+
 export interface ConsequenceLoreSink {
-  readonly builderRepo: BuilderRepository;
+  readonly builderRepo: WorldExpansionSink;
   readonly worldId: WorldId;
 }
 
 export async function consequencesFor(
   events: readonly DomainEvent[],
-  repo: Repository,
+  repo: HandlerRepo,
   llm: LanguageModel | null,
   lore?: ConsequenceLoreSink,
 ): Promise<readonly Action[]> {
@@ -861,19 +900,15 @@ export async function consequencesFor(
     }
   }
 
-  const raws = parseResponse(parsed).slice(0, MAX_CONSEQUENCES_PER_PASS);
+  const raws = parseConsequenceResponse(parsed).slice(0, MAX_CONSEQUENCES_PER_PASS);
+
+  // Pre-fetch entity context once — used by both resolve phases below.
+  const ctx = await buildConsequenceContext(events, repo);
 
   // Execute create/delete actions via builderRepo before returning domain actions.
   if (lore) {
     try {
-      let playerLocId = SYSTEM_AGENT_ID as string;
-      try {
-        const locs = await locationsInvolved(events, repo);
-        const firstLoc = locs[0];
-        if (firstLoc) playerLocId = firstLoc.id as string;
-      } catch {
-        // skip
-      }
+      const playerLocId = (ctx.locations[0]?.id ?? SYSTEM_AGENT_ID) as string;
       await applyWorldExpansion(raws, lore, playerLocId);
     } catch (err) {
       log.warn(`[consequence] applyWorldExpansion error: ${String(err)}`);
@@ -883,13 +918,13 @@ export async function consequencesFor(
   const actions: Action[] = [];
   for (const raw of raws) {
     if (raw.kind === ActionKind.RevealItem) {
-      const item = await resolveHiddenItem(raw.targetRef, events, repo);
+      const item = resolveHiddenConsequenceItem(raw.targetRef, ctx);
       if (!item) continue;
       actions.push({ kind: ActionKind.RevealItem, actorId: SYSTEM_AGENT_ID, itemId: item.id });
       continue;
     }
     if (raw.kind !== ActionKind.UpdateDescription) continue;
-    const target = await resolveTarget(raw, events, repo);
+    const target = resolveConsequenceTarget(raw, ctx);
     if (!target) continue;
     actions.push({
       kind: ActionKind.UpdateDescription,
@@ -902,28 +937,4 @@ export async function consequencesFor(
     });
   }
   return actions;
-}
-
-/**
- * Look up a hidden item the consequence engine asked to reveal. Searches
- * the *locations involved* in the event batch — typically the rooms where
- * something happened — and matches by label. Returns the first hidden
- * item whose label is plausibly the target. Visible items are excluded
- * (reveal is a no-op for them; the registry handler will Err if asked).
- */
-async function resolveHiddenItem(
-  targetRef: string,
-  events: readonly DomainEvent[],
-  repo: Repository,
-): Promise<Item | null> {
-  const locs = await locationsInvolved(events, repo);
-  const candidates: Item[] = [];
-  for (const loc of locs) {
-    const at = await repo.itemsOwnedBy({ kind: OwnerKind.Location, id: loc.id });
-    for (const it of at) {
-      if (it.hidden) candidates.push(it);
-    }
-  }
-  const r = resolveItem(targetRef, candidates);
-  return r.ok ? r.item : null;
 }

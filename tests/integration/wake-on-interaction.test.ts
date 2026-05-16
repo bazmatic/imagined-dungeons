@@ -80,7 +80,7 @@ describe('wake-on-interaction', () => {
     const parse = makeCompositeParser({ llm: null });
     expect((await repo.getAgent(SERENA)).awake).toBe(false);
 
-    await runTick(PLAYER, 'say "hello there"', repo, { parse, llm: null });
+    await runTick(PLAYER, 'say "hello there"', repo, { parse, ai: null });
 
     const serena = await repo.getAgent(SERENA);
     expect(serena.shortTermIntent).toBeNull();
@@ -96,7 +96,7 @@ describe('wake-on-interaction', () => {
       agents: [player, dormantSerena],
     });
     const parse = makeCompositeParser({ llm: null });
-    await runTick(PLAYER, 'look', repo, { parse, llm: null });
+    await runTick(PLAYER, 'look', repo, { parse, ai: null });
     expect((await repo.getAgent(SERENA)).awake).toBe(false);
     expect((await repo.getAgent(SERENA)).shortTermIntent).toBeNull();
   });

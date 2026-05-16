@@ -4,7 +4,7 @@ import { AttackOutcome, EventKind, ExaminableKind } from '@core/domain/kinds';
 import { log } from '@core/log';
 import type { LanguageModel } from './language-model';
 import { recallFor } from './memory';
-import type { Repository } from './repository';
+import type { HandlerRepo } from './repository';
 import { renderAttackMechanical, renderEmoteMechanical, renderSpeakMechanical } from './templates';
 
 /**
@@ -175,7 +175,7 @@ export function narrateMechanical(ctx: NarrateContext): string {
 export async function narrate(
   event: DomainEvent,
   observer: Agent,
-  repo: Repository,
+  repo: HandlerRepo,
   llm: LanguageModel | null,
 ): Promise<string> {
   if (

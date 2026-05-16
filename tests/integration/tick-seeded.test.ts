@@ -7,6 +7,7 @@ import { openDb } from '@infra/db';
 import { seedIfEmpty } from '@infra/seed/seeder';
 import { SqliteRepository } from '@infra/sqlite-repository';
 import { describe, expect, it } from 'vitest';
+import { LlmGameAI } from '@core/engine/game-ai';
 import { makeFakeLanguageModel } from '../helpers/fake-language-model';
 
 const PAFF = asAgentId('char_39322');
@@ -31,7 +32,7 @@ describe('runTick against the seeded burning district', () => {
         },
       });
       const parse = makeCompositeParser({ llm: null });
-      const r = await runTick(PAFF, 'look', repo, { parse, llm });
+      const r = await runTick(PAFF, 'look', repo, { parse, ai: new LlmGameAI(llm) });
 
       expect(r.render[0]).toEqual({ kind: SegmentKind.LocationName, text: 'The Flaming Goblet' });
       // Player witnessed Spark picking up the fire map.
@@ -49,7 +50,7 @@ describe('runTick against the seeded burning district', () => {
       await seedIfEmpty(h.db, BURNING_DISTRICT_CAMPAIGN);
       const repo = new SqliteRepository(h.db, BURNING_DISTRICT_CAMPAIGN.worldId);
       const parse = makeCompositeParser({ llm: null });
-      const r = await runTick(PAFF, 'look', repo, { parse, llm: null });
+      const r = await runTick(PAFF, 'look', repo, { parse, ai: null });
       // The player's look still works.
       expect(r.render[0]).toEqual({ kind: SegmentKind.LocationName, text: 'The Flaming Goblet' });
       // No witnessed lines because "wait" is rejected by the parser as an
@@ -66,7 +67,7 @@ describe('runTick against the seeded burning district', () => {
       await seedIfEmpty(h.db, BURNING_DISTRICT_CAMPAIGN);
       const repo = new SqliteRepository(h.db, BURNING_DISTRICT_CAMPAIGN.worldId);
       const parse = makeCompositeParser({ llm: null });
-      const r = await runTick(PAFF, 'look at spark', repo, { parse, llm: null });
+      const r = await runTick(PAFF, 'look at spark', repo, { parse, ai: null });
       // Spark's seeded backstory mentions hair that crackles with static
       // electricity; the mood ("Energetic") is appended by the template.
       expect(r.render.some((s) => s.text.toLowerCase().includes('halfling'))).toBe(true);
@@ -82,7 +83,7 @@ describe('runTick against the seeded burning district', () => {
       await seedIfEmpty(h.db, BURNING_DISTRICT_CAMPAIGN);
       const repo = new SqliteRepository(h.db, BURNING_DISTRICT_CAMPAIGN.worldId);
       const parse = makeCompositeParser({ llm: null });
-      const r = await runTick(PAFF, 'look at the fire map', repo, { parse, llm: null });
+      const r = await runTick(PAFF, 'look at the fire map', repo, { parse, ai: null });
       expect(r.render.length).toBeGreaterThan(0);
       // Sanity: must NOT be the room view's first line.
       expect(r.render.every((s) => !s.text.startsWith('The Flaming Goblet'))).toBe(true);
@@ -97,7 +98,7 @@ describe('runTick against the seeded burning district', () => {
       await seedIfEmpty(h.db, BURNING_DISTRICT_CAMPAIGN);
       const repo = new SqliteRepository(h.db, BURNING_DISTRICT_CAMPAIGN.worldId);
       const parse = makeCompositeParser({ llm: null });
-      const r = await runTick(PAFF, 'look at the tavern back door', repo, { parse, llm: null });
+      const r = await runTick(PAFF, 'look at the tavern back door', repo, { parse, ai: null });
       // Exit prose mentions the label and a direction.
       expect(r.render.some((s) => s.text.toLowerCase().includes('back door'))).toBe(true);
       expect(
@@ -131,7 +132,7 @@ describe('runTick against the seeded burning district', () => {
         },
       });
       const parse = makeCompositeParser({ llm: null });
-      const r = await runTick(PAFF, 'say hello to spark', repo, { parse, llm });
+      const r = await runTick(PAFF, 'say hello to spark', repo, { parse, ai: new LlmGameAI(llm) });
 
       // Player's narration came back.
       expect(r.render.length).toBeGreaterThan(0);
@@ -173,13 +174,13 @@ describe('runTick against the seeded burning district', () => {
       const parse = makeCompositeParser({ llm: null });
 
       // Tick 1: NPC mind sets its own intent.
-      await runTick(PAFF, 'say hello to spark', repo, { parse, llm });
+      await runTick(PAFF, 'say hello to spark', repo, { parse, ai: new LlmGameAI(llm) });
       const sparkAfter = await repo.getAgent(SPARK);
       expect(sparkAfter.shortTermIntent).toBe('take the fire map to the docks');
 
       // Tick 2: Spark's prompt now exposes the intent in its header.
       sparkSystemPrompts.length = 0;
-      await runTick(PAFF, 'wait', repo, { parse, llm });
+      await runTick(PAFF, 'wait', repo, { parse, ai: new LlmGameAI(llm) });
       const sparkPrompt = sparkSystemPrompts.find((p) => p.includes('Current short-term intent'));
       expect(sparkPrompt).toBeTruthy();
       expect(sparkPrompt).toContain('take the fire map to the docks');
@@ -196,7 +197,7 @@ describe('runTick against the seeded burning district', () => {
       const parse = makeCompositeParser({ llm: null });
       // With null LLM, NPCs always wait too — so events stays empty and the
       // player's render is the friendly placeholder, not a "no such verb" error.
-      const r = await runTick(PAFF, 'wait', repo, { parse, llm: null });
+      const r = await runTick(PAFF, 'wait', repo, { parse, ai: null });
       expect(r.render[0]?.text).toBe('You wait.');
       // No player turn was dispatched, so no events from the player either.
       expect(r.events).toHaveLength(0);

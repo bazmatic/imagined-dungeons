@@ -4,6 +4,7 @@ import { ActionKind, EventKind, OwnerKind } from '@core/domain/kinds';
 import { SegmentKind } from '@core/domain/segments';
 import { MemoryRepository } from '@infra/memory-repository';
 import { describe, expect, it } from 'vitest';
+import { LlmGameAI } from '../game-ai';
 import type { LanguageModel } from '../language-model';
 import { handleBuy } from './buy';
 
@@ -81,7 +82,7 @@ describe('handleBuy', () => {
     const r = await handleBuy(
       { kind: ActionKind.Buy, actorId: BUYER, sellerId: SELLER, itemId: KEY },
       repo,
-      { llm: acceptLlm },
+      { ai: new LlmGameAI(acceptLlm) },
     );
     if (r.ok) throw new Error('expected error');
     expect(r.error).toMatch(/isn't here/i);
@@ -98,7 +99,7 @@ describe('handleBuy', () => {
     const r = await handleBuy(
       { kind: ActionKind.Buy, actorId: BUYER, sellerId: SELLER, itemId: KEY },
       repo,
-      { llm: acceptLlm },
+      { ai: new LlmGameAI(acceptLlm) },
     );
     if (r.ok) throw new Error('expected error');
     expect(r.error).toMatch(/doesn't have/i);
@@ -115,7 +116,7 @@ describe('handleBuy', () => {
     const r = await handleBuy(
       { kind: ActionKind.Buy, actorId: BUYER, sellerId: SELLER, itemId: KEY },
       repo,
-      { llm: acceptLlm },
+      { ai: new LlmGameAI(acceptLlm) },
     );
     if (r.ok) throw new Error('expected error');
     expect(r.error).toMatch(/not for sale/i);
@@ -132,7 +133,7 @@ describe('handleBuy', () => {
     const r = await handleBuy(
       { kind: ActionKind.Buy, actorId: BUYER, sellerId: SELLER, itemId: KEY },
       repo,
-      { llm: acceptLlm },
+      { ai: new LlmGameAI(acceptLlm) },
     );
     if (r.ok) throw new Error('expected error');
     expect(r.error).toMatch(/can't afford/i);
@@ -148,7 +149,7 @@ describe('handleBuy', () => {
     const r = await handleBuy(
       { kind: ActionKind.Buy, actorId: BUYER, sellerId: SELLER, itemId: KEY },
       repo,
-      { llm: acceptLlm },
+      { ai: new LlmGameAI(acceptLlm) },
     );
     if (!r.ok) throw new Error(r.error);
     expect(r.value.event.kind).toBe(EventKind.Trade);
@@ -171,7 +172,7 @@ describe('handleBuy', () => {
     const r = await handleBuy(
       { kind: ActionKind.Buy, actorId: BUYER, sellerId: SELLER, itemId: KEY },
       repo,
-      { llm: refuseLlm },
+      { ai: new LlmGameAI(refuseLlm) },
     );
     if (!r.ok) throw new Error(r.error);
     expect(r.value.event.kind).toBe(EventKind.Trade);

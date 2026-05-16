@@ -2,7 +2,13 @@ import type { Agent, Exit, Item, Location, Owner } from '@core/domain/entities';
 import type { DomainEvent } from '@core/domain/events';
 import type { AgentId, ExitId, ItemId, LocationId, WorldId } from '@core/domain/ids';
 
-export interface Repository {
+/**
+ * Narrow interface for action handlers and the perception layer.
+ * Contains every method handlers actually call; excludes scheduler-only
+ * methods (`allAgents`, `recentEvents`) so handlers are not forced to
+ * depend on the full god interface.
+ */
+export interface HandlerRepo {
   getWorldId(): Promise<WorldId>;
   getAgent(id: AgentId): Promise<Agent>;
   getLocation(id: LocationId): Promise<Location>;
@@ -10,8 +16,6 @@ export interface Repository {
   getExit(id: ExitId): Promise<Exit>;
   itemsOwnedBy(owner: Owner): Promise<readonly Item[]>;
   agentsAt(loc: LocationId): Promise<readonly Agent[]>;
-  /** Every agent in the world (used by the scheduler to tick offstage NPCs). */
-  allAgents(): Promise<readonly Agent[]>;
   exitsFrom(loc: LocationId): Promise<readonly Exit[]>;
   moveAgent(agent: AgentId, to: LocationId): Promise<void>;
   transferItem(item: ItemId, to: Owner): Promise<void>;
@@ -64,7 +68,6 @@ export interface Repository {
    */
   setAgentAwake(id: AgentId, awake: boolean): Promise<void>;
   appendEvent(event: DomainEvent): Promise<void>;
-  recentEvents(limit: number): Promise<readonly DomainEvent[]>;
   /** Read the current world RNG seed. */
   getRngSeed(): Promise<number>;
   /** Persist a new RNG seed for the world (after one or more rolls). */
@@ -99,4 +102,16 @@ export interface Repository {
       shortTermIntent?: string | null;
     },
   ): Promise<void>;
+  /**
+   * Scan recent events — used by combat detection (move handler) and NPC
+   * memory. Included in HandlerRepo because action handlers legitimately
+   * need it; the scheduler also uses it indirectly.
+   */
+  recentEvents(limit: number): Promise<readonly DomainEvent[]>;
+}
+
+/** Full repository contract. Extends HandlerRepo with scheduler-only methods. */
+export interface Repository extends HandlerRepo {
+  /** Every agent in the world (used by the scheduler to tick offstage NPCs). */
+  allAgents(): Promise<readonly Agent[]>;
 }

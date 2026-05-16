@@ -13,6 +13,7 @@ import { SegmentKind } from '@core/domain/segments';
 import { MemoryBuilderRepository } from '@infra/builder-memory-repository';
 import { MemoryRepository } from '@infra/memory-repository';
 import { describe, expect, it } from 'vitest';
+import { LlmGameAI } from './game-ai';
 import { makeFakeLanguageModel } from '../../../tests/helpers/fake-language-model';
 import { makeCompositeParser } from './parser/composite';
 import { runTick } from './tick';
@@ -135,7 +136,7 @@ describe('runTick', () => {
       textResponder: () => 'go north',
     });
     const parse = makeCompositeParser({ llm: null }); // rule parser is enough for "go north"
-    const r = await runTick(player.id, 'look', repo, { parse, llm });
+    const r = await runTick(player.id, 'look', repo, { parse, ai: new LlmGameAI(llm) });
     expect(r.render[0]).toEqual({ kind: SegmentKind.LocationName, text: 'Tavern' });
     expect(r.witnessed).toContain('Spark goes north.');
   });
@@ -156,7 +157,7 @@ describe('runTick', () => {
       },
     });
     const parse = makeCompositeParser({ llm: null });
-    const r = await runTick(player.id, 'say hello', repo, { parse, llm });
+    const r = await runTick(player.id, 'say hello', repo, { parse, ai: new LlmGameAI(llm) });
     // Player's own utterance is narrated by the LLM.
     expect(r.render).toBeTruthy();
     // Spark spoke; player-witness narration appears in `witnessed`.
@@ -174,7 +175,7 @@ describe('runTick', () => {
       },
     });
     const parse = makeCompositeParser({ llm: null });
-    await runTick(player.id, 'look', repo, { parse, llm });
+    await runTick(player.id, 'look', repo, { parse, ai: new LlmGameAI(llm) });
     // 2 NPCs both ticked: each calls the NPC mind once.
     expect(calls).toBe(2);
   });
@@ -182,7 +183,7 @@ describe('runTick', () => {
   it('produces no NPC actions and no errors when llm is null (mechanical fallback path)', async () => {
     const repo = makeWorld();
     const parse = makeCompositeParser({ llm: null });
-    const r = await runTick(player.id, 'look', repo, { parse, llm: null });
+    const r = await runTick(player.id, 'look', repo, { parse, ai: null });
     // NPC mind returned "wait" → unknown verb → failed event → no observable witness line.
     expect(r.render[0]).toEqual({ kind: SegmentKind.LocationName, text: 'Tavern' });
     expect(r.witnessed).toEqual([]);
@@ -200,7 +201,7 @@ describe('runTick', () => {
       },
     });
     const parse = makeCompositeParser({ llm: null });
-    const r = await runTick(player.id, 'look', repo, { parse, llm });
+    const r = await runTick(player.id, 'look', repo, { parse, ai: new LlmGameAI(llm) });
     // Remote NPC ticks, but in another room; player sees nothing of it.
     expect(calls).toBe(1);
     expect(r.witnessed).toEqual([]);
@@ -263,19 +264,19 @@ describe('runTick', () => {
       }),
     });
     const parse = makeCompositeParser({ llm: null });
-    const r = await runTick(player.id, 'take lantern', repo, { parse, llm });
+    const r = await runTick(player.id, 'take lantern', repo, { parse, ai: new LlmGameAI(llm) });
     // The event log includes a description_updated event.
     const descUpdates = r.events.filter((e) => e.kind === EventKind.DescriptionUpdated);
     expect(descUpdates).toHaveLength(1);
     // Subsequent `look` returns the new long description.
-    const look = await runTick(player.id, 'look', repo, { parse, llm });
+    const look = await runTick(player.id, 'look', repo, { parse, ai: new LlmGameAI(llm) });
     expect(look.render.some((s) => s.text.includes('A tavern, now darker without the lantern.'))).toBe(true);
   });
 
   it('with a null llm, the consequence pass is a no-op (slice-4 baseline)', async () => {
     const repo = makeWorld();
     const parse = makeCompositeParser({ llm: null });
-    const r = await runTick(player.id, 'look', repo, { parse, llm: null });
+    const r = await runTick(player.id, 'look', repo, { parse, ai: null });
     expect(r.events.some((e) => e.kind === EventKind.DescriptionUpdated)).toBe(false);
   });
 
@@ -302,7 +303,7 @@ describe('runTick', () => {
     const parse = makeCompositeParser({ llm: null });
     const r = await runTick(player.id, 'search dusty corner', repo, {
       parse,
-      llm,
+      ai: new LlmGameAI(llm),
       builderRepo,
     });
     const discoveryCalls = llm.calls.filter((c) => c.schemaName === 'discovery_response');
@@ -328,7 +329,7 @@ describe('runTick', () => {
     const repo = makeWorld();
     const llm = makeFakeLanguageModel({ textResponder: () => 'go north' });
     const parse = makeCompositeParser({ llm: null });
-    const r = await runTick(player.id, 'look', repo, { parse, llm });
+    const r = await runTick(player.id, 'look', repo, { parse, ai: new LlmGameAI(llm) });
     // First event = player look; later events include Spark moving.
     expect(r.events.length).toBeGreaterThanOrEqual(2);
     const first = r.events[0];

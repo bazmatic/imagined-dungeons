@@ -5,6 +5,7 @@ import { SegmentKind } from '@core/domain/segments';
 import { MemoryBuilderRepository } from '@infra/builder-memory-repository';
 import { MemoryRepository } from '@infra/memory-repository';
 import { describe, expect, it } from 'vitest';
+import { LlmGameAI } from '../game-ai';
 import { makeFakeLanguageModel } from '../../../../tests/helpers/fake-language-model';
 import { handleSearch } from './search';
 
@@ -89,7 +90,7 @@ describe('handleSearch', () => {
     const r = await handleSearch(
       { kind: ActionKind.Search, actorId: paff.id, query: 'dusty corner' },
       engine,
-      { llm, builderRepo: builder, worldId: W },
+      { ai: new LlmGameAI(llm), builderRepo: builder, worldId: W },
     );
     if (!r.ok) throw new Error(r.error);
     expect(r.value.render).toEqual([{ kind: SegmentKind.Narration, text: 'A spider scuttles into a crack.' }]);
@@ -131,7 +132,7 @@ describe('handleSearch', () => {
     const r = await handleSearch(
       { kind: ActionKind.Search, actorId: paff.id, query: 'under the bench' },
       engine,
-      { llm, builderRepo: builder, worldId: W },
+      { ai: new LlmGameAI(llm), builderRepo: builder, worldId: W },
     );
     if (!r.ok) throw new Error(r.error);
     const items = await builder.listItems(W);
@@ -157,7 +158,7 @@ describe('handleSearch', () => {
     const r = await handleSearch(
       { kind: ActionKind.Search, actorId: paff.id, query: 'glowing map' },
       engine,
-      { llm, builderRepo: builder, worldId: W },
+      { ai: new LlmGameAI(llm), builderRepo: builder, worldId: W },
     );
     if (!r.ok) throw new Error(r.error);
     expect(r.value.render.some((s) => s.kind === SegmentKind.Narration && s.text.includes('A real-time map of fire.'))).toBe(true);
@@ -204,7 +205,7 @@ describe('handleSearch', () => {
     const r = await handleSearch(
       { kind: ActionKind.Search, actorId: paff.id, query: 'curtains' },
       engine,
-      { llm, builderRepo: builder, worldId: W },
+      { ai: new LlmGameAI(llm), builderRepo: builder, worldId: W },
     );
     if (!r.ok) throw new Error(r.error);
     // Narration still surfaces.
@@ -232,7 +233,7 @@ describe('handleSearch', () => {
     const r = await handleSearch(
       { kind: ActionKind.Search, actorId: paff.id, query: 'behind the bar' },
       engine,
-      { llm, builderRepo: builder, worldId: W },
+      { ai: new LlmGameAI(llm), builderRepo: builder, worldId: W },
     );
     if (!r.ok) throw new Error(r.error);
     // Player gets a signal that the item was just revealed, not merely examined.
@@ -261,7 +262,7 @@ describe('handleSearch', () => {
     const r = await handleSearch(
       { kind: ActionKind.Search, actorId: paff.id, query: 'whatever' },
       engine,
-      { llm, builderRepo: builder, worldId: W },
+      { ai: new LlmGameAI(llm), builderRepo: builder, worldId: W },
     );
     if (!r.ok) throw new Error(r.error);
     expect(r.value.render).toEqual([{ kind: SegmentKind.Narration, text: 'You see nothing of consequence.' }]);

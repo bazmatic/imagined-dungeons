@@ -3,8 +3,9 @@ import type { Action } from '@core/domain/actions';
 import type { AgentId, WorldId } from '@core/domain/ids';
 import { ActionKind } from '@core/domain/kinds';
 import { Err, type Result } from '@core/domain/result';
-import type { LanguageModel } from '../language-model';
-import type { Repository } from '../repository';
+import type { GameAI } from '../game-ai';
+import type { PerceptionView } from '../perception';
+import type { HandlerRepo } from '../repository';
 import { handleAttack } from './attack';
 import { handleBuy } from './buy';
 import { handleClose } from './close';
@@ -30,28 +31,30 @@ import { handleUpdateDescription } from './update-description';
  * need a given dep may ignore it. Missing deps for a handler that requires them
  * cause that handler to return an `Err` rather than crash the turn.
  *
- * - `llm`, `builderRepo`, `worldId`: required by `handleSearch` for generative discovery.
+ * - `ai`, `builderRepo`, `worldId`: required by `handleSearch` for generative discovery;
+ *   `ai` also powers the buy/sell trade-consent calls.
  * - `playerId`: required by `handleMove` to enforce the combat-locked movement rule.
  */
 export interface DispatchDeps {
-  readonly llm?: LanguageModel | null;
+  readonly ai?: GameAI | null;
   readonly builderRepo?: BuilderRepository;
   readonly worldId?: WorldId;
   readonly playerId?: AgentId;
+  readonly view?: PerceptionView;
 }
 
 export async function dispatch(
   action: Action,
-  repo: Repository,
+  repo: HandlerRepo,
   deps: DispatchDeps = {},
 ): Promise<Result<ActionOutcome, string>> {
   switch (action.kind) {
     case ActionKind.Move:
       return handleMove(action, repo, deps);
     case ActionKind.Look:
-      return handleLook(action, repo);
+      return handleLook(action, repo, deps);
     case ActionKind.Take:
-      return handleTake(action, repo);
+      return handleTake(action, repo, deps);
     case ActionKind.Drop:
       return handleDrop(action, repo);
     case ActionKind.Give:
@@ -59,41 +62,48 @@ export async function dispatch(
     case ActionKind.Inventory:
       return handleInventory(action, repo);
     case ActionKind.Speak:
-      return handleSpeak(action, repo);
+      return handleSpeak(action, repo, deps);
     case ActionKind.Emote:
-      return handleEmote(action, repo);
+      return handleEmote(action, repo, deps);
     case ActionKind.Attack:
-      return handleAttack(action, repo);
+      return handleAttack(action, repo, deps);
     case ActionKind.UpdateDescription:
       return handleUpdateDescription(action, repo);
     case ActionKind.Search: {
-      if (!deps.llm || !deps.builderRepo || !deps.worldId) {
-        return Err('search requires llm and builderRepo');
+      if (!deps.ai || !deps.builderRepo || !deps.worldId) {
+        return Err('search requires ai and builderRepo');
       }
       return handleSearch(action, repo, {
-        llm: deps.llm,
+        ai: deps.ai,
         builderRepo: deps.builderRepo,
         worldId: deps.worldId,
+        ...(deps.view !== undefined ? { view: deps.view } : {}),
       });
     }
     case ActionKind.Equip:
-      return handleEquip(action, repo);
+      return handleEquip(action, repo, deps);
     case ActionKind.Unequip:
-      return handleUnequip(action, repo);
+      return handleUnequip(action, repo, deps);
     case ActionKind.Open:
-      return handleOpen(action, repo);
+      return handleOpen(action, repo, deps);
     case ActionKind.Close:
-      return handleClose(action, repo);
+      return handleClose(action, repo, deps);
     case ActionKind.Buy: {
-      if (!deps.llm) return Err('buy requires llm');
-      return handleBuy(action, repo, { llm: deps.llm });
+      if (!deps.ai) return Err('buy requires ai');
+      return handleBuy(action, repo, {
+        ai: deps.ai,
+        ...(deps.view !== undefined ? { view: deps.view } : {}),
+      });
     }
     case ActionKind.Sell: {
-      if (!deps.llm) return Err('sell requires llm');
-      return handleSell(action, repo, { llm: deps.llm });
+      if (!deps.ai) return Err('sell requires ai');
+      return handleSell(action, repo, {
+        ai: deps.ai,
+        ...(deps.view !== undefined ? { view: deps.view } : {}),
+      });
     }
     case ActionKind.Offer:
-      return handleOffer(action, repo);
+      return handleOffer(action, repo, deps);
     case ActionKind.RevealItem:
       return handleRevealItem(action, repo);
   }

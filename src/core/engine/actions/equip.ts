@@ -3,8 +3,8 @@ import type { DomainEvent } from '@core/domain/events';
 import { EventKind, OwnerKind } from '@core/domain/kinds';
 import { Err, Ok, type Result } from '@core/domain/result';
 import { nextEventId } from '../ids-gen';
-import { perceive } from '../perception';
-import type { Repository } from '../repository';
+import { perceive, type PerceptionView } from '../perception';
+import type { HandlerRepo } from '../repository';
 import { renderEquipSelf, renderUnequipSelf } from '../templates';
 import type { ActionOutcome } from './types';
 
@@ -16,9 +16,10 @@ import type { ActionOutcome } from './types';
  */
 export async function handleEquip(
   action: Extract<Action, { kind: 'equip' }>,
-  repo: Repository,
+  repo: HandlerRepo,
+  deps?: { readonly view?: PerceptionView },
 ): Promise<Result<ActionOutcome, string>> {
-  const view = await perceive(action.actorId, repo);
+  const view = deps?.view ?? await perceive(action.actorId, repo);
   const item = await repo.getItem(action.itemId);
   if (item.owner.kind !== OwnerKind.Agent || item.owner.id !== action.actorId) {
     return Err(`You aren't carrying the ${item.label}.`);
@@ -44,9 +45,10 @@ export async function handleEquip(
 
 export async function handleUnequip(
   action: Extract<Action, { kind: 'unequip' }>,
-  repo: Repository,
+  repo: HandlerRepo,
+  deps?: { readonly view?: PerceptionView },
 ): Promise<Result<ActionOutcome, string>> {
-  const view = await perceive(action.actorId, repo);
+  const view = deps?.view ?? await perceive(action.actorId, repo);
   const item = await repo.getItem(action.itemId);
   if (item.owner.kind !== OwnerKind.Agent || item.owner.id !== action.actorId) {
     return Err(`You aren't carrying the ${item.label}.`);

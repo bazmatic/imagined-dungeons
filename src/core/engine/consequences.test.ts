@@ -6,7 +6,14 @@ import { MemoryBuilderRepository } from '@infra/builder-memory-repository';
 import { MemoryRepository } from '@infra/memory-repository';
 import { describe, expect, it, vi } from 'vitest';
 import { makeFakeLanguageModel } from '../../../tests/helpers/fake-language-model';
-import { MAX_CONSEQUENCES_PER_PASS, consequencesFor } from './consequences';
+import {
+  MAX_CONSEQUENCES_PER_PASS,
+  consequencesFor,
+  parseConsequenceResponse,
+  resolveConsequenceTarget,
+  resolveHiddenConsequenceItem,
+  type ConsequenceContext,
+} from './consequences';
 
 const W = asWorldId('w');
 const A = asLocationId('loc_a');
@@ -367,5 +374,118 @@ describe('consequencesFor', () => {
     const call = llm.calls[0];
     if (!call) throw new Error('expected call');
     expect(call.user).not.toContain('GM-only notes');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// parseConsequenceResponse — pure unit tests (no repo, no LLM)
+// ---------------------------------------------------------------------------
+
+describe('parseConsequenceResponse', () => {
+  it('parses a valid update_description consequence', () => {
+    const result = parseConsequenceResponse({
+      consequences: [{
+        kind: 'update_description',
+        targetKind: 'location',
+        targetRef: 'workshop',
+        shortDescription: null,
+        longDescription: 'scorched walls',
+        mood: null,
+        shortTermIntent: null,
+      }],
+    });
+    expect(result).toHaveLength(1);
+    expect(result[0]?.kind).toBe('update_description');
+  });
+
+  it('parses a reveal_item consequence', () => {
+    const result = parseConsequenceResponse({ consequences: [{ kind: 'reveal_item', targetRef: 'key' }] });
+    expect(result).toHaveLength(1);
+    expect(result[0]?.kind).toBe('reveal_item');
+  });
+
+  it('drops entries with missing required fields', () => {
+    const result = parseConsequenceResponse({ consequences: [{ kind: 'update_description', targetKind: 'location' }] });
+    expect(result).toHaveLength(0);
+  });
+
+  it('returns [] for non-object input', () => {
+    expect(parseConsequenceResponse(null)).toEqual([]);
+    expect(parseConsequenceResponse('bad')).toEqual([]);
+    expect(parseConsequenceResponse([])).toEqual([]);
+  });
+
+  it('returns [] when consequences array is absent', () => {
+    expect(parseConsequenceResponse({})).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolveConsequenceTarget / resolveHiddenConsequenceItem — pure unit tests
+// ---------------------------------------------------------------------------
+
+const CTX_LOC = asLocationId('loc_a');
+const CTX_ITEM_ID = asItemId('item_lantern');
+const CTX_AGENT_ID = asAgentId('char_p');
+
+const makeCtx = (overrides: Partial<ConsequenceContext> = {}): ConsequenceContext => ({
+  locations: [{ id: CTX_LOC, worldId: asWorldId('w'), label: 'Workshop', shortDescription: '', longDescription: '', tags: [], secretDescription: '' }],
+  items: [{ id: CTX_ITEM_ID, worldId: asWorldId('w'), label: 'lantern', shortDescription: '', longDescription: '', owner: { kind: OwnerKind.Location, id: CTX_LOC }, weight: 1, hidden: false, tags: [], equipped: false, container: false, opened: true, locked: false, lockedByItem: null, priceTag: null }],
+  agents: [{ id: CTX_AGENT_ID, worldId: asWorldId('w'), label: 'Paff', shortDescription: '', longDescription: '', locationId: CTX_LOC, hp: 10, damage: 0, defense: 0, capacity: 10, mood: null, shortTermIntent: null, goal: null, autonomous: false, awake: false, gold: 0, tags: [], secretDescription: '' }],
+  hiddenItems: [],
+  ...overrides,
+});
+
+const descRaw = (targetKind: 'location' | 'item' | 'agent', targetRef: string) => ({
+  kind: 'update_description' as const,
+  targetKind,
+  targetRef,
+  shortDescription: null,
+  longDescription: 'changed',
+  mood: null,
+  shortTermIntent: null,
+});
+
+describe('resolveConsequenceTarget', () => {
+  it('resolves a location by exact label match', () => {
+    const t = resolveConsequenceTarget(descRaw('location', 'Workshop'), makeCtx());
+    expect(t).toEqual({ kind: OwnerKind.Location, id: CTX_LOC });
+  });
+
+  it('resolves a location by partial label match (case-insensitive)', () => {
+    const t = resolveConsequenceTarget(descRaw('location', 'workshop'), makeCtx());
+    expect(t).toEqual({ kind: OwnerKind.Location, id: CTX_LOC });
+  });
+
+  it('returns null for an unknown location ref', () => {
+    const t = resolveConsequenceTarget(descRaw('location', 'nowhere'), makeCtx());
+    expect(t).toBeNull();
+  });
+
+  it('resolves an item ref', () => {
+    const t = resolveConsequenceTarget(descRaw('item', 'lantern'), makeCtx());
+    expect(t).toEqual({ kind: OwnerKind.Item, id: CTX_ITEM_ID });
+  });
+
+  it('resolves an agent ref', () => {
+    const t = resolveConsequenceTarget(descRaw('agent', 'Paff'), makeCtx());
+    expect(t).toEqual({ kind: OwnerKind.Agent, id: CTX_AGENT_ID });
+  });
+});
+
+describe('resolveHiddenConsequenceItem', () => {
+  it('returns null when there are no hidden items', () => {
+    expect(resolveHiddenConsequenceItem('key', makeCtx())).toBeNull();
+  });
+
+  it('finds a hidden item by label', () => {
+    const key: Item = { id: asItemId('item_key'), worldId: asWorldId('w'), label: 'brass key', shortDescription: '', longDescription: '', owner: { kind: OwnerKind.Location, id: CTX_LOC }, weight: 0, hidden: true, tags: [], equipped: false, container: false, opened: false, locked: false, lockedByItem: null, priceTag: null };
+    const result = resolveHiddenConsequenceItem('brass key', makeCtx({ hiddenItems: [key] }));
+    expect(result?.id).toBe(key.id);
+  });
+
+  it('returns null for a ref that does not match any hidden item', () => {
+    const key: Item = { id: asItemId('item_key'), worldId: asWorldId('w'), label: 'brass key', shortDescription: '', longDescription: '', owner: { kind: OwnerKind.Location, id: CTX_LOC }, weight: 0, hidden: true, tags: [], equipped: false, container: false, opened: false, locked: false, lockedByItem: null, priceTag: null };
+    expect(resolveHiddenConsequenceItem('gold coin', makeCtx({ hiddenItems: [key] }))).toBeNull();
   });
 });

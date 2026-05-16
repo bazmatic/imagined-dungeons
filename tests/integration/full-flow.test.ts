@@ -6,6 +6,7 @@ import { openDb } from '@infra/db';
 import { seedIfEmpty } from '@infra/seed/seeder';
 import { SqliteRepository } from '@infra/sqlite-repository';
 import { describe, expect, it } from 'vitest';
+import { LlmGameAI } from '@core/engine/game-ai';
 import { makeFakeLanguageModel } from '../helpers/fake-language-model';
 
 const PAFF = asAgentId('char_39322');
@@ -79,7 +80,7 @@ describe('full flow against seeded burning district', () => {
             ? 'You greet Spark warmly.'
             : 'Paff offers you a warm greeting.',
       });
-      const r = await runTurn(PAFF, 'say hello', repo, { llm });
+      const r = await runTurn(PAFF, 'say hello', repo, { ai: new LlmGameAI(llm) });
       expect(r.events).toHaveLength(1);
       const event = r.events[0];
       if (!event || event.kind !== 'speak') throw new Error('expected speak event');

@@ -135,7 +135,7 @@ describe('spawning end-to-end (tick pass)', () => {
 
     const result = await runTick(PLAYER, 'south', engineRepo, {
       parse,
-      llm: null,
+      ai: null,
       builderRepo,
     });
 
@@ -245,13 +245,13 @@ describe('spawning end-to-end (tick pass)', () => {
     const engineRepo = new SqliteRepository(handle.db, liveId);
     const parse = makeCompositeParser({ llm: null });
 
-    const r1 = await runTick(PLAYER, 'south', engineRepo, { parse, llm: null, builderRepo });
+    const r1 = await runTick(PLAYER, 'south', engineRepo, { parse, ai: null, builderRepo });
     expect(r1.events.filter((e) => e.kind === EventKind.AgentSpawned)).toHaveLength(1);
 
-    const r2 = await runTick(PLAYER, 'north', engineRepo, { parse, llm: null, builderRepo });
+    const r2 = await runTick(PLAYER, 'north', engineRepo, { parse, ai: null, builderRepo });
     expect(r2.events.filter((e) => e.kind === EventKind.AgentSpawned)).toHaveLength(0);
 
-    const r3 = await runTick(PLAYER, 'south', engineRepo, { parse, llm: null, builderRepo });
+    const r3 = await runTick(PLAYER, 'south', engineRepo, { parse, ai: null, builderRepo });
     expect(r3.events.filter((e) => e.kind === EventKind.AgentSpawned)).toHaveLength(0);
 
     const sewerAgents = await engineRepo.agentsAt(LOC_SEWER);

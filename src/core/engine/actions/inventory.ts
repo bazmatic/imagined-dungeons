@@ -3,13 +3,13 @@ import type { DomainEvent } from '@core/domain/events';
 import { EventKind, OwnerKind } from '@core/domain/kinds';
 import { Ok, type Result } from '@core/domain/result';
 import { nextEventId } from '../ids-gen';
-import type { Repository } from '../repository';
+import type { HandlerRepo } from '../repository';
 import { renderInventory } from '../templates';
 import type { ActionOutcome } from './types';
 
 export async function handleInventory(
   action: Extract<Action, { kind: 'inventory' }>,
-  repo: Repository,
+  repo: HandlerRepo,
 ): Promise<Result<ActionOutcome, string>> {
   const inventory = await repo.itemsOwnedBy({ kind: OwnerKind.Agent, id: action.actorId });
   const event: DomainEvent = {

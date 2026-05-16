@@ -21,18 +21,18 @@ import { EventKind, ExaminableKind, OwnerKind } from '@core/domain/kinds';
 import { Ok, type Result } from '@core/domain/result';
 import { type Segment, SegmentKind } from '@core/domain/segments';
 import { loadLoreContext } from '@core/lore/context';
-import { runDiscovery } from '../discovery';
+import type { GameAI } from '../game-ai';
 import { nextEventId } from '../ids-gen';
-import type { LanguageModel } from '../language-model';
-import { perceive } from '../perception';
-import type { Repository } from '../repository';
+import { perceive, type PerceptionView } from '../perception';
+import type { HandlerRepo } from '../repository';
 import { renderLookAgent, renderLookTarget, renderRevealObserved } from '../templates';
 import type { ActionOutcome } from './types';
 
 export interface SearchDeps {
-  readonly llm: LanguageModel;
+  readonly ai: GameAI;
   readonly builderRepo: BuilderRepository;
   readonly worldId: WorldId;
+  readonly view?: PerceptionView;
 }
 
 const isString = (v: unknown): v is string => typeof v === 'string';
@@ -141,11 +141,11 @@ const findItemById = (items: readonly Item[], id: ItemId): Item | null =>
  */
 export async function handleSearch(
   action: Extract<Action, { kind: 'search' }>,
-  repo: Repository,
+  repo: HandlerRepo,
   deps: SearchDeps,
 ): Promise<Result<ActionOutcome, string>> {
-  const { llm, builderRepo, worldId } = deps;
-  const view = await perceive(action.actorId, repo);
+  const { ai, builderRepo, worldId } = deps;
+  const view = deps.view ?? await perceive(action.actorId, repo);
   const locationId: LocationId = view.location.id;
   const witnesses: readonly AgentId[] = view.agents.map((a) => a.id).concat(action.actorId);
 
@@ -174,7 +174,7 @@ export async function handleSearch(
     undiscoveredItems,
   };
 
-  const response = await runDiscovery(request, llm);
+  const response = await ai.discover(request);
 
   const baseEvent = {
     id: nextEventId(),

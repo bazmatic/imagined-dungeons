@@ -1,6 +1,6 @@
 import type { DomainEvent } from '@core/domain/events';
 import type { AgentId } from '@core/domain/ids';
-import type { Repository } from './repository';
+import type { HandlerRepo } from './repository';
 
 /**
  * Per-agent memory recall (abstract-design §8).
@@ -19,7 +19,7 @@ import type { Repository } from './repository';
  */
 export async function recallFor(
   actorId: AgentId,
-  repo: Repository,
+  repo: HandlerRepo,
   limit: number,
 ): Promise<readonly DomainEvent[]> {
   if (limit <= 0) return [];

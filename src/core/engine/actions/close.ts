@@ -4,8 +4,8 @@ import { ActionKind, EventKind } from '@core/domain/kinds';
 import { Err, Ok, type Result } from '@core/domain/result';
 import { SegmentKind } from '@core/domain/segments';
 import { nextEventId } from '../ids-gen';
-import { perceive } from '../perception';
-import type { Repository } from '../repository';
+import { perceive, type PerceptionView } from '../perception';
+import type { HandlerRepo } from '../repository';
 import { renderCloseSelf } from '../templates';
 import type { ActionOutcome } from './types';
 
@@ -16,9 +16,10 @@ import type { ActionOutcome } from './types';
  */
 export async function handleClose(
   action: Extract<Action, { kind: typeof ActionKind.Close }>,
-  repo: Repository,
+  repo: HandlerRepo,
+  deps?: { readonly view?: PerceptionView },
 ): Promise<Result<ActionOutcome, string>> {
-  const view = await perceive(action.actorId, repo);
+  const view = deps?.view ?? await perceive(action.actorId, repo);
   const item = await repo.getItem(action.itemId);
   if (!item.container) return Err(`You can't close the ${item.label}.`);
 

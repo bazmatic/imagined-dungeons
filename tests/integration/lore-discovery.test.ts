@@ -11,6 +11,7 @@ import type { DiscoveryResponse, UpsertItemInput } from '@core/domain/builder-ty
 import { asAgentId, asItemId, asLocationId, asTagLoreId, asWorldId } from '@core/domain/ids';
 import { OwnerKind } from '@core/domain/kinds';
 import type { LanguageModelRequest, LanguageModelResponse } from '@core/engine/language-model';
+import { LlmGameAI } from '@core/engine/game-ai';
 import { makeCompositeParser } from '@core/engine/parser/composite';
 import { runTick } from '@core/engine/tick';
 import { SqliteBuilderRepository } from '@infra/builder-sqlite-repository';
@@ -124,7 +125,7 @@ describe('lore + generative discovery — end-to-end', () => {
 
     const result = await runTick(PLAYER, 'search the drain', engineRepo, {
       parse,
-      llm,
+      ai: new LlmGameAI(llm),
       builderRepo,
     });
 

@@ -1,12 +1,13 @@
 import type { Action } from '@core/domain/actions';
 import type { DomainEvent } from '@core/domain/events';
-import { AttackOutcome, EventKind, OwnerKind } from '@core/domain/kinds';
+import { EventKind, OwnerKind } from '@core/domain/kinds';
 import { Err, Ok, type Result } from '@core/domain/result';
 import { type Segment, SegmentKind } from '@core/domain/segments';
 import { nextEventId } from '../ids-gen';
-import { perceive } from '../perception';
-import type { Repository } from '../repository';
-import { makeRng, rollD } from '../rng';
+import { perceive, type PerceptionView } from '../perception';
+import type { HandlerRepo } from '../repository';
+import { makeRng } from '../rng';
+import { resolveCombat } from './combat';
 import type { ActionOutcome } from './types';
 
 /**
@@ -22,9 +23,10 @@ import type { ActionOutcome } from './types';
  */
 export async function handleAttack(
   action: Extract<Action, { kind: 'attack' }>,
-  repo: Repository,
+  repo: HandlerRepo,
+  deps?: { readonly view?: PerceptionView },
 ): Promise<Result<ActionOutcome, string>> {
-  const view = await perceive(action.actorId, repo);
+  const view = deps?.view ?? await perceive(action.actorId, repo);
   const actor = view.actor;
   const target = await repo.getAgent(action.targetAgentId);
   if (target.locationId !== view.location.id) {
@@ -34,14 +36,16 @@ export async function handleAttack(
   const seed = await repo.getRngSeed();
   const rng = makeRng(seed);
 
-  const total = actor.damage + target.defense;
-  const hit = total > 0 && rng.next() * total < actor.damage;
-  let damageDealt = 0;
-  let outcome: AttackOutcome = AttackOutcome.Miss;
-  if (hit) {
-    outcome = AttackOutcome.Hit;
-    damageDealt = rollD(rng, actor.damage);
-    await repo.setAgentHp(target.id, target.hp - damageDealt);
+  const combat = resolveCombat({
+    attackerDamage: actor.damage,
+    defenderHp: target.hp,
+    defenderDefense: target.defense,
+    rng,
+  });
+  const { outcome, damageDealt } = combat;
+
+  if (combat.outcome === 'hit') {
+    await repo.setAgentHp(target.id, combat.defenderHpAfter);
   }
 
   await repo.setRngSeed(rng.seed);
@@ -61,7 +65,7 @@ export async function handleAttack(
   };
 
   // If the target is killed, drop their inventory and emit a Death event.
-  if (hit && target.hp - damageDealt <= 0) {
+  if (combat.defenderDied) {
     const targetItems = await repo.itemsOwnedBy({ kind: OwnerKind.Agent, id: target.id });
     for (const item of targetItems) {
       await repo.transferItem(item.id, { kind: OwnerKind.Location, id: view.location.id });
@@ -80,9 +84,9 @@ export async function handleAttack(
   }
 
   const render: Segment[] = [];
-  if (hit) {
+  if (outcome === 'hit') {
     render.push({ kind: SegmentKind.Hit, text: `You hit ${target.label} for ${damageDealt} damage.` });
-    if (target.hp - damageDealt <= 0) {
+    if (combat.defenderDied) {
       render.push({ kind: SegmentKind.Death, text: `${target.label} is slain!` });
     }
   } else {

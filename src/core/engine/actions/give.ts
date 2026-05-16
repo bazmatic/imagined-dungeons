@@ -3,7 +3,7 @@ import type { DomainEvent } from '@core/domain/events';
 import { EventKind, OwnerKind } from '@core/domain/kinds';
 import { Err, Ok, type Result } from '@core/domain/result';
 import { nextEventId } from '../ids-gen';
-import type { Repository } from '../repository';
+import type { HandlerRepo } from '../repository';
 import { renderGiveSelf } from '../templates';
 import type { ActionOutcome } from './types';
 
@@ -21,7 +21,7 @@ import type { ActionOutcome } from './types';
  */
 export async function handleGive(
   action: Extract<Action, { kind: 'give' }>,
-  repo: Repository,
+  repo: HandlerRepo,
 ): Promise<Result<ActionOutcome, string>> {
   const actor = await repo.getAgent(action.actorId);
   const recipient = await repo.getAgent(action.targetAgentId);

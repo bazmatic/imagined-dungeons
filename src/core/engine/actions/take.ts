@@ -3,16 +3,17 @@ import type { DomainEvent } from '@core/domain/events';
 import { EventKind, OwnerKind } from '@core/domain/kinds';
 import { Err, Ok, type Result } from '@core/domain/result';
 import { nextEventId } from '../ids-gen';
-import { perceive } from '../perception';
-import type { Repository } from '../repository';
+import { perceive, type PerceptionView } from '../perception';
+import type { HandlerRepo } from '../repository';
 import { renderTakeSelf } from '../templates';
 import type { ActionOutcome } from './types';
 
 export async function handleTake(
   action: Extract<Action, { kind: 'take' }>,
-  repo: Repository,
+  repo: HandlerRepo,
+  deps?: { readonly view?: PerceptionView },
 ): Promise<Result<ActionOutcome, string>> {
-  const view = await perceive(action.actorId, repo);
+  const view = deps?.view ?? await perceive(action.actorId, repo);
   const item = await repo.getItem(action.itemId);
 
   const carried = await repo.itemsOwnedBy({ kind: OwnerKind.Agent, id: action.actorId });

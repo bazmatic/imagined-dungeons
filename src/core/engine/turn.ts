@@ -11,8 +11,8 @@ import {
 } from '@core/domain/kinds';
 import { type Segment, SegmentKind } from '@core/domain/segments';
 import { dispatch } from './actions/registry';
+import type { GameAI } from './game-ai';
 import { nextEventId } from './ids-gen';
-import type { LanguageModel } from './language-model';
 import { narrate } from './narrate';
 import { parse as ruleParse } from './parser';
 import type { ParseFn } from './parser/composite';
@@ -39,7 +39,7 @@ export interface DiscoveryBudget {
 
 export interface RunTurnOptions {
   readonly parse?: ParseFn;
-  readonly llm?: LanguageModel | null;
+  readonly ai?: GameAI | null;
   readonly builderRepo?: BuilderRepository;
   readonly discoveryBudget?: DiscoveryBudget;
   readonly playerId?: AgentId;
@@ -64,7 +64,7 @@ export async function runTurn(
   const opts: RunTurnOptions =
     typeof parseOrOptions === 'function' ? { parse: parseOrOptions } : parseOrOptions;
   const parse = opts.parse ?? defaultParse;
-  const llm = opts.llm ?? null;
+  const ai = opts.ai ?? null;
 
   const actor = await repo.getAgent(actorId);
   if (actor.hp <= 0) {
@@ -78,13 +78,13 @@ export async function runTurn(
     // Failed-look fall-through: a `look <unknown>` parse error reroutes to
     // generative discovery instead of surfacing the parse error — so the
     // player sees a flavour line (or a freshly-spawned entity) rather than
-    // "you don't see one here". Requires both an llm and a builderRepo;
+    // "you don't see one here". Requires both an ai and a builderRepo;
     // honours the per-tick discovery budget when supplied.
     if (
       parsed.kind === ParseErrorKind.NoSuchTarget &&
       parsed.verb !== undefined &&
       LOOK_VERBS.has(parsed.verb) &&
-      llm &&
+      ai &&
       opts.builderRepo
     ) {
       const budget = opts.discoveryBudget;
@@ -94,7 +94,7 @@ export async function runTurn(
         const searchResult = await dispatch(
           { kind: ActionKind.Search, actorId, query: parsed.ref },
           repo,
-          { llm, worldId, builderRepo: opts.builderRepo },
+          { ai, worldId, builderRepo: opts.builderRepo },
         );
         if (searchResult.ok) {
           return { render: searchResult.value.render, events: [searchResult.value.event] };
@@ -141,13 +141,13 @@ export async function runTurn(
     if (budget) budget.remaining -= 1;
   }
 
-  const r = await dispatch(
-    parsed,
-    repo,
-    opts.builderRepo
-      ? { llm, worldId, builderRepo: opts.builderRepo, ...(opts.playerId !== undefined ? { playerId: opts.playerId } : {}) }
-      : { llm, worldId, ...(opts.playerId !== undefined ? { playerId: opts.playerId } : {}) },
-  );
+  const r = await dispatch(parsed, repo, {
+    ai,
+    worldId,
+    view,
+    ...(opts.builderRepo ? { builderRepo: opts.builderRepo } : {}),
+    ...(opts.playerId !== undefined ? { playerId: opts.playerId } : {}),
+  });
   if (!r.ok) {
     const errorSegs = renderActionError(r.error);
     const reason = errorSegs.map((s) => s.text).join(' ');
@@ -175,7 +175,7 @@ export async function runTurn(
     const narrations: Record<string, string> = {};
     for (const witnessId of event.witnesses) {
       const witness = await repo.getAgent(witnessId);
-      const prose = await narrate(event, witness, repo, llm);
+      const prose = ai ? await ai.narrateEvent(event, witness, repo) : await narrate(event, witness, repo, null);
       narrations[witnessId] = prose;
     }
     event = { ...event, narrations } as DomainEvent;

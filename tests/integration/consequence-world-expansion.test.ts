@@ -8,6 +8,7 @@ import {
 } from '@core/builder/index';
 import { asAgentId, asLocationId, asMonsterTemplateId, asWorldId } from '@core/domain/ids';
 import { ActionKind } from '@core/domain/kinds';
+import { LlmGameAI } from '@core/engine/game-ai';
 import type { LanguageModel } from '@core/engine/language-model';
 import { makeCompositeParser } from '@core/engine/parser/composite';
 import { runTick } from '@core/engine/tick';
@@ -98,7 +99,7 @@ describe('consequence engine world expansion', () => {
     const engineRepo = new SqliteRepository(handle.db, liveId);
     const parse = makeCompositeParser({ llm: null });
 
-    await runTick(PLAYER, 'look around', engineRepo, { parse, llm, builderRepo });
+    await runTick(PLAYER, 'look around', engineRepo, { parse, ai: new LlmGameAI(llm), builderRepo });
 
     const locs = await builderRepo.listLocations(liveId);
     const cellar = locs.find((l) => (l.id as string) === 'loc_cellar');
@@ -161,7 +162,7 @@ describe('consequence engine world expansion', () => {
     const engineRepo = new SqliteRepository(handle.db, liveId);
     const parse = makeCompositeParser({ llm: null });
 
-    await runTick(PLAYER, 'look around', engineRepo, { parse, llm, builderRepo });
+    await runTick(PLAYER, 'look around', engineRepo, { parse, ai: new LlmGameAI(llm), builderRepo });
 
     const agents = await engineRepo.agentsAt(LOC_TAVERN);
     const rat = agents.find((a) => a.label === 'giant rat');
@@ -185,7 +186,7 @@ describe('consequence engine world expansion', () => {
     const parse = makeCompositeParser({ llm: null });
 
     await expect(
-      runTick(PLAYER, 'look around', engineRepo, { parse, llm, builderRepo }),
+      runTick(PLAYER, 'look around', engineRepo, { parse, ai: new LlmGameAI(llm), builderRepo }),
     ).resolves.toBeDefined();
 
     const agents = await engineRepo.agentsAt(LOC_TAVERN);
@@ -232,7 +233,7 @@ describe('consequence engine world expansion', () => {
       },
     ]);
 
-    await runTick(PLAYER, 'look around', engineRepo2, { parse, llm, builderRepo });
+    await runTick(PLAYER, 'look around', engineRepo2, { parse, ai: new LlmGameAI(llm), builderRepo });
 
     const agents = await engineRepo2.agentsAt(LOC_TAVERN);
     expect(agents.find((a) => a.id === NPC)).toBeUndefined();

@@ -12,7 +12,7 @@ import { log } from '@core/log';
 import type { LanguageModel } from './language-model';
 import { recallFor } from './memory';
 import { type PerceptionView, perceive } from './perception';
-import type { Repository } from './repository';
+import type { HandlerRepo } from './repository';
 
 /**
  * The NPC mind role (abstract-design §10, "special case of the interpreter").
@@ -164,7 +164,7 @@ const join = (xs: readonly string[]): string => (xs.length === 0 ? 'none' : xs.j
 async function summariseEvent(
   event: DomainEvent,
   selfId: AgentId,
-  repo: Repository,
+  repo: HandlerRepo,
 ): Promise<string> {
   const labelOf = async (id: AgentId): Promise<string> => {
     if (id === selfId) return 'you';
@@ -347,7 +347,7 @@ interface NpcMindContext {
 async function buildUserPrompt(
   ctx: NpcMindContext,
   selfId: AgentId,
-  repo: Repository,
+  repo: HandlerRepo,
 ): Promise<string> {
   const { actor, view, inventory, memory } = ctx;
   const selfNameRegex = new RegExp(
@@ -447,7 +447,7 @@ const DEFAULT_MEMORY_LIMIT = 8;
  */
 export async function decideNpcIntent(
   actorId: AgentId,
-  repo: Repository,
+  repo: HandlerRepo,
   llm: LanguageModel | null,
   opts: NpcMindOptions = {},
 ): Promise<readonly string[]> {

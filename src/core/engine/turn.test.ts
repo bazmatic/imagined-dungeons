@@ -5,6 +5,7 @@ import { SegmentKind } from '@core/domain/segments';
 import { MemoryBuilderRepository } from '@infra/builder-memory-repository';
 import { MemoryRepository } from '@infra/memory-repository';
 import { describe, expect, it } from 'vitest';
+import { LlmGameAI } from './game-ai';
 import { makeFakeLanguageModel } from '../../../tests/helpers/fake-language-model';
 import type { ParseFn } from './parser/composite';
 import { runTurn } from './turn';
@@ -126,7 +127,7 @@ describe('runTurn', () => {
         },
       }),
     });
-    const r = await runTurn(paff.id, 'look ghost', repo, { llm, builderRepo });
+    const r = await runTurn(paff.id, 'look ghost', repo, { ai: new LlmGameAI(llm), builderRepo });
     expect(r.render[0]?.text).toBe('A faint shimmer in the air, but nothing more.');
     expect(r.events[0]?.kind).toBe(EventKind.Look);
     expect(llm.calls.length).toBe(1);

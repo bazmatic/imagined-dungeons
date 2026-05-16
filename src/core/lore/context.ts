@@ -1,7 +1,7 @@
 import type { BuilderRepository } from '@core/builder/repository';
 import type { LoreContext, LoreSubject } from '@core/domain/builder-types';
 import type { WorldId } from '@core/domain/ids';
-import type { Repository } from '@core/engine/repository';
+import type { HandlerRepo } from '@core/engine/repository';
 
 /**
  * Pure resolver: assembles the `LoreContext` for a subject by unioning the
@@ -11,7 +11,7 @@ import type { Repository } from '@core/engine/repository';
  */
 export async function loadLoreContext(
   repo: BuilderRepository,
-  engineRepo: Repository,
+  engineRepo: HandlerRepo,
   worldId: WorldId,
   subject: LoreSubject,
 ): Promise<LoreContext> {

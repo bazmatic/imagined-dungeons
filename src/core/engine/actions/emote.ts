@@ -4,15 +4,16 @@ import { EventKind } from '@core/domain/kinds';
 import { Err, Ok, type Result } from '@core/domain/result';
 import { SegmentKind } from '@core/domain/segments';
 import { nextEventId } from '../ids-gen';
-import { perceive } from '../perception';
-import type { Repository } from '../repository';
+import { perceive, type PerceptionView } from '../perception';
+import type { HandlerRepo } from '../repository';
 import type { ActionOutcome } from './types';
 
 export async function handleEmote(
   action: Extract<Action, { kind: 'emote' }>,
-  repo: Repository,
+  repo: HandlerRepo,
+  deps?: { readonly view?: PerceptionView },
 ): Promise<Result<ActionOutcome, string>> {
-  const view = await perceive(action.actorId, repo);
+  const view = deps?.view ?? await perceive(action.actorId, repo);
   if (action.targetAgentId !== null) {
     const target = await repo.getAgent(action.targetAgentId);
     if (target.locationId !== view.location.id) {

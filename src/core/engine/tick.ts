@@ -10,9 +10,9 @@ import { generateSpawnNarration } from '@core/spawning/narration';
 import { runSpawnTickPass } from '@core/spawning/tick-pass';
 import type { PerceptionView } from '@core/spawning/triggers';
 import { dispatch } from './actions/registry';
-import { type ConsequenceLoreSink, MAX_CONSEQUENCE_DEPTH, consequencesFor } from './consequences';
+import { type ConsequenceLoreSink, MAX_CONSEQUENCE_DEPTH } from './consequences';
+import type { GameAI } from './game-ai';
 import type { LanguageModel } from './language-model';
-import { decideNpcIntent } from './npc-mind';
 import { MAX_NPCS_PER_TICK, scheduleNpcs } from './npc-scheduler';
 import type { ParseFn } from './parser/composite';
 import { perceive } from './perception';
@@ -101,7 +101,13 @@ export interface TickResult {
 
 export interface RunTickOptions {
   readonly parse: ParseFn;
-  readonly llm: LanguageModel | null;
+  readonly ai: GameAI | null;
+  /**
+   * Raw LLM for the spawn subsystem (LLM-judgement spawn triggers and spawn
+   * arrival narration). Separate from `ai` because the spawn system hasn't
+   * been integrated into the GameAI boundary yet.
+   */
+  readonly llm?: LanguageModel | null;
   /** Override the per-tick NPC cap. Defaults to MAX_NPCS_PER_TICK. */
   readonly npcCap?: number;
   /**
@@ -368,12 +374,12 @@ async function sleepFinishedNpcs(
 async function runConsequencePass(
   events: readonly DomainEvent[],
   repo: Repository,
-  llm: LanguageModel | null,
+  ai: GameAI | null,
   depth: number,
   lore: ConsequenceLoreSink | undefined,
 ): Promise<readonly DomainEvent[]> {
   if (depth > MAX_CONSEQUENCE_DEPTH) return [];
-  const actions: readonly Action[] = await consequencesFor(events, repo, llm, lore);
+  const actions: readonly Action[] = ai ? await ai.consequences(events, repo, lore) : [];
   const out: DomainEvent[] = [];
   for (const action of actions) {
     const r = await dispatch(action, repo);
@@ -392,7 +398,7 @@ export async function runTick(
   repo: Repository,
   opts: RunTickOptions,
 ): Promise<TickResult> {
-  const { parse, llm } = opts;
+  const { parse, ai, llm } = opts;
   const cap = opts.npcCap ?? MAX_NPCS_PER_TICK;
   // A single shared counter across the whole tick — search/failed-look from
   // the player turn or any NPC turn all draw from the same pool.
@@ -424,7 +430,7 @@ export async function runTick(
   } else {
     const playerResult = await runTurn(playerId, text, repo, {
       parse,
-      llm,
+      ai,
       discoveryBudget,
       playerId,
       ...(opts.builderRepo ? { builderRepo: opts.builderRepo } : {}),
@@ -448,7 +454,7 @@ export async function runTick(
     const postPlayerConsequences = await runConsequencePass(
       playerResult.events,
       repo,
-      llm,
+      ai,
       0,
       loreSink,
     );
@@ -488,7 +494,7 @@ export async function runTick(
     // lines for the same NPC this tick (typically: a speech line + a
     // non-speech action line). Dispatch them in order so the NPC can
     // both talk and do something.
-    const intents = await decideNpcIntent(npcId, repo, llm);
+    const intents = ai ? await ai.npcIntent(npcId, repo) : [NpcFallbackIntent];
     for (const intent of intents) {
       log.info(`[npc] ${npc.label} intent: "${intent}"`);
 
@@ -500,7 +506,7 @@ export async function runTick(
 
       const npcResult = await runTurn(npcId, intent, repo, {
         parse,
-        llm,
+        ai,
         discoveryBudget,
         playerId,
         ...(opts.builderRepo ? { builderRepo: opts.builderRepo } : {}),
@@ -529,7 +535,7 @@ export async function runTick(
   await wakeWitnessingNpcs(npcEvents, repo);
 
   // 6. Consequence pass over the NPC events only (depth 1).
-  const postNpcConsequences = await runConsequencePass(npcEvents, repo, llm, 1, loreSink);
+  const postNpcConsequences = await runConsequencePass(npcEvents, repo, ai, 1, loreSink);
   for (const ev of postNpcConsequences) {
     events.push(ev);
     const line = await renderWitnessForPlayer(ev, playerId, repo);
@@ -546,7 +552,7 @@ export async function runTick(
       events,
       engineRepo: repo,
       builderRepo: opts.builderRepo,
-      llm,
+      llm: llm ?? null,
       perception: spawnPerception.view,
     });
     for (const ev of spawnResult.events) {
@@ -566,7 +572,7 @@ export async function runTick(
         spawnEvents: spawnResult.events,
         playerId,
         repo,
-        llm,
+        llm: llm ?? null,
       });
       for (const line of spawnNarrations) witnessed.push(line);
     }

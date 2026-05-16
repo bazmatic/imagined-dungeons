@@ -135,7 +135,7 @@ export const DISCOVERY_SCHEMA: JsonSchema = {
   },
 };
 
-const FALLBACK_RESPONSE: DiscoveryResponse = {
+export const FALLBACK_RESPONSE: DiscoveryResponse = {
   narration: 'You find nothing of note.',
   matchedItemId: null,
   matchedAgentId: null,

@@ -3,16 +3,17 @@ import type { DomainEvent } from '@core/domain/events';
 import { EventKind, ExaminableKind } from '@core/domain/kinds';
 import { Err, Ok, type Result } from '@core/domain/result';
 import { nextEventId } from '../ids-gen';
-import { perceive } from '../perception';
-import type { Repository } from '../repository';
+import { perceive, type PerceptionView } from '../perception';
+import type { HandlerRepo } from '../repository';
 import { renderLook, renderLookAgent, renderLookExit, renderLookTarget } from '../templates';
 import type { ActionOutcome } from './types';
 
 export async function handleLook(
   action: Extract<Action, { kind: 'look' }>,
-  repo: Repository,
+  repo: HandlerRepo,
+  deps?: { readonly view?: PerceptionView },
 ): Promise<Result<ActionOutcome, string>> {
-  const view = await perceive(action.actorId, repo);
+  const view = deps?.view ?? await perceive(action.actorId, repo);
   const witnesses = (await repo.agentsAt(view.location.id)).map((a) => a.id);
   const baseEvent = {
     id: nextEventId(),

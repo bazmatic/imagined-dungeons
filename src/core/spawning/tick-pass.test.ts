@@ -1,4 +1,5 @@
 import { TriggerEventKind } from '@core/domain/builder-kinds';
+import type { MonsterTemplate } from '@core/domain/builder-types';
 import type { Agent } from '@core/domain/entities';
 import type { DomainEvent } from '@core/domain/events';
 import {
@@ -14,7 +15,7 @@ import { MemoryBuilderRepository } from '@infra/builder-memory-repository';
 import { MemoryRepository } from '@infra/memory-repository';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { makeFakeLanguageModel } from '../../../tests/helpers/fake-language-model';
-import { runSpawnTickPass } from './tick-pass';
+import { planSpawnBatch, runSpawnTickPass } from './tick-pass';
 
 const W = asWorldId('w_live');
 const PLAYER = asAgentId('char_p');
@@ -269,5 +270,98 @@ describe('runSpawnTickPass', () => {
     const [evt] = result.events;
     if (!evt) throw new Error('expected one event');
     expect(evt.witnesses).toContain(PLAYER);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// planSpawnBatch — pure unit tests (no repo, no LLM)
+// ---------------------------------------------------------------------------
+
+const W2 = asWorldId('w_plan');
+const TPL2 = asMonsterTemplateId('tpl_orc');
+const LOC2 = asLocationId('loc_cave');
+const WITNESS = asAgentId('char_hero');
+
+const tpl: MonsterTemplate = {
+  id: TPL2,
+  worldId: W2,
+  templateKey: 'orc',
+  label: 'orc',
+  labelPrefixInstructions: null,
+  shortDescription: 'a large orc',
+  longDescription: 'a mean orc',
+  hpMin: 5,
+  hpMax: 5,
+  damageMin: 2,
+  damageMax: 2,
+  defenseMin: 0,
+  defenseMax: 0,
+  mood: null,
+  startingItems: [],
+  tags: [],
+};
+
+const makeHit = (count = 1) => ({
+  trigger: {
+    id: asSpawnTriggerId('trg_plan_1'),
+    worldId: W2,
+    locationId: LOC2,
+    templateId: TPL2,
+    params: { kind: TriggerEventKind.PlayerEnters },
+    count,
+    oneShot: false,
+    fireOnInitialPublish: false,
+  },
+});
+
+const syncFetchers = {
+  fetchTemplate: async () => tpl,
+  fetchWitnesses: async () => [WITNESS] as const,
+  generateNames: async (_: MonsterTemplate, n: number) => Array.from({ length: n }, (_, i) => `orc ${i + 1}`),
+  now: () => 9000,
+};
+
+describe('planSpawnBatch', () => {
+  it('produces one agent and one event per hit count', async () => {
+    const batch = await planSpawnBatch({ worldId: W2, hits: [makeHit(2)], ...syncFetchers });
+    expect(batch.agents).toHaveLength(2);
+    expect(batch.events).toHaveLength(2);
+  });
+
+  it('records a trigger fire for each hit', async () => {
+    const batch = await planSpawnBatch({ worldId: W2, hits: [makeHit()], ...syncFetchers });
+    expect(batch.triggerFires.size).toBe(1);
+    expect(batch.triggerFires.get(asSpawnTriggerId('trg_plan_1'))?.firedAt).toBe(9000);
+  });
+
+  it('event witnesses come from fetchWitnesses, not from agents list', async () => {
+    const batch = await planSpawnBatch({ worldId: W2, hits: [makeHit()], ...syncFetchers });
+    expect(batch.events[0]?.witnesses).toContain(WITNESS);
+  });
+
+  it('caps at MAX_SPAWNS_PER_TICK across hits', async () => {
+    const manyHits = Array.from({ length: 10 }, (_, i) => ({
+      trigger: { ...makeHit(2).trigger, id: asSpawnTriggerId(`trg_plan_${i}`) },
+    }));
+    const batch = await planSpawnBatch({ worldId: W2, hits: manyHits, ...syncFetchers });
+    expect(batch.agents.length).toBeLessThanOrEqual(8);
+  });
+
+  it('skips hits whose template is not found', async () => {
+    const batch = await planSpawnBatch({
+      worldId: W2,
+      hits: [makeHit()],
+      ...syncFetchers,
+      fetchTemplate: async () => null,
+    });
+    expect(batch.agents).toHaveLength(0);
+    expect(batch.triggerFires.size).toBe(0);
+  });
+
+  it('returns empty batch for empty hits', async () => {
+    const batch = await planSpawnBatch({ worldId: W2, hits: [], ...syncFetchers });
+    expect(batch.agents).toHaveLength(0);
+    expect(batch.events).toHaveLength(0);
+    expect(batch.triggerFires.size).toBe(0);
   });
 });

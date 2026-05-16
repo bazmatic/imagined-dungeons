@@ -6,8 +6,8 @@ import { EventKind, OwnerKind } from '@core/domain/kinds';
 import { Err, Ok, type Result } from '@core/domain/result';
 import { isPlayerInCombat } from '../combat';
 import { nextEventId } from '../ids-gen';
-import { perceive } from '../perception';
-import type { Repository } from '../repository';
+import { perceive, type PerceptionView } from '../perception';
+import type { HandlerRepo } from '../repository';
 import { renderMoveSelf } from '../templates';
 import type { ActionOutcome } from './types';
 
@@ -15,6 +15,7 @@ export interface MoveHandlerDeps {
   readonly builderRepo?: BuilderRepository;
   readonly worldId?: WorldId;
   readonly playerId?: AgentId;
+  readonly view?: PerceptionView;
 }
 
 const REVERSE_DIRECTION: Readonly<Record<string, string>> = {
@@ -32,10 +33,10 @@ const REVERSE_DIRECTION: Readonly<Record<string, string>> = {
 
 export async function handleMove(
   action: Extract<Action, { kind: 'move' }>,
-  repo: Repository,
+  repo: HandlerRepo,
   deps: MoveHandlerDeps = {},
 ): Promise<Result<ActionOutcome, string>> {
-  const view = await perceive(action.actorId, repo);
+  const view = deps.view ?? await perceive(action.actorId, repo);
   const exit = view.exits.find((e) => e.direction === action.direction);
   if (!exit) return Err("You can't go that way.");
 

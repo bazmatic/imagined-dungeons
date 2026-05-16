@@ -1,7 +1,7 @@
 import type { Agent, Exit, Item, Location } from '@core/domain/entities';
 import { type AgentId, type ItemId, SYSTEM_AGENT_ID } from '@core/domain/ids';
 import { OwnerKind } from '@core/domain/kinds';
-import type { Repository } from './repository';
+import type { HandlerRepo } from './repository';
 
 export interface PerceptionView {
   readonly actor: Agent;
@@ -32,7 +32,7 @@ function isReachable(item: Item, byId: ReadonlyMap<ItemId, Item>): boolean {
   return true;
 }
 
-export async function perceive(actorId: AgentId, repo: Repository): Promise<PerceptionView> {
+export async function perceive(actorId: AgentId, repo: HandlerRepo): Promise<PerceptionView> {
   const actor = await repo.getAgent(actorId);
   const location = await repo.getLocation(actor.locationId);
   // Collect every item reachable from the location: items directly owned by
