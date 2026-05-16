@@ -189,10 +189,11 @@ export async function llmInterpret(
       return { kind: ActionKind.Close, actorId: actor.id, itemId: r.item.id };
     }
     case ActionKind.Buy: {
-      const itemR = resolveItem(validated.itemRef, [...view.items, ...inventory]);
-      if (!itemR.ok) return null;
       const sellerR = resolveAgent(validated.targetAgentRef, view.agents);
       if (!sellerR.ok) return null;
+      const sellerInventory = view.agentItems.get(sellerR.agent.id) ?? [];
+      const itemR = resolveItem(validated.itemRef, [...view.items, ...inventory, ...sellerInventory]);
+      if (!itemR.ok) return null;
       return {
         kind: ActionKind.Buy,
         actorId: actor.id,

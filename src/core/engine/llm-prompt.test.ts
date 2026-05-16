@@ -102,6 +102,7 @@ describe('buildUserPrompt', () => {
         items: [map],
         agents: [spark],
         exits: [exitSouth],
+        agentItems: new Map(),
       },
       [],
     );
@@ -124,6 +125,7 @@ describe('buildUserPrompt', () => {
         items: [],
         agents: [],
         exits: [],
+        agentItems: new Map(),
       },
       [],
     );

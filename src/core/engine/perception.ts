@@ -9,6 +9,8 @@ export interface PerceptionView {
   readonly items: readonly Item[];
   readonly agents: readonly Agent[];
   readonly exits: readonly Exit[];
+  /** Items owned by each visible agent, keyed by AgentId. */
+  readonly agentItems: ReadonlyMap<AgentId, readonly Item[]>;
 }
 
 /**
@@ -56,5 +58,9 @@ export async function perceive(actorId: AgentId, repo: HandlerRepo): Promise<Per
   // latter is "the world" and never visible to characters in the fiction.
   const agents = agentsHere.filter((a) => a.id !== actorId && a.id !== SYSTEM_AGENT_ID && a.hp > 0);
   const exits = await repo.exitsFrom(location.id);
-  return { actor, location, items, agents, exits };
+  const agentItemsEntries = await Promise.all(
+    agents.map(async (a) => [a.id, await repo.itemsOwnedBy({ kind: OwnerKind.Agent, id: a.id })] as const),
+  );
+  const agentItems = new Map(agentItemsEntries);
+  return { actor, location, items, agents, exits, agentItems };
 }

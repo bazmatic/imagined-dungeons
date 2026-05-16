@@ -1,5 +1,4 @@
 import type { AgentId } from '@core/domain/ids';
-import { OwnerKind } from '@core/domain/kinds';
 import { perceive } from '@core/engine/perception';
 import type { Repository } from '@core/engine/repository';
 
@@ -42,27 +41,25 @@ export async function buildSurroundings(
   repo: Repository,
 ): Promise<SurroundingsView> {
   const view = await perceive(playerId, repo);
-  const characters = await Promise.all(
-    view.agents.map(async (a) => {
-      const owned = await repo.itemsOwnedBy({ kind: OwnerKind.Agent, id: a.id });
-      const wares: ForSaleItem[] = owned
-        .filter((i) => i.priceTag != null && i.priceTag > 0)
-        .map((i) => ({
-          id: i.id as string,
-          label: i.label,
-          shortDescription: i.shortDescription,
-          priceTag: i.priceTag as number,
-        }));
-      return {
-        id: a.id as string,
-        label: a.label,
-        shortDescription: a.shortDescription,
-        mood: a.mood,
-        hp: a.hp,
-        wares,
-      };
-    }),
-  );
+  const characters = view.agents.map((a) => {
+    const owned = view.agentItems.get(a.id) ?? [];
+    const wares: ForSaleItem[] = owned
+      .filter((i) => i.priceTag != null && i.priceTag > 0)
+      .map((i) => ({
+        id: i.id as string,
+        label: i.label,
+        shortDescription: i.shortDescription,
+        priceTag: i.priceTag as number,
+      }));
+    return {
+      id: a.id as string,
+      label: a.label,
+      shortDescription: a.shortDescription,
+      mood: a.mood,
+      hp: a.hp,
+      wares,
+    };
+  });
   return {
     items: view.items.map((i) => ({ id: i.id as string, label: i.label })),
     exits: view.exits.map((e) => ({

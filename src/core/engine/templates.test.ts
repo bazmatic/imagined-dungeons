@@ -99,6 +99,7 @@ describe('templates', () => {
       items: [itemA],
       agents: [npc],
       exits: [exitN, exitS],
+      agentItems: new Map(),
     });
     expect(out[0]).toEqual({ kind: SegmentKind.LocationName, text: 'The Goblet' });
     expect(out[1]).toEqual({ kind: SegmentKind.LocationDescription, text: 'A tavern with one wall aflame.' });
@@ -110,7 +111,7 @@ describe('templates', () => {
   });
 
   it('renderLook with no items/agents omits those lines', () => {
-    const out = renderLook({ actor: npc, location: loc, items: [], agents: [], exits: [exitS] });
+    const out = renderLook({ actor: npc, location: loc, items: [], agents: [], exits: [exitS], agentItems: new Map() });
     expect(out.every((s) => !s.text.includes('You see:'))).toBe(true);
     expect(out.every((s) => !s.text.includes('Also here:'))).toBe(true);
   });

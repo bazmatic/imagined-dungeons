@@ -54,7 +54,7 @@ const map: Item = {
   weaponDamage: null,
   armorDefense: null,
 };
-const view = { actor: paff, location: tavern, items: [map], agents: [], exits: [] };
+const view = { actor: paff, location: tavern, items: [map], agents: [], exits: [], agentItems: new Map() };
 
 describe('makeCompositeParser', () => {
   it('returns the rule-based result and never calls the LLM on rule success', async () => {

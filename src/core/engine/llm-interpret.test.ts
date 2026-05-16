@@ -76,7 +76,7 @@ const spark: Agent = {
   secretDescription: '',
 };
 
-const view = { actor: paff, location: tavern, items: [map], agents: [spark], exits: [] };
+const view = { actor: paff, location: tavern, items: [map], agents: [spark], exits: [], agentItems: new Map() };
 
 const respond = (parsed: unknown): LanguageModelResponse => ({
   raw: JSON.stringify(parsed),

@@ -1,5 +1,5 @@
 import type { Agent, Exit, Item, Location } from '@core/domain/entities';
-import { asAgentId, asExitId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
+import { type AgentId, asAgentId, asExitId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
 import { ActionKind, OwnerKind, ParseErrorKind } from '@core/domain/kinds';
 import { describe, expect, it } from 'vitest';
 import { parse, resolveAgent } from './parser';
@@ -163,12 +163,17 @@ const ember: Agent = {
   secretDescription: '',
 };
 
-const view = (items: Item[] = [map], agents: Agent[] = []): PerceptionView => ({
+const view = (
+  items: Item[] = [map],
+  agents: Agent[] = [],
+  agentItems: ReadonlyMap<AgentId, readonly Item[]> = new Map(),
+): PerceptionView => ({
   actor: ACTOR,
   location: LOC,
   items,
   agents,
   exits: [exitN],
+  agentItems,
 });
 
 const inv = (items: Item[] = []): readonly Item[] => items;
@@ -443,6 +448,7 @@ describe('parse', () => {
       items: [],
       agents: [paff],
       exits: [exitN],
+      agentItems: new Map(),
     };
     const r = parse('I say "hi" to Paff Pinkerton.', spark, speakerView, inv());
     if (r.kind !== 'speak') throw new Error(`expected speak, got ${r.kind}`);
@@ -629,6 +635,15 @@ describe('buy / sell / offer verbs', () => {
     const r = parse('price the cloak at 3', ACTOR, view([], [spark]), inv([cloak]));
     if (r.kind !== ActionKind.Offer) throw new Error('expected offer');
     expect(r.price).toBe(3);
+  });
+
+  it('parses "buy the brass key from spark" when key is only in spark\'s agent inventory', () => {
+    // Real merchant scenario: item owned by agent, not in view.items
+    const agentItems = new Map<AgentId, readonly Item[]>([[spark.id, [brassKey]]]);
+    const r = parse('buy the brass key from spark', ACTOR, view([], [spark], agentItems), inv());
+    if (r.kind !== ActionKind.Buy) throw new Error('expected buy');
+    expect(r.sellerId).toBe(spark.id);
+    expect(r.itemId).toBe(brassKey.id);
   });
 
   it('returns MissingArgument for "buy the brass key" (no seller)', () => {

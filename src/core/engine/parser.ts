@@ -544,10 +544,12 @@ export function parse(
       if (itemTokens.length === 0 || sellerTokens.length === 0) {
         return { kind: ParseErrorKind.MissingArgument, verb: first };
       }
-      const itemR = resolveItem(itemTokens.join(' '), [...view.items, ...inventory]);
-      if (!itemR.ok) return itemR.error;
+      // Resolve seller first so we can search their inventory for the item.
       const sellerR = resolveAgent(sellerTokens.join(' '), view.agents);
       if (!sellerR.ok) return sellerR.error;
+      const sellerInventory = view.agentItems.get(sellerR.agent.id) ?? [];
+      const itemR = resolveItem(itemTokens.join(' '), [...view.items, ...inventory, ...sellerInventory]);
+      if (!itemR.ok) return itemR.error;
       return {
         kind: ActionKind.Buy,
         actorId: actor.id,
