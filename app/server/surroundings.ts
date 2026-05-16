@@ -55,6 +55,7 @@ export async function buildSurroundings(
       shortDescription: a.shortDescription,
       mood: a.mood,
       hp: a.hp,
+      wares: [],
     })),
   };
 }
