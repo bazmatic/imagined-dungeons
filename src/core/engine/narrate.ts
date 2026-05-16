@@ -26,6 +26,7 @@ Person of narration is determined strictly by who the observer is:
 Style:
 - One short paragraph, present tense.
 - speak events: at most 25 words. emote events: at most 25 words. attack events: at most 40 words.
+- For creative_attack events: the Narrative field describes the attack action. Narrate it from the observer's point of view, incorporating the outcome (hit/miss) and damage if applicable. Do not quote it verbatim — work it into the prose naturally. At most 40 words.
 - Stick to what the observer can plainly perceive: the words spoken, the swing, the hit or miss.
 - For speak events specifically: the actor only said the words. They did NOT approach, grin, smile, wave, nod, lean in, gesture, look up, raise a hand, or otherwise move. Don't invent body language. Just narrate the speech.
 - For emote events specifically: the body language IS the action. The actor performed exactly the gesture/expression in the supplied description, nothing more, nothing less. Do not invent a verbal utterance, do not invent additional motions. The supplied description is short and physical (e.g. "waves", "grins broadly", "shakes their head") — quote it as the action.
@@ -144,7 +145,7 @@ function summariseEvent(event: DomainEvent): string {
     case EventKind.Attack:
       return `${event.actorId} attacked ${event.targetAgentId} (${event.outcome}${event.outcome === AttackOutcome.Hit ? `, ${event.damageDealt} dmg` : ''})`;
     case EventKind.CreativeAttack:
-      return `${event.actorId} ${event.narrative} ${event.targetAgentId} (${event.outcome}${event.outcome === AttackOutcome.Hit ? `, ${event.damageDealt} dmg` : ''})`;
+      return `${event.actorId} made a creative attack on ${event.targetAgentId} (${event.outcome}${event.outcome === AttackOutcome.Hit ? `, ${event.damageDealt} dmg` : ''})`;
     case EventKind.DescriptionUpdated:
       return `${event.actorId} updated description (${event.target.kind})`;
     case EventKind.AgentSpawned:

@@ -273,11 +273,12 @@ async function summariseEvent(
       return `${actorLabel} attacked ${targetLabel} (${event.outcome}${dmg})`;
     }
     case EventKind.CreativeAttack: {
+      const targetLabel = await labelOf(event.targetAgentId);
       const dmg = event.outcome === AttackOutcome.Hit ? `, ${event.damageDealt} dmg` : '';
       if (event.targetAgentId === selfId) {
         return `${actorLabel} ${event.narrative} — hit you (${event.outcome}${dmg})`;
       }
-      return `${actorLabel} ${event.narrative} (${event.outcome}${dmg})`;
+      return `${actorLabel} ${event.narrative} targeting ${targetLabel} (${event.outcome}${dmg})`;
     }
     case EventKind.DescriptionUpdated:
       return `the world changed (${event.target.kind} description updated)`;

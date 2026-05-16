@@ -351,5 +351,5 @@ export function renderCreativeAttackMechanical(
     const targetSubject = observer.id === target.id ? 'You take' : `${target.label} takes`;
     return `${actorName}: ${event.narrative}. Hit! ${targetSubject} ${event.damageDealt} damage.`;
   }
-  return `${actorName}: ${event.narrative}. Miss.`;
+  return `${actorName}: ${event.narrative} (targets ${targetName}). Miss.`;
 }
