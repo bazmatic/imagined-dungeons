@@ -1,4 +1,5 @@
 import { OwnerKind } from '@core/domain/kinds';
+import { LlmGameAI, nullGameAI } from '@core/engine/game-ai';
 import { runTick } from '@core/engine/tick';
 import { createServerFn } from '@tanstack/react-start';
 import { getBuilderRepo } from './admin/repo';
@@ -16,8 +17,9 @@ export const submitCommand = createServerFn({ method: 'POST' })
     const repo = await getRepo();
     const builderRepo = await getBuilderRepo();
     const parse = getParse();
-    const llm = getNarratorLlm();
-    const result = await runTick(PLAYER_ID, data.text, repo, { parse, llm, builderRepo });
+    const rawLlm = getNarratorLlm();
+    const ai = rawLlm ? new LlmGameAI(rawLlm) : nullGameAI;
+    const result = await runTick(PLAYER_ID, data.text, repo, { parse, ai, builderRepo });
     const inventoryItems = await repo.itemsOwnedBy({ kind: OwnerKind.Agent, id: PLAYER_ID });
     const surroundings = await buildSurroundings(PLAYER_ID, repo);
     return {
