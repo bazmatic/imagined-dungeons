@@ -27,6 +27,7 @@ Three conditions must all be true:
 - An enemy who attacked the player but then had their `shortTermIntent` cleared by the LLM (surrendered, calmed down) does **not** block movement — they are no longer `awake`.
 - An enemy who is alive and `awake` but was never involved in an attack with the player does **not** block movement.
 - A dead enemy (`hp <= 0`) does **not** block movement regardless of `awake` state.
+- An enemy who has **left the location** does **not** block movement — `agentsAt` only returns agents currently present, so a fleeing enemy immediately lifts the block.
 
 ### "Recent" events window
 
@@ -91,7 +92,8 @@ New `describe` block in `move.test.ts`:
 3. **Allowed** — enemy is alive and `awake` but there is no attack event involving the player (e.g. friendly NPC woken by a conversation); move succeeds.
 4. **Allowed** — there was an attack event but the enemy is now dead (`hp <= 0`); move succeeds.
 5. **Allowed** — there was an attack event, enemy is alive, but enemy is no longer `awake` (LLM ended combat); move succeeds.
-6. **Allowed** — no `playerId` in deps; guard is skipped; move succeeds.
+6. **Allowed** — enemy was attacked but has since moved to a different location; move succeeds.
+7. **Allowed** — no `playerId` in deps; guard is skipped; move succeeds.
 7. **NPC not blocked** — actor is an NPC (not the player); move succeeds even with a living, awake, previously-attacked enemy present.
 
 ## Out of scope
