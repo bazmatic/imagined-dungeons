@@ -1,5 +1,6 @@
 import type { Agent, Exit, Location } from '@core/domain/entities';
-import { asAgentId, asExitId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
+import { asAgentId, asEventId, asExitId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
+import { AttackOutcome, EventKind } from '@core/domain/kinds';
 import { SegmentKind } from '@core/domain/segments';
 import { MemoryRepository } from '@infra/memory-repository';
 import { describe, expect, it } from 'vitest';
@@ -137,5 +138,103 @@ describe('handleMove', () => {
     if (!r.ok) throw new Error(r.error);
     const exitAfter = await repo.getExit(exitS.id);
     expect(exitAfter.locked).toBe(false);
+  });
+});
+
+describe('handleMove — combat guard', () => {
+  const goblin: Agent = {
+    id: asAgentId('char_goblin'),
+    worldId: W,
+    label: 'Goblin',
+    shortDescription: '',
+    longDescription: '',
+    locationId: A,
+    hp: 5,
+    damage: 2,
+    defense: 1,
+    capacity: 5,
+    mood: null,
+    shortTermIntent: null,
+    goal: null,
+    autonomous: false,
+    awake: true,
+    gold: 0,
+    tags: [],
+    secretDescription: '',
+  };
+
+  it('blocks the player from moving when combat is underway', async () => {
+    const repo = new MemoryRepository(W, {
+      locations: [locA, locB],
+      exits: [exitN],
+      items: [],
+      agents: [paff, goblin],
+    });
+    await repo.appendEvent({
+      id: asEventId('evt_1'),
+      worldId: W,
+      actorId: paff.id,
+      kind: EventKind.Attack,
+      witnesses: [paff.id, goblin.id],
+      createdAt: new Date(),
+      targetAgentId: goblin.id,
+      outcome: AttackOutcome.Hit,
+      damageDealt: 1,
+    });
+    const r = await handleMove(
+      { kind: 'move', actorId: paff.id, direction: 'north' },
+      repo,
+      { playerId: paff.id },
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) throw new Error();
+    expect(r.error).toMatch(/combat/i);
+  });
+
+  it('allows the player to move when there is no combat', async () => {
+    const repo = new MemoryRepository(W, {
+      locations: [locA, locB],
+      exits: [exitN],
+      items: [],
+      agents: [paff],
+    });
+    const r = await handleMove(
+      { kind: 'move', actorId: paff.id, direction: 'north' },
+      repo,
+      { playerId: paff.id },
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  it('does not block an NPC from moving even when the player is in combat', async () => {
+    const npc: Agent = {
+      ...goblin,
+      id: asAgentId('char_npc'),
+      label: 'NPC',
+      awake: false,
+    };
+    const repo = new MemoryRepository(W, {
+      locations: [locA, locB],
+      exits: [exitN],
+      items: [],
+      agents: [paff, goblin, npc],
+    });
+    await repo.appendEvent({
+      id: asEventId('evt_1'),
+      worldId: W,
+      actorId: paff.id,
+      kind: EventKind.Attack,
+      witnesses: [paff.id, goblin.id],
+      createdAt: new Date(),
+      targetAgentId: goblin.id,
+      outcome: AttackOutcome.Hit,
+      damageDealt: 1,
+    });
+    const r = await handleMove(
+      { kind: 'move', actorId: npc.id, direction: 'north' },
+      repo,
+      { playerId: paff.id },
+    );
+    expect(r.ok).toBe(true);
   });
 });

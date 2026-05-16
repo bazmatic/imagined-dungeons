@@ -4,6 +4,7 @@ import type { DomainEvent } from '@core/domain/events';
 import { asExitId, asLocationId, type AgentId, type WorldId } from '@core/domain/ids';
 import { EventKind, OwnerKind } from '@core/domain/kinds';
 import { Err, Ok, type Result } from '@core/domain/result';
+import { isPlayerInCombat } from '../combat';
 import { nextEventId } from '../ids-gen';
 import { perceive } from '../perception';
 import type { Repository } from '../repository';
@@ -37,6 +38,12 @@ export async function handleMove(
   const view = await perceive(action.actorId, repo);
   const exit = view.exits.find((e) => e.direction === action.direction);
   if (!exit) return Err("You can't go that way.");
+
+  if (deps.playerId && action.actorId === deps.playerId) {
+    if (await isPlayerInCombat(deps.playerId, view.location.id, repo)) {
+      return Err("You can't leave while in combat.");
+    }
+  }
 
   if (exit.to === null) {
     if (!deps.builderRepo) return Err("You can't go that way.");
