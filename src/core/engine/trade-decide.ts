@@ -33,7 +33,9 @@ export interface TradeDecision {
 const SYSTEM_PROMPT_LINES: readonly string[] = [
   'You decide whether a non-player character accepts a trade.',
   '',
-  'Read the seller, the buyer, and the item description. Decide whether the seller would accept the offered price for that item, given their personality, mood, and goals.',
+  'Read the seller, the buyer, and the item description. Decide whether the seller would accept the trade.',
+  '',
+  'If the buyer is paying the seller\'s own listed price (offered price equals listed price), the seller should accept UNLESS they have a strong in-character reason to refuse (e.g. hostile, not actually a merchant, wants a specific trade good instead of gold). Grumpiness or a hard bargain persona is NOT a reason to refuse a fair-price sale — those traits colour the narration, not the decision.',
   '',
   'Respond with a JSON object containing two fields:',
   '  - accept: boolean — true to accept the trade, false to refuse.',
@@ -83,6 +85,7 @@ function buildUserPrompt(req: TradeDecideRequest): string {
     `  Long: ${req.item.longDescription}`,
     `  Tags: ${req.item.tags.join(', ') || '(none)'}`,
     '',
+    `Listed price (set by the seller): ${req.item.priceTag} gold.`,
     `Offered price: ${req.price} gold.`,
   ];
   return lines.join('\n');
