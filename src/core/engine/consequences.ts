@@ -305,8 +305,8 @@ export type RawConsequence =
       readonly weight: number;
       readonly hidden: boolean;
       readonly tags: readonly string[];
-      readonly weaponDamage?: number | null;
-      readonly armorDefense?: number | null;
+      readonly weaponDamage: number | null;
+      readonly armorDefense: number | null;
     }
   | {
       readonly kind: 'delete_entity';
@@ -499,8 +499,8 @@ async function applyWorldExpansion(
           locked: false,
           lockedByItem: null,
           priceTag: null,
-          weaponDamage: raw.weaponDamage ?? null,
-          armorDefense: raw.armorDefense ?? null,
+          weaponDamage: raw.weaponDamage,
+          armorDefense: raw.armorDefense,
         });
       } catch (err) {
         log.warn(`[consequence] create_item ${raw.id} failed: ${String(err)}`);
