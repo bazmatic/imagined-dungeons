@@ -97,24 +97,24 @@ export const CONSEQUENCE_SCHEMA: JsonSchema = {
   additionalProperties: false,
   required: ['consequences', 'updatedStorySoFar'],
   properties: {
-    updatedStorySoFar: { type: ['string', 'null'] },
+    updatedStorySoFar: { anyOf: [{ type: 'string' }, { type: 'null' }] },
     consequences: {
       type: 'array',
       maxItems: 5,
       items: {
-        oneOf: [
+        anyOf: [
           {
             type: 'object',
             additionalProperties: false,
             required: ['kind', 'targetKind', 'targetRef', 'shortDescription', 'longDescription', 'mood', 'shortTermIntent'],
             properties: {
-              kind: { const: 'update_description' },
-              targetKind: { enum: ['location', 'item', 'agent'] },
+              kind: { type: 'string', enum: ['update_description'] },
+              targetKind: { type: 'string', enum: ['location', 'item', 'agent'] },
               targetRef: { type: 'string' },
-              shortDescription: { type: ['string', 'null'] },
-              longDescription: { type: ['string', 'null'] },
-              mood: { type: ['string', 'null'] },
-              shortTermIntent: { type: ['string', 'null'] },
+              shortDescription: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+              longDescription: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+              mood: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+              shortTermIntent: { anyOf: [{ type: 'string' }, { type: 'null' }] },
             },
           },
           {
@@ -122,8 +122,7 @@ export const CONSEQUENCE_SCHEMA: JsonSchema = {
             additionalProperties: false,
             required: ['kind', 'targetRef'],
             properties: {
-              kind: { const: 'reveal_item' },
-              targetKind: { type: 'string' },
+              kind: { type: 'string', enum: ['reveal_item'] },
               targetRef: { type: 'string' },
             },
           },
@@ -132,7 +131,7 @@ export const CONSEQUENCE_SCHEMA: JsonSchema = {
             additionalProperties: false,
             required: ['kind', 'id', 'label', 'shortDescription', 'longDescription', 'secretDescription', 'tags'],
             properties: {
-              kind: { const: 'create_location' },
+              kind: { type: 'string', enum: ['create_location'] },
               id: { type: 'string' },
               label: { type: 'string' },
               shortDescription: { type: 'string' },
@@ -144,12 +143,12 @@ export const CONSEQUENCE_SCHEMA: JsonSchema = {
           {
             type: 'object',
             additionalProperties: false,
-            required: ['kind', 'id', 'from', 'direction', 'label', 'locked'],
+            required: ['kind', 'id', 'from', 'to', 'direction', 'label', 'locked'],
             properties: {
-              kind: { const: 'create_exit' },
+              kind: { type: 'string', enum: ['create_exit'] },
               id: { type: 'string' },
               from: { type: 'string' },
-              to: { type: ['string', 'null'] },
+              to: { anyOf: [{ type: 'string' }, { type: 'null' }] },
               direction: { type: 'string' },
               label: { type: 'string' },
               locked: { type: 'boolean' },
@@ -158,12 +157,12 @@ export const CONSEQUENCE_SCHEMA: JsonSchema = {
           {
             type: 'object',
             additionalProperties: false,
-            required: ['kind', 'templateKey', 'locationId'],
+            required: ['kind', 'templateKey', 'locationId', 'count'],
             properties: {
-              kind: { const: 'create_agent' },
+              kind: { type: 'string', enum: ['create_agent'] },
               templateKey: { type: 'string' },
               locationId: { type: 'string' },
-              count: { type: 'integer', minimum: 1, maximum: 3 },
+              count: { type: 'integer' },
             },
           },
           {
@@ -171,14 +170,14 @@ export const CONSEQUENCE_SCHEMA: JsonSchema = {
             additionalProperties: false,
             required: ['kind', 'id', 'label', 'shortDescription', 'longDescription', 'ownerKind', 'ownerId', 'weight', 'hidden', 'tags'],
             properties: {
-              kind: { const: 'create_item' },
+              kind: { type: 'string', enum: ['create_item'] },
               id: { type: 'string' },
               label: { type: 'string' },
               shortDescription: { type: 'string' },
               longDescription: { type: 'string' },
-              ownerKind: { enum: ['location', 'agent'] },
+              ownerKind: { type: 'string', enum: ['location', 'agent'] },
               ownerId: { type: 'string' },
-              weight: { type: 'integer', minimum: 0 },
+              weight: { type: 'integer' },
               hidden: { type: 'boolean' },
               tags: { type: 'array', items: { type: 'string' } },
             },
@@ -188,8 +187,8 @@ export const CONSEQUENCE_SCHEMA: JsonSchema = {
             additionalProperties: false,
             required: ['kind', 'targetKind', 'entityId'],
             properties: {
-              kind: { const: 'delete_entity' },
-              targetKind: { enum: ['location', 'exit', 'agent', 'item'] },
+              kind: { type: 'string', enum: ['delete_entity'] },
+              targetKind: { type: 'string', enum: ['location', 'exit', 'agent', 'item'] },
               entityId: { type: 'string' },
             },
           },
