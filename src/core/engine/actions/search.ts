@@ -81,6 +81,8 @@ function coerceSpawnedItem(raw: unknown): UpsertItemInput | null {
     locked: typeof raw.locked === 'boolean' ? raw.locked : false,
     lockedByItem: null,
     priceTag: typeof raw.priceTag === 'number' ? raw.priceTag : null,
+    weaponDamage: typeof raw.weaponDamage === 'number' ? raw.weaponDamage : null,
+    armorDefense: typeof raw.armorDefense === 'number' ? raw.armorDefense : null,
   };
 }
 

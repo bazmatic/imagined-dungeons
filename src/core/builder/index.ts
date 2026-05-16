@@ -415,6 +415,8 @@ const asItemInput = (i: Item): UpsertItemInput => ({
   locked: typeof i.locked === 'boolean' ? i.locked : false,
   lockedByItem: i.lockedByItem ?? null,
   priceTag: typeof i.priceTag === 'number' ? i.priceTag : null,
+  weaponDamage: typeof i.weaponDamage === 'number' ? i.weaponDamage : null,
+  armorDefense: typeof i.armorDefense === 'number' ? i.armorDefense : null,
 });
 const asAgentInput = (a: Agent): UpsertAgentInput => ({
   id: a.id,

@@ -79,6 +79,8 @@ const toItem = (r: typeof schema.items.$inferSelect, worldId: WorldId): Item => 
   locked: r.locked,
   lockedByItem: r.lockedByItemId === null ? null : asItemId(r.lockedByItemId),
   priceTag: r.priceTag,
+  weaponDamage: r.weaponDamage ?? null,
+  armorDefense: r.armorDefense ?? null,
 });
 
 const toExit = (r: typeof schema.exits.$inferSelect, worldId: WorldId): Exit => ({

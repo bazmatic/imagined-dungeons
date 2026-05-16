@@ -157,6 +157,8 @@ export class MemoryBuilderRepository implements BuilderRepository {
       locked: i.locked,
       lockedByItem: i.lockedByItem,
       priceTag: i.priceTag ?? null,
+      weaponDamage: i.weaponDamage,
+      armorDefense: i.armorDefense,
     });
   }
   async upsertAgent(w: WorldId, i: UpsertAgentInput) {
