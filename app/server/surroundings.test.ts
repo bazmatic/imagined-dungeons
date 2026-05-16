@@ -124,6 +124,63 @@ const hidden: Item = {
   priceTag: null,
 };
 
+const SWORD = asItemId('item_sword');
+const POTION = asItemId('item_potion');
+
+const sword: Item = {
+  id: SWORD,
+  worldId: W,
+  label: 'Iron Sword',
+  shortDescription: 'a sturdy blade',
+  longDescription: '',
+  owner: { kind: OwnerKind.Agent, id: PAFF },
+  weight: 3,
+  hidden: false,
+  tags: [],
+  equipped: false,
+  container: false,
+  opened: true,
+  locked: false,
+  lockedByItem: null,
+  priceTag: 5,
+};
+
+const potion: Item = {
+  id: POTION,
+  worldId: W,
+  label: 'Health Potion',
+  shortDescription: 'restores a small amount of vitality',
+  longDescription: '',
+  owner: { kind: OwnerKind.Agent, id: PAFF },
+  weight: 1,
+  hidden: false,
+  tags: [],
+  equipped: false,
+  container: false,
+  opened: true,
+  locked: false,
+  lockedByItem: null,
+  priceTag: 10,
+};
+
+const notForSale: Item = {
+  id: asItemId('item_not_for_sale'),
+  worldId: W,
+  label: 'Paff\'s Mug',
+  shortDescription: 'a personal mug',
+  longDescription: '',
+  owner: { kind: OwnerKind.Agent, id: PAFF },
+  weight: 1,
+  hidden: false,
+  tags: [],
+  equipped: false,
+  container: false,
+  opened: true,
+  locked: false,
+  lockedByItem: null,
+  priceTag: null,
+};
+
 const exitN: Exit = {
   id: EXIT_N,
   worldId: W,
@@ -151,6 +208,14 @@ const makeRepo = (): MemoryRepository =>
     locations: [loc],
     exits: [exitN, exitS],
     items: [map, hidden],
+    agents: [player, spark, paff],
+  });
+
+const makeRepoWithWares = (): MemoryRepository =>
+  new MemoryRepository(W, {
+    locations: [loc],
+    exits: [exitN, exitS],
+    items: [map, hidden, sword, potion, notForSale],
     agents: [player, spark, paff],
   });
 
@@ -185,12 +250,16 @@ describe('buildSurroundings', () => {
         label: 'Spark',
         shortDescription: 'a halfling courier',
         mood: 'energetic',
+        hp: 18,
+        wares: [],
       },
       {
         id: 'char_paff',
         label: 'Paff Pinkerton',
         shortDescription: 'a tavern-keeper',
         mood: null,
+        hp: 20,
+        wares: [],
       },
     ]);
   });
@@ -199,5 +268,29 @@ describe('buildSurroundings', () => {
     const repo = makeRepo();
     const r = await buildSurroundings(PLAYER, repo);
     expect(r.characters.find((c) => c.id === 'char_player')).toBeUndefined();
+  });
+
+  it('includes for-sale items (priceTag > 0) in wares for their owning character', async () => {
+    const repo = makeRepoWithWares();
+    const r = await buildSurroundings(PLAYER, repo);
+    const paff = r.characters.find((c) => c.id === 'char_paff');
+    expect(paff?.wares).toEqual([
+      { id: 'item_sword', label: 'Iron Sword', shortDescription: 'a sturdy blade', priceTag: 5 },
+      { id: 'item_potion', label: 'Health Potion', shortDescription: 'restores a small amount of vitality', priceTag: 10 },
+    ]);
+  });
+
+  it('excludes items owned by the character with priceTag null', async () => {
+    const repo = makeRepoWithWares();
+    const r = await buildSurroundings(PLAYER, repo);
+    const paff = r.characters.find((c) => c.id === 'char_paff');
+    expect(paff?.wares.find((w) => w.id === 'item_not_for_sale')).toBeUndefined();
+  });
+
+  it('returns empty wares for a character with no items for sale', async () => {
+    const repo = makeRepoWithWares();
+    const r = await buildSurroundings(PLAYER, repo);
+    const spark = r.characters.find((c) => c.id === 'char_spark');
+    expect(spark?.wares).toEqual([]);
   });
 });

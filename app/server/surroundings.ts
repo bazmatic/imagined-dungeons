@@ -14,12 +14,20 @@ export interface SurroundingsExit {
   readonly locked: boolean;
 }
 
+export interface SurroundingsWare {
+  readonly id: string;
+  readonly label: string;
+  readonly shortDescription: string;
+  readonly priceTag: number;
+}
+
 export interface SurroundingsCharacter {
   readonly id: string;
   readonly label: string;
   readonly shortDescription: string;
   readonly mood: string | null;
   readonly hp: number;
+  readonly wares: readonly SurroundingsWare[];
 }
 
 export interface SurroundingsView {
