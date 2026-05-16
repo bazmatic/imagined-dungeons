@@ -22,7 +22,8 @@
     "migrate:worlds": "tsx scripts/migrate-worlds.ts",
     "mcp": "tsx src/mcp/server.ts",
     "db": "drizzle-kit studio",
-    "test:llm": "vitest run --config vitest.smoke.config.ts"
+    "test:llm": "vitest run --config vitest.smoke.config.ts",
+    "backfill:item-stats": "tsx scripts/backfill-item-stats.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
