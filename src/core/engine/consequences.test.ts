@@ -375,6 +375,52 @@ describe('consequencesFor', () => {
     if (!call) throw new Error('expected call');
     expect(call.user).not.toContain('GM-only notes');
   });
+
+  describe('consequencesFor — creative_attack', () => {
+    it('emits a creative_attack action when the LLM returns one', async () => {
+      const repo = repoFor();
+      const llm = makeFakeLanguageModel({
+        responder: () => ({
+          raw: '',
+          parsed: {
+            updatedStorySoFar: null,
+            consequences: [
+              {
+                kind: 'creative_attack',
+                actorRef: 'Paff',
+                targetRef: 'Paff',
+                toHit: { sides: 20, threshold: 1 },
+                damage: { count: 1, sides: 6, bonus: 0 },
+                narrative: 'Paff smashes the lantern overhead',
+              },
+            ],
+          },
+        }),
+      });
+      const actions = await consequencesFor([takeEvent], repo, llm);
+      const ca = actions.find((a) => a.kind === ActionKind.CreativeAttack);
+      expect(ca).toBeTruthy();
+      if (!ca || ca.kind !== ActionKind.CreativeAttack) throw new Error();
+      expect(ca.narrative).toBe('Paff smashes the lantern overhead');
+      expect(ca.toHit).toEqual({ sides: 20, threshold: 1 });
+      expect(ca.damage).toEqual({ count: 1, sides: 6, bonus: 0 });
+    });
+
+    it('drops malformed creative_attack consequences silently', async () => {
+      const repo = repoFor();
+      const llm = makeFakeLanguageModel({
+        responder: () => ({
+          raw: '',
+          parsed: {
+            updatedStorySoFar: null,
+            consequences: [{ kind: 'creative_attack' }], // missing required fields
+          },
+        }),
+      });
+      const actions = await consequencesFor([takeEvent], repo, llm);
+      expect(actions.filter((a) => a.kind === ActionKind.CreativeAttack)).toHaveLength(0);
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------
