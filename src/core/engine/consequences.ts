@@ -39,7 +39,7 @@ const SYSTEM_PROMPT_LINES: readonly string[] = [
   'When to emit `reveal_item`:',
   '- The player disturbed, broke, or rearranged the scene in a way that would expose something previously hidden (smashing a chest, knocking over a pile, lifting a tapestry, kicking aside a rug, lighting a dark corner).',
   "- The player's narrated action contextually suggests they would now notice a specific hidden item that exists at the location.",
-  '- For a reveal action, set kind="reveal_item", targetRef = the natural-language name of the hidden item the engine should reveal, targetKind="item", and the description / mood / shortTermIntent fields all null. The engine resolves targetRef against the currently-hidden items at the locations where the events happened.',
+  '- For a reveal action, set kind="reveal_item", targetRef = the natural-language name of the hidden item the engine should reveal, targetKind="item", and the description / mood fields all null. The engine resolves targetRef against the currently-hidden items at the locations where the events happened.',
   '- Do NOT use reveal_item when a normal search already matched the hidden item; the search handler reveals it directly. Reveal is for INDIRECT discoveries — actions that incidentally expose something.',
   '',
   'When to emit a description update:',
@@ -222,6 +222,8 @@ export const CONSEQUENCE_SCHEMA: JsonSchema = {
               weight: { type: 'integer' },
               hidden: { type: 'boolean' },
               tags: { type: 'array', items: { type: 'string' } },
+              weaponDamage: { type: ['number', 'null'] },
+              armorDefense: { type: ['number', 'null'] },
             },
           },
           {
@@ -303,6 +305,8 @@ export type RawConsequence =
       readonly weight: number;
       readonly hidden: boolean;
       readonly tags: readonly string[];
+      readonly weaponDamage?: number | null;
+      readonly armorDefense?: number | null;
     }
   | {
       readonly kind: 'delete_entity';
@@ -411,7 +415,9 @@ export function parseConsequenceResponse(parsed: unknown): readonly RawConsequen
         continue;
       }
       if (ownerKind !== OwnerKind.Location && ownerKind !== OwnerKind.Agent) continue;
-      out.push({ kind: ActionKind.CreateItem, id, label, shortDescription: short, longDescription: long, ownerKind, ownerId, weight, hidden, tags });
+      const weaponDamage = typeof entry.weaponDamage === 'number' ? entry.weaponDamage : null;
+      const armorDefense = typeof entry.armorDefense === 'number' ? entry.armorDefense : null;
+      out.push({ kind: ActionKind.CreateItem, id, label, shortDescription: short, longDescription: long, ownerKind, ownerId, weight, hidden, tags, weaponDamage, armorDefense });
       continue;
     }
 
@@ -493,6 +499,8 @@ async function applyWorldExpansion(
           locked: false,
           lockedByItem: null,
           priceTag: null,
+          weaponDamage: raw.weaponDamage ?? null,
+          armorDefense: raw.armorDefense ?? null,
         });
       } catch (err) {
         log.warn(`[consequence] create_item ${raw.id} failed: ${String(err)}`);
