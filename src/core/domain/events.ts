@@ -36,6 +36,13 @@ export type DomainEvent =
       outcome: 'hit' | 'miss';
       damageDealt: number;
     })
+  | (BaseEvent & {
+      kind: 'creative_attack';
+      targetAgentId: AgentId;
+      outcome: 'hit' | 'miss';
+      damageDealt: number;
+      narrative: string;
+    })
   /**
    * The event kind name `description_updated` is retained for compatibility
    * with persisted history; the payload now also covers mood and short-term
@@ -79,4 +86,5 @@ export const NARRATED_EVENT_KINDS: ReadonlySet<EventKind> = new Set<EventKind>([
   EventKind.Speak,
   EventKind.Emote,
   EventKind.Attack,
+  EventKind.CreativeAttack,
 ]);

@@ -22,6 +22,14 @@ export type Action =
       targetAgentId: AgentId | null;
     }
   | { kind: 'attack'; actorId: AgentId; targetAgentId: AgentId }
+  | {
+      kind: 'creative_attack';
+      actorId: AgentId;
+      targetAgentId: AgentId;
+      toHit: { readonly sides: number; readonly threshold: number };
+      damage: { readonly count: number; readonly sides: number; readonly bonus: number };
+      narrative: string;
+    }
   | { kind: 'search'; actorId: AgentId; query: string }
   | { kind: 'equip'; actorId: AgentId; itemId: ItemId; manner: string }
   | { kind: 'unequip'; actorId: AgentId; itemId: ItemId; manner: string }

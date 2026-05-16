@@ -35,6 +35,7 @@ export const ActionKind = {
   Buy: 'buy',
   Sell: 'sell',
   Offer: 'offer',
+  CreativeAttack: 'creative_attack',
   CreateLocation: 'create_location',
   CreateExit: 'create_exit',
   CreateAgent: 'create_agent',
@@ -82,6 +83,7 @@ export const EventKind = {
   Close: 'close',
   Trade: 'trade',
   Death: 'death',
+  CreativeAttack: 'creative_attack',
 } as const;
 export type EventKind = (typeof EventKind)[keyof typeof EventKind];
 
