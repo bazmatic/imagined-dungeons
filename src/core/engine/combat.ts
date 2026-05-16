@@ -2,6 +2,8 @@ import type { AgentId, LocationId } from '@core/domain/ids';
 import { EventKind } from '@core/domain/kinds';
 import type { Repository } from './repository';
 
+// Scans the last N *events* (not turns) for an attack involving the player.
+// In a busy tick many events fire, so this window may span only a few turns.
 const RECENT_EVENT_WINDOW = 100;
 
 export async function isPlayerInCombat(
