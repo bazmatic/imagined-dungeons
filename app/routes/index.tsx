@@ -28,10 +28,10 @@ interface InventoryItem {
 }
 
 interface ForSaleItem {
-  id: string;
-  label: string;
-  shortDescription: string;
-  priceTag: number;
+  readonly id: string;
+  readonly label: string;
+  readonly shortDescription: string;
+  readonly priceTag: number;
 }
 
 interface SurroundingsItem {
