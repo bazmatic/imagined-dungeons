@@ -1,6 +1,6 @@
 import type { Action } from '@core/domain/actions';
 import type { DomainEvent } from '@core/domain/events';
-import { EventKind } from '@core/domain/kinds';
+import { AttackOutcome, EventKind } from '@core/domain/kinds';
 import { Err, Ok, type Result } from '@core/domain/result';
 import { type Segment, SegmentKind } from '@core/domain/segments';
 import { nextEventId } from '../ids-gen';
@@ -45,7 +45,7 @@ export async function handleAttack(
   });
   const { outcome, damageDealt } = combat;
 
-  if (combat.outcome === 'hit') {
+  if (combat.outcome === AttackOutcome.Hit) {
     await repo.setAgentHp(target.id, combat.defenderHpAfter);
   }
 
@@ -70,7 +70,7 @@ export async function handleAttack(
   }
 
   const render: Segment[] = [];
-  if (outcome === 'hit') {
+  if (outcome === AttackOutcome.Hit) {
     render.push({ kind: SegmentKind.Hit, text: `You hit ${target.label} for ${damageDealt} damage.` });
     if (combat.defenderDied) {
       render.push({ kind: SegmentKind.Death, text: `${target.label} is slain!` });
