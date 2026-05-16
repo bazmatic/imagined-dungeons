@@ -26,11 +26,12 @@ import type { ActionOutcome } from './types';
 import { handleUpdateDescription } from './update-description';
 
 /**
- * Optional dependencies passed to handlers that need them (currently only
- * `handleSearch`, which calls the generative-discovery LLM and persists
- * spawned entities through the builder port). Handlers that don't need
- * these may ignore them. Missing deps for a handler that requires them
+ * Optional dependencies passed to handlers that need them. Handlers that don't
+ * need a given dep may ignore it. Missing deps for a handler that requires them
  * cause that handler to return an `Err` rather than crash the turn.
+ *
+ * - `llm`, `builderRepo`, `worldId`: required by `handleSearch` for generative discovery.
+ * - `playerId`: required by `handleMove` to enforce the combat-locked movement rule.
  */
 export interface DispatchDeps {
   readonly llm?: LanguageModel | null;
