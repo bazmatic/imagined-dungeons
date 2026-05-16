@@ -550,12 +550,13 @@ async function handleSubmit(e: React.FormEvent): Promise<void> {
       const { done, value } = await reader.read();
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
+      const SSE_PREFIX = 'data: ';
       const parts = buffer.split('\n\n');
       buffer = parts.pop() ?? '';
       for (const part of parts) {
         const line = part.trim();
-        if (!line.startsWith('data: ')) continue;
-        applyChunk(JSON.parse(line.slice(6)) as TickStreamChunk);
+        if (!line.startsWith(SSE_PREFIX)) continue;
+        applyChunk(JSON.parse(line.slice(SSE_PREFIX.length)) as TickStreamChunk);
       }
     }
   } catch (err) {
