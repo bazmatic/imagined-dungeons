@@ -27,6 +27,13 @@ interface InventoryItem {
   equipped: boolean;
 }
 
+interface ForSaleItem {
+  id: string;
+  label: string;
+  shortDescription: string;
+  priceTag: number;
+}
+
 interface SurroundingsItem {
   id: string;
   label: string;
@@ -45,6 +52,7 @@ interface SurroundingsCharacter {
   shortDescription: string;
   mood: string | null;
   hp: number;
+  wares: readonly ForSaleItem[];
 }
 
 interface Surroundings {
@@ -381,6 +389,24 @@ function Page() {
                     {c.mood ? (
                       <div style={{ fontStyle: 'italic', color: '#888', fontSize: 12 }}>
                         {c.mood}
+                      </div>
+                    ) : null}
+                    {c.wares.length > 0 ? (
+                      <div style={{ marginTop: 4 }}>
+                        <div style={{ fontSize: 11, color: '#888', marginBottom: 2 }}>For sale:</div>
+                        <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                          {c.wares.map((w) => (
+                            <li key={w.id} style={{ fontSize: 11, display: 'flex', justifyContent: 'space-between', gap: 4, marginBottom: 1 }}>
+                              <span style={{ opacity: 0.9 }}>
+                                {w.label}
+                                {w.shortDescription ? (
+                                  <span style={{ fontStyle: 'italic', opacity: 0.75 }}> — {w.shortDescription}</span>
+                                ) : null}
+                              </span>
+                              <span style={{ color: '#ba9', flexShrink: 0 }}>{w.priceTag}g</span>
+                            </li>
+                          ))}
+                        </ul>
                       </div>
                     ) : null}
                   </li>
