@@ -14,7 +14,7 @@ export interface SurroundingsExit {
   readonly locked: boolean;
 }
 
-export interface SurroundingsWare {
+export interface ForSaleItem {
   readonly id: string;
   readonly label: string;
   readonly shortDescription: string;
@@ -27,7 +27,7 @@ export interface SurroundingsCharacter {
   readonly shortDescription: string;
   readonly mood: string | null;
   readonly hp: number;
-  readonly wares: readonly SurroundingsWare[];
+  readonly wares: readonly ForSaleItem[];
 }
 
 export interface SurroundingsView {
