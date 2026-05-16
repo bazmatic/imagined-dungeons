@@ -85,6 +85,12 @@ export const items = sqliteTable(
     // Authored asking price (nullable). When non-null and > 0 the item is for
     // sale at this many gold; the engine clears it on Trade-event handover.
     priceTag: integer('price_tag'),
+    // Authored stat. When non-null this item is a weapon; the value is the
+    // max damage die (replaces the agent's base damage stat when equipped).
+    weaponDamage: integer('weapon_damage'),
+    // Authored stat. When non-null this item is armour; the value is added
+    // to the defender's base defense stat while equipped.
+    armorDefense: integer('armor_defense'),
   },
   (t) => [primaryKey({ columns: [t.worldId, t.id] })],
 );

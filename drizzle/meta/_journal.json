@@ -127,6 +127,13 @@
       "when": 1778900002000,
       "tag": "0017_monster_template_combat_stats",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1747948456000,
+      "tag": "0018_item_combat_stats",
+      "breakpoints": true
     }
   ]
 }
