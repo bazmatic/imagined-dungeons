@@ -9,6 +9,7 @@ import type { HandlerRepo } from '../repository';
 import { handleAttack } from './attack';
 import { handleBuy } from './buy';
 import { handleClose } from './close';
+import { handleCreativeAttack } from './creative-attack';
 import { handleDrop } from './drop';
 import { handleEmote } from './emote';
 import { handleEquip, handleUnequip } from './equip';
@@ -67,6 +68,8 @@ export async function dispatch(
       return handleEmote(action, repo, deps);
     case ActionKind.Attack:
       return handleAttack(action, repo, deps);
+    case ActionKind.CreativeAttack:
+      return handleCreativeAttack(action, repo, deps);
     case ActionKind.UpdateDescription:
       return handleUpdateDescription(action, repo);
     case ActionKind.Search: {
