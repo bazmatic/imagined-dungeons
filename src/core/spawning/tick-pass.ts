@@ -1,6 +1,6 @@
 import type { BuilderRepository } from '@core/builder/repository';
 import { TriggerEventKind } from '@core/domain/builder-kinds';
-import type { LocationSpawnTrigger, MonsterTemplate, TriggerFireState, UpsertAgentInput } from '@core/domain/builder-types';
+import type { LocationSpawnTrigger, MonsterTemplate, TriggerFireState, UpsertAgentInput, UpsertItemInput } from '@core/domain/builder-types';
 import type { DomainEvent } from '@core/domain/events';
 import {
   type AgentId,
@@ -30,6 +30,7 @@ export interface TickSpawnResult {
 
 export interface SpawnBatch {
   readonly agents: readonly UpsertAgentInput[];
+  readonly items: readonly UpsertItemInput[];
   readonly triggerFires: ReadonlyMap<SpawnTriggerId, { firedAt: number }>;
   readonly events: readonly DomainEvent[];
 }
@@ -47,6 +48,7 @@ export interface PlanSpawnArgs {
 export async function planSpawnBatch(args: PlanSpawnArgs): Promise<SpawnBatch> {
   const now = args.now ?? (() => Date.now());
   const agents: UpsertAgentInput[] = [];
+  const items: UpsertItemInput[] = [];
   const triggerFires = new Map<SpawnTriggerId, { firedAt: number }>();
   const events: DomainEvent[] = [];
   let spawnCount = 0;
@@ -62,7 +64,7 @@ export async function planSpawnBatch(args: PlanSpawnArgs): Promise<SpawnBatch> {
     const inserts = expandSpawn({ template: tpl, locationId: hit.trigger.locationId, count, labels });
     // Snapshot witnesses before any inserts so spawned agents don't witness their own arrival.
     const witnesses = await args.fetchWitnesses(hit.trigger.locationId);
-    for (const insert of inserts) {
+    for (const insert of inserts.agents) {
       agents.push(insert);
       events.push(spawnedEvent({
         worldId: args.worldId,
@@ -75,10 +77,13 @@ export async function planSpawnBatch(args: PlanSpawnArgs): Promise<SpawnBatch> {
       spawnCount++;
       if (spawnCount >= MAX_SPAWNS_PER_TICK) break;
     }
+    for (const item of inserts.items) {
+      items.push(item);
+    }
     triggerFires.set(hit.trigger.id, { firedAt: now() });
   }
 
-  return { agents, triggerFires, events };
+  return { agents, items, triggerFires, events };
 }
 
 export interface ExecuteSpawnArgs {
@@ -87,10 +92,13 @@ export interface ExecuteSpawnArgs {
   readonly previousFireState: TriggerFireState;
 }
 
-/** Execution phase: all writes. Agents first, then fire-state in one call. */
+/** Execution phase: all writes. Agents first, then items, then fire-state in one call. */
 export async function executeSpawnPlan(batch: SpawnBatch, args: ExecuteSpawnArgs): Promise<void> {
   for (const agent of batch.agents) {
     await args.builderRepo.upsertAgent(args.worldId, agent);
+  }
+  for (const item of batch.items) {
+    await args.builderRepo.upsertItem(args.worldId, item);
   }
   if (batch.triggerFires.size > 0) {
     const newFireRecords: Record<string, { firedAt: number }> = { ...args.previousFireState.byTriggerId };

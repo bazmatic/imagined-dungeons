@@ -187,6 +187,7 @@ export class SqliteBuilderRepository implements BuilderRepository {
         weight: i.weight,
         hidden: i.hidden,
         tags: tagsJson,
+        equipped: i.equipped ?? false,
         container: i.container,
         opened: i.opened,
         locked: i.locked,

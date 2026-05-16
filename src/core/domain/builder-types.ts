@@ -281,6 +281,13 @@ export interface UpsertItemInput {
   readonly priceTag: number | null;
   readonly weaponDamage: number | null;
   readonly armorDefense: number | null;
+  /**
+   * When true the item is created already worn/wielded by its owning agent.
+   * Only meaningful on insert (upsert repos preserve the existing runtime
+   * flag on conflict rather than overwriting it). Defaults to false when
+   * omitted.
+   */
+  readonly equipped?: boolean;
 }
 
 export interface UpsertAgentInput {

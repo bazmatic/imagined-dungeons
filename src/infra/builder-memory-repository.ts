@@ -137,9 +137,10 @@ export class MemoryBuilderRepository implements BuilderRepository {
         : i.ownerKind === OwnerKind.Agent
           ? { kind: OwnerKind.Agent, id: asAgentId(i.ownerId) }
           : { kind: OwnerKind.Item, id: asItemId(i.ownerId) };
-    // Preserve the runtime `equipped` flag on update; default to false on
-    // insert. Mirrors the SQLite repo, which leaves the column out of the
-    // .onConflictDoUpdate set so existing values survive authored upserts.
+    // Preserve the runtime `equipped` flag on update; use input value on
+    // insert (so spawn can set equipped: true). Mirrors the SQLite repo,
+    // which uses input.equipped for the insert value but leaves the column
+    // out of .onConflictDoUpdate so existing values survive authored upserts.
     const existing = this.bucket(this.items, w).get(i.id);
     this.bucket(this.items, w).set(i.id, {
       id: asItemId(i.id),
@@ -151,7 +152,7 @@ export class MemoryBuilderRepository implements BuilderRepository {
       weight: i.weight,
       hidden: i.hidden,
       tags: [...i.tags],
-      equipped: existing?.equipped ?? false,
+      equipped: existing?.equipped ?? (i.equipped ?? false),
       container: i.container,
       opened: i.opened,
       locked: i.locked,

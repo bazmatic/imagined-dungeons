@@ -513,16 +513,23 @@ async function applyWorldExpansion(
         log.warn(`[consequence] create_agent: no template with key "${raw.templateKey}"; dropping`);
         continue;
       }
-      const inputs = expandSpawn({
+      const result = expandSpawn({
         template,
         locationId: asLocationId(raw.locationId),
         count: raw.count,
       });
-      for (const input of inputs) {
+      for (const input of result.agents) {
         try {
           await lore.builderRepo.upsertAgent(lore.worldId, input);
         } catch (err) {
           log.warn(`[consequence] create_agent upsert failed: ${String(err)}`);
+        }
+      }
+      for (const item of result.items) {
+        try {
+          await lore.builderRepo.upsertItem(lore.worldId, item);
+        } catch (err) {
+          log.warn(`[consequence] create_agent item upsert failed: ${String(err)}`);
         }
       }
     }
