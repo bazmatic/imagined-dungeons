@@ -76,6 +76,9 @@ const startingItemsField = {
       longDescription: stringField('long description'),
       weight: { type: 'number', description: 'inventory weight' },
       hidden: { type: 'boolean', description: 'whether the item starts hidden' },
+      weaponDamage: { type: ['number', 'null'], description: 'weapon damage die (replaces agent bare-handed damage when equipped)' },
+      armorDefense: { type: ['number', 'null'], description: 'armor defense bonus (stacks with base defense when equipped)' },
+      equipped: { type: 'boolean', description: 'true if the item spawns already worn/wielded' },
     },
     required: ['kind', 'label', 'shortDescription', 'longDescription', 'weight', 'hidden'],
   },
@@ -208,6 +211,8 @@ export const TOOLS: readonly ToolDef[] = [
         weight: { type: 'number' },
         hidden: { type: 'boolean' },
         priceTag: { type: ['number', 'null'] },
+        weaponDamage: { type: ['number', 'null'], description: 'weapon damage die; null = not a weapon' },
+        armorDefense: { type: ['number', 'null'], description: 'armor defense bonus; null = not armor' },
         tags: tagsField,
       },
       required: [
