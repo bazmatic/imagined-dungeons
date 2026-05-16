@@ -210,7 +210,7 @@ export const CONSEQUENCE_SCHEMA: JsonSchema = {
           {
             type: 'object',
             additionalProperties: false,
-            required: ['kind', 'id', 'label', 'shortDescription', 'longDescription', 'ownerKind', 'ownerId', 'weight', 'hidden', 'tags'],
+            required: ['kind', 'id', 'label', 'shortDescription', 'longDescription', 'ownerKind', 'ownerId', 'weight', 'hidden', 'tags', 'weaponDamage', 'armorDefense'],
             properties: {
               kind: { type: 'string', enum: ['create_item'] },
               id: { type: 'string' },
