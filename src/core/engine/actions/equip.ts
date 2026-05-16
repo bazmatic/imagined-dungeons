@@ -27,6 +27,14 @@ export async function handleEquip(
   if (item.equipped) {
     return Err(`You already have the ${item.label} equipped.`);
   }
+  if (item.weaponDamage !== null) {
+    const carried = await repo.itemsOwnedBy({ kind: OwnerKind.Agent, id: action.actorId });
+    for (const other of carried) {
+      if (other.id !== item.id && other.weaponDamage !== null && other.equipped) {
+        await repo.setItemEquipped(other.id, false);
+      }
+    }
+  }
   await repo.setItemEquipped(item.id, true);
   const witnesses = (await repo.agentsAt(view.location.id)).map((a) => a.id);
   const event: DomainEvent = {

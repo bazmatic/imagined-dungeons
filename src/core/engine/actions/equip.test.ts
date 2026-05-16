@@ -111,6 +111,98 @@ describe('handleEquip', () => {
   });
 });
 
+describe('handleEquip — weapon slot enforcement', () => {
+  const sword: Item = {
+    id: asItemId('item_sword'),
+    worldId: W,
+    label: 'sword',
+    shortDescription: '',
+    longDescription: '',
+    owner: { kind: OwnerKind.Agent, id: paff.id },
+    weight: 2,
+    hidden: false,
+    tags: [],
+    equipped: true,
+    container: false,
+    opened: false,
+    locked: false,
+    lockedByItem: null,
+    priceTag: null,
+    weaponDamage: 5,
+    armorDefense: null,
+  };
+  const axe: Item = {
+    id: asItemId('item_axe'),
+    worldId: W,
+    label: 'axe',
+    shortDescription: '',
+    longDescription: '',
+    owner: { kind: OwnerKind.Agent, id: paff.id },
+    weight: 3,
+    hidden: false,
+    tags: [],
+    equipped: false,
+    container: false,
+    opened: false,
+    locked: false,
+    lockedByItem: null,
+    priceTag: null,
+    weaponDamage: 8,
+    armorDefense: null,
+  };
+  const shield: Item = {
+    id: asItemId('item_shield'),
+    worldId: W,
+    label: 'shield',
+    shortDescription: '',
+    longDescription: '',
+    owner: { kind: OwnerKind.Agent, id: paff.id },
+    weight: 4,
+    hidden: false,
+    tags: [],
+    equipped: false,
+    container: false,
+    opened: false,
+    locked: false,
+    lockedByItem: null,
+    priceTag: null,
+    weaponDamage: null,
+    armorDefense: 3,
+  };
+
+  it('auto-unequips the current weapon when equipping a new weapon', async () => {
+    const repo = new MemoryRepository(W, {
+      locations: [loc],
+      exits: [],
+      items: [sword, axe],
+      agents: [paff],
+    });
+    const r = await handleEquip(
+      { kind: ActionKind.Equip, actorId: paff.id, itemId: axe.id, manner: 'draw' },
+      repo,
+    );
+    if (!r.ok) throw new Error(r.error);
+    expect((await repo.getItem(axe.id)).equipped).toBe(true);
+    expect((await repo.getItem(sword.id)).equipped).toBe(false);
+  });
+
+  it('does not auto-unequip the weapon when equipping armour', async () => {
+    const repo = new MemoryRepository(W, {
+      locations: [loc],
+      exits: [],
+      items: [sword, shield],
+      agents: [paff],
+    });
+    const r = await handleEquip(
+      { kind: ActionKind.Equip, actorId: paff.id, itemId: shield.id, manner: 'put on' },
+      repo,
+    );
+    if (!r.ok) throw new Error(r.error);
+    expect((await repo.getItem(shield.id)).equipped).toBe(true);
+    expect((await repo.getItem(sword.id)).equipped).toBe(true);
+  });
+});
+
 describe('handleUnequip', () => {
   it('clears the equipped flag and emits an Unequip event', async () => {
     const repo = new MemoryRepository(W, {
