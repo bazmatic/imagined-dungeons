@@ -95,7 +95,7 @@ const SYSTEM_PROMPT_LINES: readonly string[] = [
   'For creative_attack set:',
   "- actorRef: natural-language name of the actor (e.g. \"Paff Pinkerton\")",
   "- targetRef: natural-language name of the target (e.g. \"the orc\")",
-  '- toHit: { sides: 20, threshold: N } — threshold reflects cleverness: inspired idea 4-6, solid idea 10-14, clumsy idea 16+',
+  '- toHit: { sides: 20, threshold: N } — lower threshold = easier to hit; threshold reflects cleverness: inspired idea 4-6, solid idea 10-14, clumsy idea 16+',
   "- damage: { count, sides, bonus } — reflects physical severity: small hazard 1d4, moderate 1d6-1d8, serious 2d6",
   "- narrative: one sentence of prose describing what happened (e.g. \"Mira sweeps the candelabra into the orc's face\")",
 ];
@@ -151,7 +151,7 @@ export const CONSEQUENCE_SCHEMA: JsonSchema = {
                 additionalProperties: false,
                 required: ['sides', 'threshold'],
                 properties: {
-                  sides: { type: 'integer', minimum: 4, maximum: 20 },
+                  sides: { type: 'integer', enum: [20] },
                   threshold: { type: 'integer', minimum: 1, maximum: 25 },
                 },
               },
@@ -165,7 +165,7 @@ export const CONSEQUENCE_SCHEMA: JsonSchema = {
                   bonus: { type: 'integer', minimum: 0, maximum: 5 },
                 },
               },
-              narrative: { type: 'string' },
+              narrative: { type: 'string', minLength: 1 },
             },
           },
           {
@@ -339,8 +339,8 @@ export function parseConsequenceResponse(parsed: unknown): readonly RawConsequen
         typeof actorRef !== 'string' || actorRef.length === 0 ||
         typeof targetRef !== 'string' || targetRef.length === 0 ||
         typeof narrative !== 'string' || narrative.length === 0 ||
-        !isRecord(toHit) || typeof toHit.sides !== 'number' || typeof toHit.threshold !== 'number' ||
-        !isRecord(damage) || typeof damage.count !== 'number' || typeof damage.sides !== 'number' || typeof damage.bonus !== 'number'
+        !isRecord(toHit) || typeof toHit.sides !== 'number' || toHit.sides !== 20 || typeof toHit.threshold !== 'number' || toHit.threshold < 1 ||
+        !isRecord(damage) || typeof damage.count !== 'number' || damage.count < 1 || typeof damage.sides !== 'number' || damage.sides < 4 || typeof damage.bonus !== 'number' || damage.bonus < 0
       ) continue;
       out.push({
         kind: ActionKind.CreativeAttack,
