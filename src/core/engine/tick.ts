@@ -320,6 +320,17 @@ async function wakeWitnessingNpcs(events: readonly DomainEvent[], repo: Reposito
     if (!WAKING_EVENT_KINDS.has(e.kind)) continue;
     for (const witnessId of e.witnesses) {
       if (witnessId === e.actorId) continue;
+      // Departures don't wake dormant NPCs — only arrivals do. A witness at
+      // the source location saw someone leave; a witness at the destination
+      // saw someone arrive. Only the latter is noteworthy enough to rouse.
+      if (e.kind === EventKind.Move) {
+        try {
+          const w = await repo.getAgent(witnessId);
+          if (w.locationId !== e.to) continue;
+        } catch {
+          continue;
+        }
+      }
       wakeIds.add(witnessId);
     }
   }

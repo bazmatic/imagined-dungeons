@@ -1,5 +1,5 @@
-import type { Agent, Location } from '@core/domain/entities';
-import { asAgentId, asLocationId, asWorldId } from '@core/domain/ids';
+import type { Agent, Exit, Location } from '@core/domain/entities';
+import { asAgentId, asExitId, asLocationId, asWorldId } from '@core/domain/ids';
 import { makeCompositeParser } from '@core/engine/parser/composite';
 import { runTick } from '@core/engine/tick';
 import { MemoryRepository } from '@infra/memory-repository';
@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 const W = asWorldId('w');
 const LOC = asLocationId('loc_room');
+const LOC_B = asLocationId('loc_room_b');
 const PLAYER = asAgentId('char_player');
 const SERENA = asAgentId('char_serena');
 
@@ -18,6 +19,27 @@ const loc: Location = {
   longDescription: 'Just a room.',
   tags: [],
   secretDescription: '',
+};
+
+const locB: Location = {
+  id: LOC_B,
+  worldId: W,
+  label: 'Another room',
+  shortDescription: '',
+  longDescription: 'Another room.',
+  tags: [],
+  secretDescription: '',
+};
+
+const exitNorth: Exit = {
+  id: asExitId('exit_north'),
+  worldId: W,
+  from: LOC,
+  to: LOC_B,
+  direction: 'north',
+  label: 'north door',
+  locked: false,
+  lockedByItem: null,
 };
 
 const player: Agent = {
@@ -100,4 +122,19 @@ describe('wake-on-interaction', () => {
     expect((await repo.getAgent(SERENA)).awake).toBe(false);
     expect((await repo.getAgent(SERENA)).shortTermIntent).toBeNull();
   });
+
+  it('player leaving a location does NOT wake a dormant NPC left behind', async () => {
+    const serenaInLoc: Agent = { ...dormantSerena, locationId: LOC };
+    const repo = new MemoryRepository(W, {
+      locations: [loc, locB],
+      exits: [exitNorth],
+      items: [],
+      agents: [player, serenaInLoc],
+    });
+    const parse = makeCompositeParser({ llm: null });
+    await runTick(PLAYER, 'go north', repo, { parse, ai: null });
+    expect((await repo.getAgent(PLAYER)).locationId).toBe(LOC_B);
+    expect((await repo.getAgent(SERENA)).awake).toBe(false);
+  });
+
 });

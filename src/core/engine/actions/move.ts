@@ -88,7 +88,9 @@ export async function handleMove(
     });
 
     await repo.moveAgent(action.actorId, stubId);
-    const witnesses = (await repo.agentsAt(view.location.id)).map((a) => a.id);
+    const atSource = (await repo.agentsAt(view.location.id)).map((a) => a.id);
+    const atDest = (await repo.agentsAt(stubId)).map((a) => a.id);
+    const witnesses = [...new Set([...atSource, ...atDest])];
     const event: DomainEvent = {
       id: nextEventId(),
       worldId: await repo.getWorldId(),
@@ -114,7 +116,9 @@ export async function handleMove(
   }
 
   await repo.moveAgent(action.actorId, exit.to);
-  const witnesses = (await repo.agentsAt(view.location.id)).map((a) => a.id);
+  const atSource = (await repo.agentsAt(view.location.id)).map((a) => a.id);
+  const atDest = (await repo.agentsAt(exit.to)).map((a) => a.id);
+  const witnesses = [...new Set([...atSource, ...atDest])];
   const event: DomainEvent = {
     id: nextEventId(),
     worldId: await repo.getWorldId(),
