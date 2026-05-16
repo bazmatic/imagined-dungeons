@@ -1,12 +1,13 @@
 import type { Action } from '@core/domain/actions';
 import type { DomainEvent } from '@core/domain/events';
-import { EventKind, OwnerKind } from '@core/domain/kinds';
+import { EventKind } from '@core/domain/kinds';
 import { Err, Ok, type Result } from '@core/domain/result';
 import { type Segment, SegmentKind } from '@core/domain/segments';
 import { nextEventId } from '../ids-gen';
 import { perceive, type PerceptionView } from '../perception';
 import type { HandlerRepo } from '../repository';
 import { makeRng } from '../rng';
+import { applyDeathEffects } from './combat-effects';
 import { resolveCombat } from './combat';
 import type { ActionOutcome } from './types';
 
@@ -64,23 +65,8 @@ export async function handleAttack(
     damageDealt,
   };
 
-  // If the target is killed, drop their inventory and emit a Death event.
   if (combat.defenderDied) {
-    const targetItems = await repo.itemsOwnedBy({ kind: OwnerKind.Agent, id: target.id });
-    for (const item of targetItems) {
-      await repo.transferItem(item.id, { kind: OwnerKind.Location, id: view.location.id });
-    }
-    const deathEvent: DomainEvent = {
-      id: nextEventId(),
-      worldId,
-      actorId: action.actorId,
-      kind: EventKind.Death,
-      witnesses,
-      createdAt: new Date(),
-      targetAgentId: action.targetAgentId,
-      locationId: view.location.id,
-    };
-    await repo.appendEvent(deathEvent);
+    await applyDeathEffects(action.actorId, target, view.location.id, witnesses, worldId, repo);
   }
 
   const render: Segment[] = [];
