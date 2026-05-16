@@ -426,6 +426,7 @@ export async function runTick(
       parse,
       llm,
       discoveryBudget,
+      playerId,
       ...(opts.builderRepo ? { builderRepo: opts.builderRepo } : {}),
     });
     playerRender = playerResult.render;
@@ -501,6 +502,7 @@ export async function runTick(
         parse,
         llm,
         discoveryBudget,
+        playerId,
         ...(opts.builderRepo ? { builderRepo: opts.builderRepo } : {}),
       });
       if (npcResult.events.length === 0) {

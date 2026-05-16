@@ -1,7 +1,7 @@
 import type { BuilderRepository } from '@core/builder/repository';
 import type { Action } from '@core/domain/actions';
 import type { DomainEvent } from '@core/domain/events';
-import { asExitId, asLocationId, type WorldId } from '@core/domain/ids';
+import { asExitId, asLocationId, type AgentId, type WorldId } from '@core/domain/ids';
 import { EventKind, OwnerKind } from '@core/domain/kinds';
 import { Err, Ok, type Result } from '@core/domain/result';
 import { nextEventId } from '../ids-gen';
@@ -13,6 +13,7 @@ import type { ActionOutcome } from './types';
 export interface MoveHandlerDeps {
   readonly builderRepo?: BuilderRepository;
   readonly worldId?: WorldId;
+  readonly playerId?: AgentId;
 }
 
 const REVERSE_DIRECTION: Readonly<Record<string, string>> = {

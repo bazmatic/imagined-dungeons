@@ -1,6 +1,6 @@
 import type { BuilderRepository } from '@core/builder/repository';
 import type { Action } from '@core/domain/actions';
-import type { WorldId } from '@core/domain/ids';
+import type { AgentId, WorldId } from '@core/domain/ids';
 import { ActionKind } from '@core/domain/kinds';
 import { Err, type Result } from '@core/domain/result';
 import type { LanguageModel } from '../language-model';
@@ -36,6 +36,7 @@ export interface DispatchDeps {
   readonly llm?: LanguageModel | null;
   readonly builderRepo?: BuilderRepository;
   readonly worldId?: WorldId;
+  readonly playerId?: AgentId;
 }
 
 export async function dispatch(

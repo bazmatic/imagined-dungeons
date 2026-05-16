@@ -42,6 +42,7 @@ export interface RunTurnOptions {
   readonly llm?: LanguageModel | null;
   readonly builderRepo?: BuilderRepository;
   readonly discoveryBudget?: DiscoveryBudget;
+  readonly playerId?: AgentId;
 }
 
 const defaultParse: ParseFn = async (text, actor, view, inventory) =>
@@ -143,7 +144,9 @@ export async function runTurn(
   const r = await dispatch(
     parsed,
     repo,
-    opts.builderRepo ? { llm, worldId, builderRepo: opts.builderRepo } : { llm, worldId },
+    opts.builderRepo
+      ? { llm, worldId, builderRepo: opts.builderRepo, ...(opts.playerId !== undefined ? { playerId: opts.playerId } : {}) }
+      : { llm, worldId, ...(opts.playerId !== undefined ? { playerId: opts.playerId } : {}) },
   );
   if (!r.ok) {
     const errorSegs = renderActionError(r.error);
