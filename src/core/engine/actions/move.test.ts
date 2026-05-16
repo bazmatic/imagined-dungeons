@@ -211,7 +211,7 @@ describe('handleMove — combat guard', () => {
       ...goblin,
       id: asAgentId('char_npc'),
       label: 'NPC',
-      awake: false,
+      awake: true, // NPC is awake and alive — exempt because actorId !== playerId
     };
     const repo = new MemoryRepository(W, {
       locations: [locA, locB],
