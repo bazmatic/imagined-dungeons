@@ -17,6 +17,7 @@ import { LlmGameAI } from './game-ai';
 import { makeFakeLanguageModel } from '../../../tests/helpers/fake-language-model';
 import { makeCompositeParser } from './parser/composite';
 import { runTick } from './tick';
+import { TickChunkKind, type NpcTurnChunk, type PlayerTurnChunk } from './tick-stream-types';
 
 const W = asWorldId('w');
 const A = asLocationId('loc_a');
@@ -335,5 +336,52 @@ describe('runTick', () => {
     const first = r.events[0];
     if (!first) throw new Error('expected at least one event');
     expect(first.actorId).toBe(player.id);
+  });
+
+  it('onChunk: emits player_turn chunk first', async () => {
+    const repo = makeWorld(); // player + Spark
+    const chunks: Array<PlayerTurnChunk | NpcTurnChunk> = [];
+    const llm = makeFakeLanguageModel({ textResponder: () => 'go north' });
+    const parse = makeCompositeParser({ llm: null });
+    await runTick(PLAYER, 'look', repo, {
+      parse,
+      ai: new LlmGameAI(llm),
+      onChunk: (c) => chunks.push(c),
+    });
+    expect(chunks[0]?.kind).toBe(TickChunkKind.PlayerTurn);
+    expect(chunks[0] as PlayerTurnChunk).toMatchObject({ render: expect.any(Array) });
+  });
+
+  it('onChunk: emits one npc_turn chunk per NPC that produces a visible action', async () => {
+    const repo = makeWorld(); // player + Spark (autonomous)
+    const chunks: Array<PlayerTurnChunk | NpcTurnChunk> = [];
+    const llm = makeFakeLanguageModel({ textResponder: () => 'go north' });
+    const parse = makeCompositeParser({ llm: null });
+    await runTick(PLAYER, 'look', repo, {
+      parse,
+      ai: new LlmGameAI(llm),
+      onChunk: (c) => chunks.push(c),
+    });
+    const npcChunks = chunks.filter((c) => c.kind === TickChunkKind.NpcTurn);
+    expect(npcChunks).toHaveLength(1); // Spark moved north → one witnessed event
+  });
+
+  it('onChunk: emits no npc_turn chunks when no NPCs are visible', async () => {
+    const repo = makeWorld([player]); // player only
+    const chunks: Array<PlayerTurnChunk | NpcTurnChunk> = [];
+    const parse = makeCompositeParser({ llm: null });
+    await runTick(PLAYER, 'look', repo, {
+      parse,
+      ai: null,
+      onChunk: (c) => chunks.push(c),
+    });
+    expect(chunks).toHaveLength(1);
+    expect(chunks[0].kind).toBe(TickChunkKind.PlayerTurn);
+  });
+
+  it('onChunk: is optional — runTick works without it', async () => {
+    const repo = makeWorld();
+    const parse = makeCompositeParser({ llm: null });
+    await expect(runTick(PLAYER, 'look', repo, { parse, ai: null })).resolves.toBeTruthy();
   });
 });

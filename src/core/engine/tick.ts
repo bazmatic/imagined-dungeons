@@ -13,6 +13,7 @@ import { dispatch } from './actions/registry';
 import { type ConsequenceLoreSink, MAX_CONSEQUENCE_DEPTH } from './consequences';
 import type { GameAI } from './game-ai';
 import type { LanguageModel } from './language-model';
+import { TickChunkKind, type NpcTurnChunk, type PlayerTurnChunk } from './tick-stream-types';
 import { MAX_NPCS_PER_TICK, scheduleNpcs } from './npc-scheduler';
 import type { ParseFn } from './parser/composite';
 import { perceive } from './perception';
@@ -115,6 +116,12 @@ export interface RunTickOptions {
    * legacy callers, narrow tests) the spawn pass is skipped entirely.
    */
   readonly builderRepo?: BuilderRepository;
+  /**
+   * Optional streaming callback. Called once with a PlayerTurnChunk after the
+   * player's turn completes, then once per NPC that produces at least one
+   * witnessed event this tick.
+   */
+  readonly onChunk?: (chunk: PlayerTurnChunk | NpcTurnChunk) => void;
 }
 
 /**
@@ -461,6 +468,12 @@ export async function runTick(
     }
   }
 
+  opts.onChunk?.({
+    kind: TickChunkKind.PlayerTurn,
+    render: playerRender,
+    witnessed: [...witnessed],
+  });
+
   // 3. Scheduler picks NPCs co-located with the player.
   const npcIds = await scheduleNpcs({ playerId, repo, cap });
   if (npcIds.length === 0) {
@@ -490,6 +503,7 @@ export async function runTick(
     // lines for the same NPC this tick (typically: a speech line + a
     // non-speech action line). Dispatch them in order so the NPC can
     // both talk and do something.
+    const npcWitnessed: string[] = [];
     const intents = ai ? await ai.npcIntent(npcId, repo) : [NpcFallbackIntent];
     for (const intent of intents) {
       log.info(`[npc] ${npc.label} intent: "${intent}"`);
@@ -521,8 +535,14 @@ export async function runTick(
         events.push(ev);
         npcEvents.push(ev);
         const line = await renderWitnessForPlayer(ev, playerId, repo);
-        if (line !== null && line.length > 0) witnessed.push(line);
+        if (line !== null && line.length > 0) {
+          witnessed.push(line);
+          npcWitnessed.push(line);
+        }
       }
+    }
+    if (npcWitnessed.length > 0) {
+      opts.onChunk?.({ kind: TickChunkKind.NpcTurn, witnessed: npcWitnessed });
     }
   }
 
@@ -557,6 +577,7 @@ export async function runTick(
         const spawned = await repo.getAgent(ev.spawnedAgentId);
         const text = renderAgentSpawnedObserved(spawned.label);
         playerRender = [...playerRender, { kind: SegmentKind.Spawn, text }];
+        opts.onChunk?.({ kind: TickChunkKind.NpcTurn, witnessed: [text] });
       } else {
         const line = await renderWitnessForPlayer(ev, playerId, repo);
         if (line !== null && line.length > 0) witnessed.push(line);
@@ -571,6 +592,9 @@ export async function runTick(
         llm: llm ?? null,
       });
       for (const line of spawnNarrations) witnessed.push(line);
+      if (spawnNarrations.length > 0) {
+        opts.onChunk?.({ kind: TickChunkKind.NpcTurn, witnessed: spawnNarrations });
+      }
     }
   }
 
