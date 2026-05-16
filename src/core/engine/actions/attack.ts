@@ -1,6 +1,6 @@
 import type { Action } from '@core/domain/actions';
 import type { DomainEvent } from '@core/domain/events';
-import { AttackOutcome, EventKind } from '@core/domain/kinds';
+import { AttackOutcome, EventKind, OwnerKind } from '@core/domain/kinds';
 import { Err, Ok, type Result } from '@core/domain/result';
 import { type Segment, SegmentKind } from '@core/domain/segments';
 import { nextEventId } from '../ids-gen';
@@ -37,10 +37,20 @@ export async function handleAttack(
   const seed = await repo.getRngSeed();
   const rng = makeRng(seed);
 
+  const actorItems = await repo.itemsOwnedBy({ kind: OwnerKind.Agent, id: action.actorId });
+  const equippedWeapon = actorItems.find((i) => i.weaponDamage !== null && i.equipped);
+  const effectiveDamage = equippedWeapon?.weaponDamage ?? actor.damage;
+
+  const targetItems = await repo.itemsOwnedBy({ kind: OwnerKind.Agent, id: action.targetAgentId });
+  const armorBonus = targetItems
+    .filter((i) => i.armorDefense !== null && i.equipped)
+    .reduce((sum, i) => sum + (i.armorDefense ?? 0), 0);
+  const effectiveDefense = target.defense + armorBonus;
+
   const combat = resolveCombat({
-    attackerDamage: actor.damage,
+    attackerDamage: effectiveDamage,
     defenderHp: target.hp,
-    defenderDefense: target.defense,
+    defenderDefense: effectiveDefense,
     rng,
   });
   const { outcome, damageDealt } = combat;

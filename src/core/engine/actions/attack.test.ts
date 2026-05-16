@@ -1,4 +1,5 @@
 import type { Agent, Item, Location } from '@core/domain/entities';
+import type { AgentId } from '@core/domain/ids';
 import { asAgentId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
 import { OwnerKind } from '@core/domain/kinds';
 import { MemoryRepository } from '@infra/memory-repository';
@@ -225,5 +226,124 @@ describe('handleAttack (seeded RNG)', () => {
     if (!r.ok) throw new Error(r.error);
     if (r.value.event.kind !== 'attack' || r.value.event.outcome !== 'hit') return;
     expect(r.value.render.some((s) => s.kind === 'hit')).toBe(true);
+  });
+});
+
+describe('handleAttack — weapon and armour stats', () => {
+  const weapon = (owner: AgentId, dmg: number): Item => ({
+    id: asItemId('item_sword'),
+    worldId: W,
+    label: 'sword',
+    shortDescription: '',
+    longDescription: '',
+    owner: { kind: OwnerKind.Agent, id: owner },
+    weight: 2,
+    hidden: false,
+    tags: [],
+    equipped: true,
+    container: false,
+    opened: false,
+    locked: false,
+    lockedByItem: null,
+    priceTag: null,
+    weaponDamage: dmg,
+    armorDefense: null,
+  });
+
+  const armour = (owner: AgentId, def: number): Item => ({
+    id: asItemId('item_shield'),
+    worldId: W,
+    label: 'shield',
+    shortDescription: '',
+    longDescription: '',
+    owner: { kind: OwnerKind.Agent, id: owner },
+    weight: 5,
+    hidden: false,
+    tags: [],
+    equipped: true,
+    container: false,
+    opened: false,
+    locked: false,
+    lockedByItem: null,
+    priceTag: null,
+    weaponDamage: null,
+    armorDefense: def,
+  });
+
+  it('uses equipped weapon damage instead of agent base damage', async () => {
+    // paff base damage = 1 (almost never hits); weapon = 50 (always hits at seed=1)
+    const a = paff({ damage: 1 });
+    const t = spark({ hp: 10, defense: 4 });
+    const repo = new MemoryRepository(W, {
+      locations: [locA, locB],
+      exits: [],
+      items: [weapon(a.id, 50)],
+      agents: [a, t],
+      rngSeed: 1,
+    });
+    const r = await handleAttack({ kind: 'attack', actorId: a.id, targetAgentId: t.id }, repo);
+    if (!r.ok) throw new Error(r.error);
+    if (r.value.event.kind !== 'attack') throw new Error();
+    // damage=50 defense=4 → seed=1 roll 0.627 * 54 ≈ 33.9 < 50 → hit
+    expect(r.value.event.outcome).toBe('hit');
+    expect(r.value.event.damageDealt).toBeGreaterThan(0);
+  });
+
+  it('falls back to agent base damage when no weapon is equipped', async () => {
+    // weapon in inventory but NOT equipped
+    const a = paff({ damage: 50 });
+    const t = spark({ hp: 10, defense: 4 });
+    const unequippedSword: Item = { ...weapon(a.id, 1), equipped: false };
+    const repo = new MemoryRepository(W, {
+      locations: [locA, locB],
+      exits: [],
+      items: [unequippedSword],
+      agents: [a, t],
+      rngSeed: 1,
+    });
+    const r = await handleAttack({ kind: 'attack', actorId: a.id, targetAgentId: t.id }, repo);
+    if (!r.ok) throw new Error(r.error);
+    if (r.value.event.kind !== 'attack') throw new Error();
+    // base damage=50 hits at seed=1
+    expect(r.value.event.outcome).toBe('hit');
+  });
+
+  it('equipped armour raises defender effective defense', async () => {
+    // attacker damage=10, target base defense=10 → threshold 0.5, seed=1 misses
+    // adding armor_defense=1000 pushes threshold far lower → still miss
+    const a = paff({ damage: 10 });
+    const t = spark({ hp: 10, defense: 10 });
+    const repo = new MemoryRepository(W, {
+      locations: [locA, locB],
+      exits: [],
+      items: [armour(t.id, 1000)],
+      agents: [a, t],
+      rngSeed: 1,
+    });
+    const r = await handleAttack({ kind: 'attack', actorId: a.id, targetAgentId: t.id }, repo);
+    if (!r.ok) throw new Error(r.error);
+    if (r.value.event.kind !== 'attack') throw new Error();
+    expect(r.value.event.outcome).toBe('miss');
+  });
+
+  it('multiple armour items stack their defense bonuses', async () => {
+    const a = paff({ damage: 10 });
+    const t = spark({ hp: 10, defense: 0 });
+    const shield2: Item = {
+      ...armour(t.id, 500),
+      id: asItemId('item_shield2'),
+    };
+    // Two armour pieces total defense = 1000; combined with base 0 still massive
+    const repo = new MemoryRepository(W, {
+      locations: [locA, locB],
+      exits: [],
+      items: [armour(t.id, 500), shield2],
+      agents: [a, t],
+      rngSeed: 1,
+    });
+    const r = await handleAttack({ kind: 'attack', actorId: a.id, targetAgentId: t.id }, repo);
+    if (!r.ok) throw new Error(r.error);
+    if (r.value.event.kind !== 'attack') throw new Error();
+    expect(r.value.event.outcome).toBe('miss');
   });
 });
