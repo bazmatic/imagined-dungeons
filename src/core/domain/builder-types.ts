@@ -47,6 +47,12 @@ export interface InlineStarterPackEntry {
   readonly longDescription: string;
   readonly weight: number;
   readonly hidden: boolean;
+  /** Item spawns already worn/wielded by the monster. Default false. */
+  readonly equipped?: boolean;
+  /** Weapon stat for this spawned item. null = not a weapon. */
+  readonly weaponDamage?: number | null;
+  /** Armour stat for this spawned item. null = not armour. */
+  readonly armorDefense?: number | null;
 }
 export type StarterPackEntry = InlineStarterPackEntry;
 
@@ -273,6 +279,8 @@ export interface UpsertItemInput {
   /** The item-id whose presence in the actor's inventory auto-unlocks this container. */
   readonly lockedByItem: ItemId | null;
   readonly priceTag: number | null;
+  readonly weaponDamage: number | null;
+  readonly armorDefense: number | null;
 }
 
 export interface UpsertAgentInput {

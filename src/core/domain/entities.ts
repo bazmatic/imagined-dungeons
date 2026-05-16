@@ -73,6 +73,18 @@ export interface Item {
    * hands via a Trade event (the new owner must re-`offer` to resell).
    */
   readonly priceTag: number | null;
+  /**
+   * Authored stat. When non-null, this item is a weapon. The value is the
+   * max damage die — it replaces the agent's `damage` stat while equipped.
+   * null = not a weapon.
+   */
+  readonly weaponDamage: number | null;
+  /**
+   * Authored stat. When non-null, this item is armour. The value is added
+   * to the defender's `defense` stat (stacks across all equipped armour).
+   * null = not armour.
+   */
+  readonly armorDefense: number | null;
 }
 
 export interface Agent {
