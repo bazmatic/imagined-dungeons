@@ -86,6 +86,18 @@ const SYSTEM_PROMPT_LINES: readonly string[] = [
   'Enriching sparse locations: When a location has empty or minimal descriptions (a newly generated stub), treat any player action there as a signal to generate full content — proper label, descriptions, atmosphere, and any items or agents that belong there. You may plant exits with to=null to suggest depth beyond the current scene.',
   '',
   "create/delete limits: No more than 3 create or delete actions per batch. Maximum 5 total consequences. When in doubt, don't create — a good description update is often better than a new entity.",
+  '',
+  'When to emit creative_attack:',
+  "- A player or NPC used the environment creatively in a way that would realistically cause damage: shoving furniture, triggering a hazard, using a prop as a weapon, dropping something heavy.",
+  '- Do NOT emit if the action is silly or physically implausible (hypnotising a troll with a spoon, invoking fire that does not exist). Implausible actions produce no consequence.',
+  '- Do NOT emit if the actor already dispatched a standard attack action this turn — creative_attack is for non-attack actions that happen to cause harm.',
+  '',
+  'For creative_attack set:',
+  "- actorRef: natural-language name of the actor (e.g. \"Paff Pinkerton\")",
+  "- targetRef: natural-language name of the target (e.g. \"the orc\")",
+  '- toHit: { sides: 20, threshold: N } — threshold reflects cleverness: inspired idea 4-6, solid idea 10-14, clumsy idea 16+',
+  "- damage: { count, sides, bonus } — reflects physical severity: small hazard 1d4, moderate 1d6-1d8, serious 2d6",
+  "- narrative: one sentence of prose describing what happened (e.g. \"Mira sweeps the candelabra into the orc's face\")",
 ];
 
 const SYSTEM_PROMPT = SYSTEM_PROMPT_LINES.join('\n');
@@ -124,6 +136,36 @@ export const CONSEQUENCE_SCHEMA: JsonSchema = {
             properties: {
               kind: { type: 'string', enum: ['reveal_item'] },
               targetRef: { type: 'string' },
+            },
+          },
+          {
+            type: 'object',
+            additionalProperties: false,
+            required: ['kind', 'actorRef', 'targetRef', 'toHit', 'damage', 'narrative'],
+            properties: {
+              kind: { type: 'string', enum: ['creative_attack'] },
+              actorRef: { type: 'string' },
+              targetRef: { type: 'string' },
+              toHit: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['sides', 'threshold'],
+                properties: {
+                  sides: { type: 'integer', minimum: 4, maximum: 20 },
+                  threshold: { type: 'integer', minimum: 1, maximum: 25 },
+                },
+              },
+              damage: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['count', 'sides', 'bonus'],
+                properties: {
+                  count: { type: 'integer', minimum: 1, maximum: 6 },
+                  sides: { type: 'integer', minimum: 4, maximum: 12 },
+                  bonus: { type: 'integer', minimum: 0, maximum: 5 },
+                },
+              },
+              narrative: { type: 'string' },
             },
           },
           {
@@ -219,6 +261,14 @@ export type RawConsequence =
       readonly targetRef: string;
     }
   | {
+      readonly kind: 'creative_attack';
+      readonly actorRef: string;
+      readonly targetRef: string;
+      readonly toHit: { readonly sides: number; readonly threshold: number };
+      readonly damage: { readonly count: number; readonly sides: number; readonly bonus: number };
+      readonly narrative: string;
+    }
+  | {
       readonly kind: 'create_location';
       readonly id: string;
       readonly label: string;
@@ -276,6 +326,30 @@ export function parseConsequenceResponse(parsed: unknown): readonly RawConsequen
       const targetRef = entry.targetRef;
       if (typeof targetRef !== 'string' || targetRef.length === 0) continue;
       out.push({ kind: ActionKind.RevealItem, targetRef });
+      continue;
+    }
+
+    if (kind === ActionKind.CreativeAttack) {
+      const actorRef = entry.actorRef;
+      const targetRef = entry.targetRef;
+      const toHit = entry.toHit;
+      const damage = entry.damage;
+      const narrative = entry.narrative;
+      if (
+        typeof actorRef !== 'string' || actorRef.length === 0 ||
+        typeof targetRef !== 'string' || targetRef.length === 0 ||
+        typeof narrative !== 'string' || narrative.length === 0 ||
+        !isRecord(toHit) || typeof toHit.sides !== 'number' || typeof toHit.threshold !== 'number' ||
+        !isRecord(damage) || typeof damage.count !== 'number' || typeof damage.sides !== 'number' || typeof damage.bonus !== 'number'
+      ) continue;
+      out.push({
+        kind: ActionKind.CreativeAttack,
+        actorRef,
+        targetRef,
+        toHit: { sides: toHit.sides, threshold: toHit.threshold },
+        damage: { count: damage.count, sides: damage.sides, bonus: damage.bonus },
+        narrative,
+      });
       continue;
     }
 
@@ -577,6 +651,12 @@ async function summarise(event: DomainEvent, repo: HandlerRepo): Promise<string>
       const dmg = event.outcome === AttackOutcome.Hit ? `, ${event.damageDealt} dmg` : '';
       return `${actor} attacked ${target} (${event.outcome}${dmg})`;
     }
+    case EventKind.CreativeAttack: {
+      const actor = await labelOf(event.actorId);
+      const target = await labelOf(event.targetAgentId);
+      const dmg = event.outcome === AttackOutcome.Hit ? `, ${event.damageDealt} dmg` : '';
+      return `${actor} ${event.narrative} (${event.outcome}${dmg}) against ${target}`;
+    }
     case EventKind.DescriptionUpdated: {
       const actor = await labelOf(event.actorId);
       return `${actor} updated a description (${event.target.kind})`;
@@ -718,7 +798,7 @@ async function agentsInvolved(
   };
   for (const e of events) {
     if (e.actorId !== SYSTEM_AGENT_ID) await add(e.actorId);
-    if (e.kind === EventKind.Attack || e.kind === EventKind.Give) {
+    if (e.kind === EventKind.Attack || e.kind === EventKind.CreativeAttack || e.kind === EventKind.Give) {
       await add(e.targetAgentId);
     }
     if ((e.kind === EventKind.Speak || e.kind === EventKind.Emote) && e.targetAgentId !== null) {
@@ -921,6 +1001,20 @@ export async function consequencesFor(
       const item = resolveHiddenConsequenceItem(raw.targetRef, ctx);
       if (!item) continue;
       actions.push({ kind: ActionKind.RevealItem, actorId: SYSTEM_AGENT_ID, itemId: item.id });
+      continue;
+    }
+    if (raw.kind === ActionKind.CreativeAttack) {
+      const actor = resolveAgent(raw.actorRef, ctx.agents);
+      const target = resolveAgent(raw.targetRef, ctx.agents);
+      if (!actor.ok || !target.ok) continue;
+      actions.push({
+        kind: ActionKind.CreativeAttack,
+        actorId: actor.agent.id,
+        targetAgentId: target.agent.id,
+        toHit: raw.toHit,
+        damage: raw.damage,
+        narrative: raw.narrative,
+      });
       continue;
     }
     if (raw.kind !== ActionKind.UpdateDescription) continue;
