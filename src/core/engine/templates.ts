@@ -338,3 +338,18 @@ export function renderAttackMechanical(
   }
   return `${actorName} ${verb} ${targetName}. Miss.`;
 }
+
+export function renderCreativeAttackMechanical(
+  event: Extract<DomainEvent, { kind: 'creative_attack' }>,
+  actor: Agent,
+  target: Agent,
+  observer: Agent,
+): string {
+  const actorName = observer.id === actor.id ? 'You' : actor.label;
+  const targetName = observer.id === target.id ? 'you' : target.label;
+  if (event.outcome === AttackOutcome.Hit) {
+    const targetSubject = observer.id === target.id ? 'You take' : `${target.label} takes`;
+    return `${actorName}: ${event.narrative}. Hit! ${targetSubject} ${event.damageDealt} damage.`;
+  }
+  return `${actorName}: ${event.narrative}. Miss.`;
+}

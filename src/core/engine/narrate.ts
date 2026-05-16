@@ -5,7 +5,7 @@ import { log } from '@core/log';
 import type { LanguageModel } from './language-model';
 import { recallFor } from './memory';
 import type { HandlerRepo } from './repository';
-import { renderAttackMechanical, renderEmoteMechanical, renderSpeakMechanical } from './templates';
+import { renderAttackMechanical, renderCreativeAttackMechanical, renderEmoteMechanical, renderSpeakMechanical } from './templates';
 
 /**
  * The Narrator role (abstract-design §10).
@@ -87,6 +87,12 @@ function buildUserPrompt(ctx: NarrateContext, recentMemory: readonly string[]): 
     lines.push(`Outcome: ${event.outcome}`);
     lines.push(`Damage dealt: ${event.damageDealt}`);
     lines.push(`Target HP after: ${target.hp}`);
+  } else if (event.kind === EventKind.CreativeAttack && target) {
+    lines.push('Event: creative_attack');
+    lines.push(`Narrative: "${event.narrative}"`);
+    lines.push(`Outcome: ${event.outcome}`);
+    lines.push(`Damage dealt: ${event.damageDealt}`);
+    lines.push(`Target HP after: ${target.hp}`);
   }
   if (recentMemory.length > 0) {
     lines.push('');
@@ -137,6 +143,8 @@ function summariseEvent(event: DomainEvent): string {
         : `${event.actorId} ${event.description}`;
     case EventKind.Attack:
       return `${event.actorId} attacked ${event.targetAgentId} (${event.outcome}${event.outcome === AttackOutcome.Hit ? `, ${event.damageDealt} dmg` : ''})`;
+    case EventKind.CreativeAttack:
+      return `${event.actorId} ${event.narrative} ${event.targetAgentId} (${event.outcome}${event.outcome === AttackOutcome.Hit ? `, ${event.damageDealt} dmg` : ''})`;
     case EventKind.DescriptionUpdated:
       return `${event.actorId} updated description (${event.target.kind})`;
     case EventKind.AgentSpawned:
@@ -168,6 +176,8 @@ export function narrateMechanical(ctx: NarrateContext): string {
   if (event.kind === EventKind.Emote) return renderEmoteMechanical(event, actor, observer, target);
   if (event.kind === EventKind.Attack && target)
     return renderAttackMechanical(event, actor, target, observer);
+  if (event.kind === EventKind.CreativeAttack && target)
+    return renderCreativeAttackMechanical(event, actor, target, observer);
   // Other event kinds are not narrated; this is a defensive fallthrough.
   return '';
 }
@@ -181,13 +191,14 @@ export async function narrate(
   if (
     event.kind !== EventKind.Speak &&
     event.kind !== EventKind.Attack &&
+    event.kind !== EventKind.CreativeAttack &&
     event.kind !== EventKind.Emote
   )
     return '';
   const actor = await repo.getAgent(event.actorId);
-  // Emote events may not have a target. Speak/Attack always do.
+  // Emote events may not have a target. Speak/Attack/CreativeAttack always do.
   let target: Agent | null = null;
-  if (event.kind === EventKind.Attack) {
+  if (event.kind === EventKind.Attack || event.kind === EventKind.CreativeAttack) {
     target = await repo.getAgent(event.targetAgentId);
   } else if (
     (event.kind === EventKind.Speak || event.kind === EventKind.Emote) &&

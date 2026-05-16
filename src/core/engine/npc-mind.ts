@@ -52,7 +52,7 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
     '    INTENT_DONE              — clear your current short-term intent (use when you have just finished it).',
   );
   lines.push(
-    '    INTENT: <full plan>      — set or replace your short-term intent. Phrase it as the WHOLE multi-step task ("deliver the fire map to Captain Serena near the docks"), not the next single step ("take the fire map"). Use this whenever you form a new plan, accept a request, or want to refine an existing intent.',
+    '    INTENT: <full plan>      — set or replace your short-term intent. The intent MUST be a medium-term goal that takes several turns to achieve — it cannot be satisfied by the action you are taking this turn. Phrase it as the END STATE you are working toward ("deliver the fire map to Captain Serena near the docks", "find out what is behind the north door", "trade the dagger for enough gold to buy food"), NOT the immediate next step ("take the fire map", "open the door", "say hello"). If your goal can be fully achieved by one action right now, just take that action — do NOT set it as an intent. Use INTENT only when the goal will still be unfinished after this turn.',
   );
   lines.push(
     '- Then exactly one action command for this turn, in the first person, using one of the verbs below.',
@@ -128,7 +128,7 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
     '2. If someone is currently attacking you (and you have not yet retaliated), decide whether to fight back, flee through an exit, or speak.',
   );
   lines.push(
-    '3. Manage your own `Current short-term intent` (shown in the header above). Each turn, decide:\n   a. If you HAVE NO intent yet, ASK YOURSELF whether anything is worth doing right now — anything you observe, anything you remember, anything you just thought of (a question to ask, a person to find, a long-term goal to take a step toward, a curiosity to satisfy, a worry to address, a passive stance). If yes, declare it with `INTENT: <full plan>`. Phrase the intent as the END STATE you are working toward, not the next step on the way to it.\n   b. INTENT_DONE is ONLY for when the end state of your current intent is OBSERVABLY TRUE in this turn\'s events. Verbally agreeing to a task, beginning to work on it, taking the first step, arriving near the goal, or feeling confident you will succeed are NOT fulfilment — keep the intent in those cases. The test is: "if I look at what just happened, would another character watching agree this is finished?" If you cannot answer yes, omit INTENT_DONE.\n   c. If you HAVE an intent and your understanding of it has sharpened (new information, an obstacle, a refined plan), restate it with `INTENT: <refined plan>`.\n   d. If you HAVE an intent and it is still in progress, do not emit a control line — just take the next concrete step.\n   IMPORTANT: An empty `Current short-term intent` at the end of a turn means you go dormant. Declaring an intent is the way to stay in the scene. "I have something I want to pursue but did not declare it" is the failure mode to avoid.',
+    '3. Manage your own `Current short-term intent` (shown in the header above). Each turn, decide:\n   a. If you HAVE NO intent yet, ASK YOURSELF whether anything is worth doing right now — anything you observe, anything you remember, anything you just thought of (a question to ask, a person to find, a long-term goal to take a step toward, a curiosity to satisfy, a worry to address, a passive stance). If yes, set an intent — but ONLY if it will take MULTIPLE TURNS to achieve. An intent must survive past this turn. If your plan can be fully carried out right now in a single action, just take that action without declaring an intent. Good intents: "find Captain Serena and warn her about the fire", "explore the east wing and see what is there", "convince the merchant to lower her prices". Bad intents (single-action, will be immediately stale): "open the chest", "pick up the lantern", "say hello to the guard".\n   b. INTENT_DONE is ONLY for when the end state of your current intent is OBSERVABLY TRUE in this turn\'s events. Verbally agreeing to a task, beginning to work on it, taking the first step, arriving near the goal, or feeling confident you will succeed are NOT fulfilment — keep the intent in those cases. The test is: "if I look at what just happened, would another character watching agree this is finished?" If you cannot answer yes, omit INTENT_DONE.\n   c. If you HAVE an intent and your understanding of it has sharpened (new information, an obstacle, a refined plan), restate it with `INTENT: <refined plan>`.\n   d. If you HAVE an intent and it is still in progress, do not emit a control line — just take the next concrete step.\n   IMPORTANT: An empty `Current short-term intent` at the end of a turn means you go dormant. Declaring an intent is the way to stay in the scene. "I have something I want to pursue but did not declare it" is the failure mode to avoid.',
   );
   lines.push(
     "4. Otherwise, pick something consistent with your long-term goal — move toward something useful, examine your surroundings, pick up something you'd want, emote a small in-character gesture, or wait. Don't repeat or rephrase things you've already said, and do NOT volunteer follow-up speech about earlier exchanges.",
@@ -272,6 +272,13 @@ async function summariseEvent(
       }
       return `${actorLabel} attacked ${targetLabel} (${event.outcome}${dmg})`;
     }
+    case EventKind.CreativeAttack: {
+      const dmg = event.outcome === AttackOutcome.Hit ? `, ${event.damageDealt} dmg` : '';
+      if (event.targetAgentId === selfId) {
+        return `${actorLabel} ${event.narrative} — hit you (${event.outcome}${dmg})`;
+      }
+      return `${actorLabel} ${event.narrative} (${event.outcome}${dmg})`;
+    }
     case EventKind.DescriptionUpdated:
       return `the world changed (${event.target.kind} description updated)`;
     case EventKind.AgentSpawned: {
@@ -386,7 +393,7 @@ async function buildUserPrompt(
     // also choose to respond to broadcast lines that don't name the NPC,
     // but those don't get foregrounded by this priority-1 filter.
     const isAddressedToMe =
-      ((m.kind === EventKind.Speak || m.kind === EventKind.Attack) && m.targetAgentId === selfId) ||
+      ((m.kind === EventKind.Speak || m.kind === EventKind.Attack || m.kind === EventKind.CreativeAttack) && m.targetAgentId === selfId) ||
       (m.kind === EventKind.Speak &&
         m.targetAgentId === null &&
         selfNameRegex.test(m.utterance.toLowerCase()));
