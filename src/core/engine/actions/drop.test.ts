@@ -52,6 +52,8 @@ const heldMap: Item = {
   locked: false,
   lockedByItem: null,
   priceTag: null,
+  weaponDamage: null,
+  armorDefense: null,
 };
 
 describe('handleDrop', () => {

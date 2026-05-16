@@ -93,6 +93,7 @@ describe('handleCreativeAttack', () => {
       id: asItemId('item_sword'), worldId: W, label: 'sword', shortDescription: '', longDescription: '',
       owner: { kind: OwnerKind.Agent, id: t.id }, weight: 1, hidden: false, tags: [],
       equipped: false, container: false, opened: false, locked: false, lockedByItem: null, priceTag: null,
+      weaponDamage: null, armorDefense: null,
     };
     const repo = new MemoryRepository(W, { locations: [locA, locB], exits: [], items: [sword], agents: [a, t], rngSeed: 1 });
     // count=1, sides=1 → guaranteed 1 damage; bonus=0; hp=1 → hp after = 0 → dies

@@ -60,6 +60,8 @@ const closedBox: Item = {
   locked: false,
   lockedByItem: null,
   priceTag: null,
+  weaponDamage: null,
+  armorDefense: null,
 };
 const keyInBox: Item = {
   ...baseItem,
@@ -71,6 +73,8 @@ const keyInBox: Item = {
   locked: false,
   lockedByItem: null,
   priceTag: null,
+  weaponDamage: null,
+  armorDefense: null,
 };
 const heldKey: Item = { ...keyInBox, owner: { kind: OwnerKind.Agent, id: ACTOR } };
 const sword: Item = {
@@ -83,6 +87,8 @@ const sword: Item = {
   locked: false,
   lockedByItem: null,
   priceTag: null,
+  weaponDamage: null,
+  armorDefense: null,
 };
 
 describe('handleOpen', () => {

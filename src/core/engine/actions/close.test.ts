@@ -58,6 +58,8 @@ const openedBox: Item = {
   locked: false,
   lockedByItem: null,
   priceTag: null,
+  weaponDamage: null,
+  armorDefense: null,
 };
 const sword: Item = {
   ...baseItem,
@@ -69,6 +71,8 @@ const sword: Item = {
   locked: false,
   lockedByItem: null,
   priceTag: null,
+  weaponDamage: null,
+  armorDefense: null,
 };
 
 describe('handleClose', () => {

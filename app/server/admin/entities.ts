@@ -79,6 +79,8 @@ export const saveEntity = createServerFn({ method: 'POST' })
             ? asItemId(p.lockedByItem)
             : null,
         priceTag: typeof p.priceTag === 'number' ? p.priceTag : null,
+        weaponDamage: typeof p.weaponDamage === 'number' ? p.weaponDamage : null,
+        armorDefense: typeof p.armorDefense === 'number' ? p.armorDefense : null,
       });
     }
     return upsertAgentCore(repo, W, {

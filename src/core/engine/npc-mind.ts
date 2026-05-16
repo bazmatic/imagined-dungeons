@@ -60,6 +60,11 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
   lines.push('');
   lines.push('Examples:');
   lines.push(
+    '  THOUGHT: I notice the District Chart on the wall. I want to look at it. Looking takes one action — that is all. So I just look; no INTENT needed. After this action my goal is done.',
+  );
+  lines.push('  I look at the District Chart.');
+  lines.push('');
+  lines.push(
     '  THOUGHT: Paff just asked me to deliver the fire map to Captain Serena. I do not have it yet.',
   );
   lines.push('  THOUGHT: It is on the table here. I should take it first.');

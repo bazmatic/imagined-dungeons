@@ -52,6 +52,8 @@ const map: Item = {
   locked: false,
   lockedByItem: null,
   priceTag: null,
+  weaponDamage: null,
+  armorDefense: null,
 };
 const spark: Agent = {
   id: asAgentId('char_spark'),

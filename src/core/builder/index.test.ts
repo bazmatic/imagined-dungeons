@@ -439,6 +439,8 @@ describe('upsertItem — owner-chain cycle rejection', () => {
     locked: false,
     lockedByItem: null,
     priceTag: null,
+    weaponDamage: null,
+    armorDefense: null,
   });
 
   it('rejects an item whose owner chain forms a cycle', async () => {
@@ -473,6 +475,8 @@ describe('upsertItem — owner-chain cycle rejection', () => {
       locked: false,
       lockedByItem: null,
       priceTag: null,
+      weaponDamage: null,
+      armorDefense: null,
     });
     if (!r2.ok) throw new Error('seed key');
     // now try to re-parent box under key → box → key → box cycle
@@ -491,6 +495,8 @@ describe('upsertItem — owner-chain cycle rejection', () => {
       locked: false,
       lockedByItem: null,
       priceTag: null,
+      weaponDamage: null,
+      armorDefense: null,
     });
     if (r.ok) throw new Error('expected cycle rejection');
     expect(r.error.kind).toBe(BuilderErrorKind.ItemOwnerCycle);
@@ -525,6 +531,8 @@ describe('upsertItem — owner-chain cycle rejection', () => {
       locked: false,
       lockedByItem: null,
       priceTag: null,
+      weaponDamage: null,
+      armorDefense: null,
     });
     if (r.ok) throw new Error('expected self-cycle rejection');
     expect(r.error.kind).toBe(BuilderErrorKind.ItemOwnerCycle);

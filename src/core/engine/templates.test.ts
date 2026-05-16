@@ -45,6 +45,8 @@ const itemA: Item = {
   locked: false,
   lockedByItem: null,
   priceTag: null,
+  weaponDamage: null,
+  armorDefense: null,
 };
 
 const npc: Agent = {

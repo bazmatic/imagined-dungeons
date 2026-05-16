@@ -51,6 +51,8 @@ const map: Item = {
   locked: false,
   lockedByItem: null,
   priceTag: null,
+  weaponDamage: null,
+  armorDefense: null,
 };
 const view = { actor: paff, location: tavern, items: [map], agents: [], exits: [] };
 

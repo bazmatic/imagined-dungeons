@@ -107,6 +107,8 @@ describe('lore + generative discovery — end-to-end', () => {
       locked: false,
       lockedByItem: null,
       priceTag: null,
+      weaponDamage: null,
+      armorDefense: null,
     };
 
     const responder = (_req: LanguageModelRequest): LanguageModelResponse => {

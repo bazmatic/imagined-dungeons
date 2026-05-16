@@ -32,6 +32,8 @@ const map: Item = {
   locked: false,
   lockedByItem: null,
   priceTag: null,
+  weaponDamage: null,
+  armorDefense: null,
 };
 const paff: Agent = {
   id: asAgentId('char_p'),

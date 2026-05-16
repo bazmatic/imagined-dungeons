@@ -225,6 +225,8 @@ describe('runTick', () => {
       locked: false,
       lockedByItem: null,
       priceTag: null,
+      weaponDamage: null,
+      armorDefense: null,
     };
     const sys: Agent = {
       id: SYSTEM_AGENT_ID,

@@ -51,6 +51,8 @@ const map: Item = {
   locked: false,
   lockedByItem: null,
   priceTag: null,
+  weaponDamage: null,
+  armorDefense: null,
 };
 const rustyKey: Item = {
   id: asItemId('item_rusty'),
@@ -68,6 +70,8 @@ const rustyKey: Item = {
   locked: false,
   lockedByItem: null,
   priceTag: null,
+  weaponDamage: null,
+  armorDefense: null,
 };
 const silverKey: Item = {
   id: asItemId('item_silver'),
@@ -85,6 +89,8 @@ const silverKey: Item = {
   locked: false,
   lockedByItem: null,
   priceTag: null,
+  weaponDamage: null,
+  armorDefense: null,
 };
 const containerBox: Item = {
   id: asItemId('item_box'),
@@ -102,6 +108,8 @@ const containerBox: Item = {
   locked: false,
   lockedByItem: null,
   priceTag: null,
+  weaponDamage: null,
+  armorDefense: null,
 };
 const exitN: Exit = {
   id: asExitId('e'),
@@ -565,6 +573,8 @@ const cloak: Item = {
   locked: false,
   lockedByItem: null,
   priceTag: null,
+  weaponDamage: null,
+  armorDefense: null,
 };
 
 const brassKey: Item = {
@@ -583,6 +593,8 @@ const brassKey: Item = {
   locked: false,
   lockedByItem: null,
   priceTag: 5,
+  weaponDamage: null,
+  armorDefense: null,
 };
 
 describe('buy / sell / offer verbs', () => {

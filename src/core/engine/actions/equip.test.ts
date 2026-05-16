@@ -33,6 +33,8 @@ const cloak: Item = {
   locked: false,
   lockedByItem: null,
   priceTag: null,
+  weaponDamage: null,
+  armorDefense: null,
 };
 const cloakOnFloor: Item = {
   ...cloak,

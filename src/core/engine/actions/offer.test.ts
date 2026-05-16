@@ -13,7 +13,7 @@ const ITEM = asItemId('item_cloak');
 
 const loc: Location = { id: A, worldId: W, label: 'A', shortDescription: '', longDescription: '', tags: [], secretDescription: '' };
 const actor: Agent = { id: ACTOR, worldId: W, label: 'Paff', shortDescription: '', longDescription: '', locationId: A, hp: 10, damage: 0, defense: 0, capacity: 10, mood: null, shortTermIntent: null, goal: null, autonomous: false, awake: false, tags: [], gold: 0 , secretDescription: ''};
-const baseItem = { worldId: W, shortDescription: '', longDescription: '', weight: 1, hidden: false, tags: [], equipped: false, container: false, opened: true, locked: false, lockedByItem: null, priceTag: null } as const;
+const baseItem = { worldId: W, shortDescription: '', longDescription: '', weight: 1, hidden: false, tags: [], equipped: false, container: false, opened: true, locked: false, lockedByItem: null, priceTag: null, weaponDamage: null, armorDefense: null } as const;
 const heldCloak: Item = { ...baseItem, id: ITEM, label: 'cloak', owner: { kind: OwnerKind.Agent, id: ACTOR } };
 const floorCloak: Item = { ...heldCloak, owner: { kind: OwnerKind.Location, id: A } };
 

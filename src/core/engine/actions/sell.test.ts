@@ -59,6 +59,8 @@ const pricedCloak: Item = {
   label: 'cloak',
   owner: { kind: OwnerKind.Agent, id: PLAYER },
   priceTag: 5,
+  weaponDamage: null,
+  armorDefense: null,
 };
 
 function stubLlm(parsed: unknown): LanguageModel {

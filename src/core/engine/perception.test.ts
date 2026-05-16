@@ -56,6 +56,8 @@ const item = (id: string, ownerLoc: string, hidden = false): Item => ({
   locked: false,
   lockedByItem: null,
   priceTag: null,
+  weaponDamage: null,
+  armorDefense: null,
 });
 
 const exit: Exit = {
@@ -144,6 +146,8 @@ describe('perceive — container chain', () => {
     locked: false,
     lockedByItem: null,
     priceTag: null,
+    weaponDamage: null,
+    armorDefense: null,
   };
   const keyInBox: Item = {
     id: KEY,
@@ -161,6 +165,8 @@ describe('perceive — container chain', () => {
     locked: false,
     lockedByItem: null,
     priceTag: null,
+    weaponDamage: null,
+    armorDefense: null,
   };
 
   it('hides items inside a closed container', async () => {

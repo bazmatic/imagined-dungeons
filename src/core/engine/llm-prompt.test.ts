@@ -55,6 +55,8 @@ const map: Item = {
   locked: false,
   lockedByItem: null,
   priceTag: null,
+  weaponDamage: null,
+  armorDefense: null,
 };
 const exitSouth: Exit = {
   id: asExitId('e_s'),

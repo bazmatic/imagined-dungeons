@@ -62,6 +62,8 @@ const pricedKey: Item = {
   label: 'brass key',
   owner: { kind: OwnerKind.Agent, id: SELLER },
   priceTag: 5,
+  weaponDamage: null,
+  armorDefense: null,
 };
 
 function stubLlm(parsed: unknown): LanguageModel {

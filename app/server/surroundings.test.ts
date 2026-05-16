@@ -104,6 +104,8 @@ const map: Item = {
   locked: false,
   lockedByItem: null,
   priceTag: null,
+  weaponDamage: null,
+  armorDefense: null,
 };
 
 const hidden: Item = {
@@ -122,6 +124,8 @@ const hidden: Item = {
   locked: false,
   lockedByItem: null,
   priceTag: null,
+  weaponDamage: null,
+  armorDefense: null,
 };
 
 const SWORD = asItemId('item_sword');
@@ -143,6 +147,8 @@ const sword: Item = {
   locked: false,
   lockedByItem: null,
   priceTag: 5,
+  weaponDamage: null,
+  armorDefense: null,
 };
 
 const potion: Item = {
@@ -161,6 +167,8 @@ const potion: Item = {
   locked: false,
   lockedByItem: null,
   priceTag: 10,
+  weaponDamage: null,
+  armorDefense: null,
 };
 
 const notForSale: Item = {
@@ -179,6 +187,8 @@ const notForSale: Item = {
   locked: false,
   lockedByItem: null,
   priceTag: null,
+  weaponDamage: null,
+  armorDefense: null,
 };
 
 const exitN: Exit = {

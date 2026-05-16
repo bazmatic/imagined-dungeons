@@ -78,6 +78,8 @@ describe('SqliteBuilderRepository (via builder facade)', () => {
       locked: false,
       lockedByItem: null,
       priceTag: null,
+      weaponDamage: null,
+      armorDefense: null,
     });
     await upsertAgent(repo, scratch, {
       id: asAgentId('char_serena'),

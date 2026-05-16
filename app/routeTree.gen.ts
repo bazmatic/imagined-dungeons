@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as ApiStreamCommandRouteImport } from './routes/api/stream-command'
 import { Route as AdminWorldIdRouteImport } from './routes/admin/$worldId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -23,6 +24,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/admin/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiStreamCommandRoute = ApiStreamCommandRouteImport.update({
+  id: '/api/stream-command',
+  path: '/api/stream-command',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminWorldIdRoute = AdminWorldIdRouteImport.update({
   id: '/admin/$worldId',
   path: '/admin/$worldId',
@@ -32,30 +38,34 @@ const AdminWorldIdRoute = AdminWorldIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin/$worldId': typeof AdminWorldIdRoute
+  '/api/stream-command': typeof ApiStreamCommandRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin/$worldId': typeof AdminWorldIdRoute
+  '/api/stream-command': typeof ApiStreamCommandRoute
   '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin/$worldId': typeof AdminWorldIdRoute
+  '/api/stream-command': typeof ApiStreamCommandRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin/$worldId' | '/admin/'
+  fullPaths: '/' | '/admin/$worldId' | '/api/stream-command' | '/admin/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin/$worldId' | '/admin'
-  id: '__root__' | '/' | '/admin/$worldId' | '/admin/'
+  to: '/' | '/admin/$worldId' | '/api/stream-command' | '/admin'
+  id: '__root__' | '/' | '/admin/$worldId' | '/api/stream-command' | '/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminWorldIdRoute: typeof AdminWorldIdRoute
+  ApiStreamCommandRoute: typeof ApiStreamCommandRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
@@ -75,6 +85,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/stream-command': {
+      id: '/api/stream-command'
+      path: '/api/stream-command'
+      fullPath: '/api/stream-command'
+      preLoaderRoute: typeof ApiStreamCommandRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/$worldId': {
       id: '/admin/$worldId'
       path: '/admin/$worldId'
@@ -88,6 +105,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminWorldIdRoute: AdminWorldIdRoute,
+  ApiStreamCommandRoute: ApiStreamCommandRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
 export const routeTree = rootRouteImport

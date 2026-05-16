@@ -241,6 +241,8 @@ export const TOOLS: readonly ToolDef[] = [
             ? asItemId(a.lockedByItem)
             : null,
         priceTag: typeof a.priceTag === 'number' ? a.priceTag : null,
+        weaponDamage: typeof a.weaponDamage === 'number' ? a.weaponDamage : null,
+        armorDefense: typeof a.armorDefense === 'number' ? a.armorDefense : null,
       }),
   },
   {

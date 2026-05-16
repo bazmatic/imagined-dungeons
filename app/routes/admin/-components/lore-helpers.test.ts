@@ -67,6 +67,8 @@ describe('collectLoreTags', () => {
           locked: false,
           lockedByItem: null,
           priceTag: null,
+          weaponDamage: null,
+          armorDefense: null,
         },
       ],
       agents: [

@@ -127,6 +127,8 @@ describe('handleMove', () => {
       locked: false,
       lockedByItem: null,
       priceTag: null,
+      weaponDamage: null,
+      armorDefense: null,
     };
     const repo = new MemoryRepository(W, {
       locations: [locA, locB],

@@ -190,6 +190,8 @@ describe('handleAttack (seeded RNG)', () => {
       locked: false,
       lockedByItem: null,
       priceTag: null,
+      weaponDamage: null,
+      armorDefense: null,
     };
     const repo = new MemoryRepository(W, { locations: [locA, locB], exits: [], items: [sword], agents: [a, t], rngSeed: 1 });
     const r = await handleAttack({ kind: 'attack', actorId: a.id, targetAgentId: t.id }, repo);

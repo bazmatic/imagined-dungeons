@@ -181,6 +181,8 @@ describe('validateWorld', () => {
           locked: false,
           lockedByItem: null,
           priceTag: null,
+          weaponDamage: null,
+          armorDefense: null,
         },
       ],
     };

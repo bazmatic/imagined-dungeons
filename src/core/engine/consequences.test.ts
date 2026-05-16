@@ -42,6 +42,8 @@ const lantern: Item = {
   locked: false,
   lockedByItem: null,
   priceTag: null,
+  weaponDamage: null,
+  armorDefense: null,
 };
 const paff: Agent = {
   id: asAgentId('char_p'),
@@ -476,7 +478,7 @@ const CTX_AGENT_ID = asAgentId('char_p');
 
 const makeCtx = (overrides: Partial<ConsequenceContext> = {}): ConsequenceContext => ({
   locations: [{ id: CTX_LOC, worldId: asWorldId('w'), label: 'Workshop', shortDescription: '', longDescription: '', tags: [], secretDescription: '' }],
-  items: [{ id: CTX_ITEM_ID, worldId: asWorldId('w'), label: 'lantern', shortDescription: '', longDescription: '', owner: { kind: OwnerKind.Location, id: CTX_LOC }, weight: 1, hidden: false, tags: [], equipped: false, container: false, opened: true, locked: false, lockedByItem: null, priceTag: null }],
+  items: [{ id: CTX_ITEM_ID, worldId: asWorldId('w'), label: 'lantern', shortDescription: '', longDescription: '', owner: { kind: OwnerKind.Location, id: CTX_LOC }, weight: 1, hidden: false, tags: [], equipped: false, container: false, opened: true, locked: false, lockedByItem: null, priceTag: null, weaponDamage: null, armorDefense: null }],
   agents: [{ id: CTX_AGENT_ID, worldId: asWorldId('w'), label: 'Paff', shortDescription: '', longDescription: '', locationId: CTX_LOC, hp: 10, damage: 0, defense: 0, capacity: 10, mood: null, shortTermIntent: null, goal: null, autonomous: false, awake: false, gold: 0, tags: [], secretDescription: '' }],
   hiddenItems: [],
   ...overrides,
@@ -525,13 +527,13 @@ describe('resolveHiddenConsequenceItem', () => {
   });
 
   it('finds a hidden item by label', () => {
-    const key: Item = { id: asItemId('item_key'), worldId: asWorldId('w'), label: 'brass key', shortDescription: '', longDescription: '', owner: { kind: OwnerKind.Location, id: CTX_LOC }, weight: 0, hidden: true, tags: [], equipped: false, container: false, opened: false, locked: false, lockedByItem: null, priceTag: null };
+    const key: Item = { id: asItemId('item_key'), worldId: asWorldId('w'), label: 'brass key', shortDescription: '', longDescription: '', owner: { kind: OwnerKind.Location, id: CTX_LOC }, weight: 0, hidden: true, tags: [], equipped: false, container: false, opened: false, locked: false, lockedByItem: null, priceTag: null, weaponDamage: null, armorDefense: null };
     const result = resolveHiddenConsequenceItem('brass key', makeCtx({ hiddenItems: [key] }));
     expect(result?.id).toBe(key.id);
   });
 
   it('returns null for a ref that does not match any hidden item', () => {
-    const key: Item = { id: asItemId('item_key'), worldId: asWorldId('w'), label: 'brass key', shortDescription: '', longDescription: '', owner: { kind: OwnerKind.Location, id: CTX_LOC }, weight: 0, hidden: true, tags: [], equipped: false, container: false, opened: false, locked: false, lockedByItem: null, priceTag: null };
+    const key: Item = { id: asItemId('item_key'), worldId: asWorldId('w'), label: 'brass key', shortDescription: '', longDescription: '', owner: { kind: OwnerKind.Location, id: CTX_LOC }, weight: 0, hidden: true, tags: [], equipped: false, container: false, opened: false, locked: false, lockedByItem: null, priceTag: null, weaponDamage: null, armorDefense: null };
     expect(resolveHiddenConsequenceItem('gold coin', makeCtx({ hiddenItems: [key] }))).toBeNull();
   });
 });

@@ -24,6 +24,7 @@ const item: Item = {
   longDescription: '', owner: { kind: OwnerKind.Agent, id: SELLER_ID }, weight: 0,
   hidden: false, tags: [], equipped: false, container: false, opened: true,
   locked: false, lockedByItem: null, priceTag: 5,
+  weaponDamage: null, armorDefense: null,
 };
 
 function stubLlm(parsed: unknown): LanguageModel {

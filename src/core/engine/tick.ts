@@ -66,7 +66,7 @@ const NPC_WAIT_PHRASES: ReadonlySet<string> = new Set<string>([
   'i watch',
 ]);
 
-const isWaitIntent = (intent: string): boolean => {
+const isWaitIntention = (intent: string): boolean => {
   const normalised = intent
     .trim()
     .toLowerCase()
@@ -428,7 +428,7 @@ export async function runTick(
   const witnessed: string[] = [];
   let playerRender: readonly Segment[];
 
-  if (isWaitIntent(text)) {
+  if (isWaitIntention(text)) {
     playerRender = [{ kind: SegmentKind.Feedback, text: 'You wait.' }];
   } else {
     const playerResult = await runTurn(playerId, text, repo, {
@@ -505,16 +505,16 @@ export async function runTick(
     // both talk and do something.
     const npcWitnessed: string[] = [];
     const intents = ai ? await ai.npcIntent(npcId, repo) : [NpcFallbackIntent];
-    for (const intent of intents) {
-      log.info(`[npc] ${npc.label} intent: "${intent}"`);
+    for (const intention of intents) {
+      log.info(`[npc] ${npc.label} action: "${intention}"`);
 
-      if (isWaitIntent(intent)) {
+      if (isWaitIntention(intention)) {
         // Benign no-op — don't bother the parser, don't pollute the player's
         // transcript with "Spark waits."-style filler.
         continue;
       }
 
-      const npcResult = await runTurn(npcId, intent, repo, {
+      const npcResult = await runTurn(npcId, intention, repo, {
         parse,
         ai,
         discoveryBudget,

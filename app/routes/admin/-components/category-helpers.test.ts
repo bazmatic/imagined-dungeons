@@ -100,6 +100,8 @@ describe('resolveOwnerSubtitle', () => {
       locked: false,
       lockedByItem: null,
       priceTag: null,
+      weaponDamage: null,
+      armorDefense: null,
     },
   ];
 
