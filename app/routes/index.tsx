@@ -1,17 +1,25 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
 import { type Segment, SegmentKind } from '@core/domain/segments';
+import { TickChunkKind } from '@core/engine/tick-stream-types';
+import { type TickStreamChunk } from './api/stream-command';
 import { getInitialView } from '../server/initial-view';
-import { submitCommand } from '../server/submit';
 
 export const Route = createFileRoute('/')({
   component: Page,
   loader: async () => await getInitialView(),
 });
 
+const LineKind = {
+  System:    'system',
+  User:      'user',
+  Witnessed: 'witnessed',
+} as const;
+type LineKind = (typeof LineKind)[keyof typeof LineKind];
+
 type Line =
-  | { id: number; kind: 'system'; segments: readonly Segment[] }
-  | { id: number; kind: 'user' | 'witnessed'; text: string };
+  | { id: number; kind: typeof LineKind.System;                           segments: readonly Segment[] }
+  | { id: number; kind: typeof LineKind.User | typeof LineKind.Witnessed; text: string };
 
 interface InventoryItem {
   id: string;
@@ -49,7 +57,7 @@ const EMPTY_SURROUNDINGS: Surroundings = { items: [], exits: [], characters: [] 
 
 function Page() {
   const initial = Route.useLoaderData();
-  const [lines, setLines] = useState<Line[]>([{ id: 0, kind: 'system', segments: initial.render }]);
+  const [lines, setLines] = useState<Line[]>([{ id: 0, kind: LineKind.System, segments: initial.render }]);
   const [inventory, setInventory] = useState<InventoryItem[]>(initial.inventory ?? []);
   const [surroundings, setSurroundings] = useState<Surroundings>(
     initial.surroundings ?? EMPTY_SURROUNDINGS,
@@ -73,26 +81,80 @@ function Page() {
     const text = input.trim();
     if (!text || busy) return;
     setBusy(true);
-    setLines((ls) => [...ls, { id: idRef.current++, kind: 'user', text: `> ${text}` }]);
+    setLines((ls) => [...ls, { id: idRef.current++, kind: LineKind.User, text: `> ${text}` }]);
     setInput('');
     try {
-      const r = await submitCommand({ data: { text } });
-      setLines((ls) => {
-        const next: Line[] = [...ls, { id: idRef.current++, kind: 'system', segments: r.render }];
-        for (const w of r.witnessed) {
-          next.push({ id: idRef.current++, kind: 'witnessed', text: w });
-        }
-        return next;
+      const response = await fetch('/api/stream-command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
       });
-      if (r.inventory) setInventory(r.inventory);
-      if (r.surroundings) setSurroundings(r.surroundings);
+      if (!response.ok || !response.body) throw new Error(`HTTP ${response.status}`);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      const SSE_PREFIX = 'data: ';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() ?? '';
+        for (const part of parts) {
+          const line = part.trim();
+          if (!line.startsWith(SSE_PREFIX)) continue;
+          applyChunk(JSON.parse(line.slice(SSE_PREFIX.length)) as TickStreamChunk);
+        }
+      }
+    } catch (err) {
+      setLines((ls) => [
+        ...ls,
+        {
+          id: idRef.current++,
+          kind: LineKind.System,
+          segments: [{ kind: SegmentKind.Error, text: err instanceof Error ? err.message : 'Unknown error' }],
+        },
+      ]);
     } finally {
       setBusy(false);
     }
   }
 
-  const colorFor = (kind: 'user' | 'witnessed'): string => {
-    if (kind === 'user') return '#9aff9a';
+  function applyChunk(chunk: TickStreamChunk): void {
+    if (chunk.kind === TickChunkKind.PlayerTurn) {
+      setLines((ls) => {
+        const next: Line[] = [...ls, { id: idRef.current++, kind: LineKind.System, segments: chunk.render }];
+        for (const w of chunk.witnessed) {
+          next.push({ id: idRef.current++, kind: LineKind.Witnessed, text: w });
+        }
+        return next;
+      });
+    } else if (chunk.kind === TickChunkKind.NpcTurn) {
+      if (chunk.witnessed.length === 0) return;
+      setLines((ls) => {
+        const next = [...ls];
+        for (const w of chunk.witnessed) {
+          next.push({ id: idRef.current++, kind: LineKind.Witnessed, text: w });
+        }
+        return next;
+      });
+    } else if (chunk.kind === TickChunkKind.Complete) {
+      setInventory(chunk.inventory);
+      setSurroundings(chunk.surroundings);
+    } else if (chunk.kind === TickChunkKind.Error) {
+      setLines((ls) => [
+        ...ls,
+        {
+          id: idRef.current++,
+          kind: LineKind.System,
+          segments: [{ kind: SegmentKind.Error, text: chunk.message }],
+        },
+      ]);
+    }
+  }
+
+  const colorFor = (kind: typeof LineKind.User | typeof LineKind.Witnessed): string => {
+    if (kind === LineKind.User) return '#9aff9a';
     return '#888888';
   };
 
@@ -187,7 +249,7 @@ function Page() {
             }}
           >
             {lines.map((l) => {
-              if (l.kind === 'system') {
+              if (l.kind === LineKind.System) {
                 return (
                   <div key={l.id} style={{ color: '#cfcfcf', marginBottom: 8 }}>
                     {l.segments.map((seg, i) => (
@@ -202,7 +264,7 @@ function Page() {
                   style={{
                     color: colorFor(l.kind),
                     marginBottom: 8,
-                    fontStyle: l.kind === 'witnessed' ? 'italic' : 'normal',
+                    fontStyle: l.kind === LineKind.Witnessed ? 'italic' : 'normal',
                   }}
                 >
                   {l.text}
