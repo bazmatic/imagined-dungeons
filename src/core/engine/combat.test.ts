@@ -2,7 +2,7 @@
 import type { Agent, Location } from '@core/domain/entities';
 import type { DomainEvent } from '@core/domain/events';
 import { type AgentId, asAgentId, asEventId, asLocationId, asWorldId } from '@core/domain/ids';
-import { EventKind } from '@core/domain/kinds';
+import { AttackOutcome, EventKind } from '@core/domain/kinds';
 import { MemoryRepository } from '@infra/memory-repository';
 import { describe, expect, it } from 'vitest';
 import { isPlayerInCombat } from './combat';
@@ -33,7 +33,7 @@ function makeGoblin(overrides: Partial<Agent> = {}): Agent {
   return {
     id: GOBLIN_ID, worldId: W, label: 'Goblin', shortDescription: '', longDescription: '',
     locationId: LOC_A, hp: 5, damage: 2, defense: 1, capacity: 5,
-    mood: null, shortTermIntent: 'attack the player', goal: null, autonomous: false, awake: true, gold: 0,
+    mood: null, shortTermIntent: null, goal: null, autonomous: false, awake: true, gold: 0,
     tags: [], secretDescription: '',
     ...overrides,
   };
@@ -48,7 +48,7 @@ function attackEvent(actorId: AgentId, targetId: AgentId): DomainEvent {
     witnesses: [actorId, targetId],
     createdAt: new Date(),
     targetAgentId: targetId,
-    outcome: 'hit',
+    outcome: AttackOutcome.Hit,
     damageDealt: 1,
   };
 }
@@ -99,7 +99,7 @@ describe('isPlayerInCombat', () => {
     expect(await isPlayerInCombat(PLAYER_ID, LOC_A, repo)).toBe(false);
   });
 
-  it('returns false when there are no agents at the location', async () => {
+  it('returns false when there are no other agents at the location', async () => {
     const repo = new MemoryRepository(W, { locations: [locA], exits: [], items: [], agents: [player] });
     await repo.appendEvent(attackEvent(PLAYER_ID, GOBLIN_ID));
     expect(await isPlayerInCombat(PLAYER_ID, LOC_A, repo)).toBe(false);
