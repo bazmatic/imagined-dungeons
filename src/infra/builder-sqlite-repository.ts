@@ -503,6 +503,10 @@ export class SqliteBuilderRepository implements BuilderRepository {
       .where(and(eq(schema.tagLore.worldId, w), eq(schema.tagLore.id, id)));
   }
 
+  async deleteAllEvents(w: WorldId): Promise<void> {
+    await this.db.delete(schema.events).where(eq(schema.events.worldId, w));
+  }
+
   /**
    * Trigger-fire-state lives on the snapshot JSON's `triggerFireState` field
    * (per spec §"world_snapshots.snapshotJson"). Read defaults to empty when

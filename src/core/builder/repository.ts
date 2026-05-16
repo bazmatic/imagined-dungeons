@@ -104,6 +104,8 @@ export interface BuilderRepository {
   upsertTagLore(worldId: WorldId, input: UpsertTagLoreInput): Promise<void>;
   deleteTagLore(worldId: WorldId, id: TagLoreId): Promise<void>;
 
+  deleteAllEvents(worldId: WorldId): Promise<void>;
+
   /**
    * Per-live-world spawn-firing record. Separate column-shape on
    * `world_snapshots.snapshotJson` is documented in the spec; for the port

@@ -77,7 +77,7 @@ export const items = sqliteTable(
     // Authored intent: this item is a container that can be opened/closed and may hold items.
     container: integer('container', { mode: 'boolean' }).notNull().default(false),
     // Runtime state. Meaningful only when container is true.
-    opened: integer('opened', { mode: 'boolean' }).notNull().default(true),
+    opened: integer('opened', { mode: 'boolean' }).notNull().default(false),
     // Runtime state. Meaningful only when container is true.
     locked: integer('locked', { mode: 'boolean' }).notNull().default(false),
     // The item-id whose presence in the actor's inventory auto-unlocks this container.

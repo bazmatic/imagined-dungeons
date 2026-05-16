@@ -19,6 +19,7 @@ export interface SurroundingsCharacter {
   readonly label: string;
   readonly shortDescription: string;
   readonly mood: string | null;
+  readonly hp: number;
 }
 
 export interface SurroundingsView {
@@ -45,6 +46,7 @@ export async function buildSurroundings(
       label: a.label,
       shortDescription: a.shortDescription,
       mood: a.mood,
+      hp: a.hp,
     })),
   };
 }

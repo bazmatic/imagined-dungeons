@@ -309,6 +309,8 @@ export class MemoryBuilderRepository implements BuilderRepository {
     this.bucket(this.tagLore, w).delete(id);
   }
 
+  async deleteAllEvents(_w: WorldId): Promise<void> {}
+
   async readTriggerFireState(w: WorldId): Promise<TriggerFireState> {
     return this.fireStates.get(w) ?? { byTriggerId: {} };
   }

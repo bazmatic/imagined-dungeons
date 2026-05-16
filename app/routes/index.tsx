@@ -36,6 +36,7 @@ interface SurroundingsCharacter {
   label: string;
   shortDescription: string;
   mood: string | null;
+  hp: number;
 }
 
 interface Surroundings {
@@ -306,7 +307,10 @@ function Page() {
               <ul style={listStyle}>
                 {surroundings.characters.map((c) => (
                   <li key={c.id} style={{ ...itemStyle, marginBottom: 8 }}>
-                    <div>{c.label}</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                      <span>{c.label}</span>
+                      <span style={{ fontSize: 11, color: '#c44', marginLeft: 8, flexShrink: 0 }}>♥ {c.hp}</span>
+                    </div>
                     {c.shortDescription ? (
                       <div style={{ fontStyle: 'italic', opacity: 0.85, fontSize: 12 }}>
                         {c.shortDescription}

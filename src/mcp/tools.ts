@@ -234,7 +234,7 @@ export const TOOLS: readonly ToolDef[] = [
         hidden: Boolean(a.hidden),
         tags: readTags(a),
         container: typeof a.container === 'boolean' ? a.container : false,
-        opened: typeof a.opened === 'boolean' ? a.opened : true,
+        opened: typeof a.opened === 'boolean' ? a.opened : false,
         locked: typeof a.locked === 'boolean' ? a.locked : false,
         lockedByItem:
           typeof a.lockedByItem === 'string' && a.lockedByItem.length > 0

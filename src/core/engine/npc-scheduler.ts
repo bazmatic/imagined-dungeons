@@ -19,7 +19,7 @@ import type { Repository } from './repository';
  */
 
 /** Hard cap on NPC mind invocations per player turn. */
-export const MAX_NPCS_PER_TICK = 2;
+export const MAX_NPCS_PER_TICK = 5;
 
 export interface ScheduleNpcsArgs {
   readonly playerId: AgentId;

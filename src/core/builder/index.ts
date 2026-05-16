@@ -411,7 +411,7 @@ const asItemInput = (i: Item): UpsertItemInput => ({
   // container fields existed on Item. Old blobs have `i.container === undefined`;
   // we need real booleans / null before handing to upsertItem.
   container: typeof i.container === 'boolean' ? i.container : false,
-  opened: typeof i.opened === 'boolean' ? i.opened : true,
+  opened: typeof i.opened === 'boolean' ? i.opened : false,
   locked: typeof i.locked === 'boolean' ? i.locked : false,
   lockedByItem: i.lockedByItem ?? null,
   priceTag: typeof i.priceTag === 'number' ? i.priceTag : null,
@@ -513,6 +513,7 @@ async function wipeWorldEntities(repo: BuilderRepository, worldId: WorldId): Pro
   for (const trg of triggers) await repo.deleteLocationSpawnTrigger(worldId, trg.id);
   for (const tpl of templates) await repo.deleteMonsterTemplate(worldId, tpl.id);
   for (const row of tagLore) await repo.deleteTagLore(worldId, row.id);
+  await repo.deleteAllEvents(worldId);
 }
 
 async function copyBlobIntoWorld(

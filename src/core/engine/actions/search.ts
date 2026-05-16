@@ -77,7 +77,7 @@ function coerceSpawnedItem(raw: unknown): UpsertItemInput | null {
     hidden: typeof raw.hidden === 'boolean' ? raw.hidden : false,
     tags,
     container: typeof raw.container === 'boolean' ? raw.container : false,
-    opened: typeof raw.opened === 'boolean' ? raw.opened : true,
+    opened: typeof raw.opened === 'boolean' ? raw.opened : false,
     locked: typeof raw.locked === 'boolean' ? raw.locked : false,
     lockedByItem: null,
     priceTag: typeof raw.priceTag === 'number' ? raw.priceTag : null,
