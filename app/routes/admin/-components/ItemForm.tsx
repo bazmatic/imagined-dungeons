@@ -41,6 +41,8 @@ export function ItemForm({ tree, itemId, onSaved, onDeleted }: ItemFormProps) {
           locked: item.locked,
           lockedByItem: (item.lockedByItem as string | null) ?? null,
           priceTag: item.priceTag,
+          weaponDamage: item.weaponDamage,
+          armorDefense: item.armorDefense,
         }
       : null,
   );
@@ -78,6 +80,8 @@ export function ItemForm({ tree, itemId, onSaved, onDeleted }: ItemFormProps) {
             locked: v.locked,
             lockedByItem: v.locked ? v.lockedByItem : null,
             priceTag: v.priceTag,
+            weaponDamage: v.weaponDamage,
+            armorDefense: v.armorDefense,
           },
         },
       });
@@ -255,6 +259,72 @@ export function ItemForm({ tree, itemId, onSaved, onDeleted }: ItemFormProps) {
                   value={v.priceTag}
                   onChange={(e) =>
                     update({ priceTag: Math.max(1, Math.trunc(Number(e.target.value))) })
+                  }
+                />
+              </div>
+            ) : null}
+            <label className="row-editor__checkbox" style={{ gridColumn: 'span 12' }}>
+              <input
+                type="checkbox"
+                checked={v.weaponDamage !== null}
+                onChange={(e) =>
+                  update({
+                    weaponDamage: e.target.checked
+                      ? typeof v.weaponDamage === 'number' && v.weaponDamage > 0
+                        ? v.weaponDamage
+                        : 4
+                      : null,
+                  })
+                }
+              />
+              Is weapon
+            </label>
+            {v.weaponDamage !== null ? (
+              <div className="row-editor__field" style={{ gridColumn: 'span 12' }}>
+                <label className="row-editor__field-label" htmlFor="it-weapon-damage">
+                  Damage die
+                </label>
+                <input
+                  id="it-weapon-damage"
+                  type="number"
+                  min={1}
+                  className="row-editor__input"
+                  value={v.weaponDamage}
+                  onChange={(e) =>
+                    update({ weaponDamage: Math.max(1, Math.trunc(Number(e.target.value))) })
+                  }
+                />
+              </div>
+            ) : null}
+            <label className="row-editor__checkbox" style={{ gridColumn: 'span 12' }}>
+              <input
+                type="checkbox"
+                checked={v.armorDefense !== null}
+                onChange={(e) =>
+                  update({
+                    armorDefense: e.target.checked
+                      ? typeof v.armorDefense === 'number' && v.armorDefense > 0
+                        ? v.armorDefense
+                        : 2
+                      : null,
+                  })
+                }
+              />
+              Is armour
+            </label>
+            {v.armorDefense !== null ? (
+              <div className="row-editor__field" style={{ gridColumn: 'span 12' }}>
+                <label className="row-editor__field-label" htmlFor="it-armor-defense">
+                  Defense bonus
+                </label>
+                <input
+                  id="it-armor-defense"
+                  type="number"
+                  min={1}
+                  className="row-editor__input"
+                  value={v.armorDefense}
+                  onChange={(e) =>
+                    update({ armorDefense: Math.max(1, Math.trunc(Number(e.target.value))) })
                   }
                 />
               </div>
