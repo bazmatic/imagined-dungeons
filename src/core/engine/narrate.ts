@@ -51,7 +51,7 @@ function buildUserPrompt(ctx: NarrateContext, recentMemory: readonly string[]): 
 
   const lines: string[] = [];
   if (observerIsActor) {
-    lines.push(`POV: second person. You ARE the actor. Use "you" — do NOT write the actor's name ("${actor.label}") anywhere in the narration.`);
+    lines.push(`POV: second person. The observer IS the actor. Use "you" for the actor.`);
     if (target) lines.push(`Refer to the target ("${target.label}") by name.`);
   } else if (observerIsTarget && target) {
     lines.push(`POV: second person. The observer IS the target. Use "you" for the target.`);
@@ -213,6 +213,9 @@ export async function narrate(
   const ctx: NarrateContext = { event, observer, actor, target, location };
 
   if (!llm) return narrateMechanical(ctx);
+  // The actor's own perspective is always mechanical — the LLM consistently
+  // generates bystander-style prose when given actor POV ("You see yourself say...").
+  if (observer.id === actor.id) return narrateMechanical(ctx);
 
   // Per-agent memory (abstract-design §8): perception-gated, recent slice.
   const recalled = await recallFor(observer.id, repo, 3);
