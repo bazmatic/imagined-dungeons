@@ -137,6 +137,7 @@ async function renderWitnessForPlayer(
   event: DomainEvent,
   playerId: AgentId,
   repo: Repository,
+  ai?: GameAI | null,
 ): Promise<string | null> {
   if (event.actorId === playerId) return null; // player's own action — already in `render`
   if (event.actorId === SYSTEM_AGENT_ID) return null; // synthetic; never narrate as a witnessed actor
@@ -164,17 +165,14 @@ async function renderWitnessForPlayer(
       return renderGiveObserved(actor, item, recipient);
     }
     case EventKind.Look: {
+      if (event.target.kind === ExaminableKind.Agent && ai) {
+        const observer = await repo.getAgent(playerId);
+        return ai.narrateEvent(event, observer, repo);
+      }
+      // Non-agent look targets: mechanical template.
       let targetPhrase: string | null = null;
       if (event.target.kind === ExaminableKind.Item) {
-        try {
-          const item = await repo.getItem(event.target.id);
-          targetPhrase = `the ${item.label}`;
-        } catch { /* target no longer accessible; fall through to "looks around" */ }
-      } else if (event.target.kind === ExaminableKind.Agent) {
-        try {
-          const target = await repo.getAgent(event.target.id);
-          targetPhrase = target.label;
-        } catch { /* fall through */ }
+        try { const item = await repo.getItem(event.target.id); targetPhrase = `the ${item.label}`; } catch { /* fall through */ }
       } else if (event.target.kind === ExaminableKind.Exit) {
         try {
           const exit = await repo.getExit(event.target.id);
@@ -497,7 +495,7 @@ export async function runTick(
     );
     for (const ev of postPlayerConsequences) {
       events.push(ev);
-      const line = await renderWitnessForPlayer(ev, playerId, repo);
+      const line = await renderWitnessForPlayer(ev, playerId, repo, ai);
       if (line !== null && line.length > 0) witnessed.push(line);
     }
   }
@@ -570,7 +568,7 @@ export async function runTick(
       for (const ev of npcResult.events) {
         events.push(ev);
         npcEvents.push(ev);
-        const line = await renderWitnessForPlayer(ev, playerId, repo);
+        const line = await renderWitnessForPlayer(ev, playerId, repo, ai);
         if (line !== null && line.length > 0) {
           witnessed.push(line);
           npcWitnessed.push(line);
@@ -615,7 +613,7 @@ export async function runTick(
         playerRender = [...playerRender, { kind: SegmentKind.Spawn, text }];
         opts.onChunk?.({ kind: TickChunkKind.NpcTurn, witnessed: [text] });
       } else {
-        const line = await renderWitnessForPlayer(ev, playerId, repo);
+        const line = await renderWitnessForPlayer(ev, playerId, repo, ai);
         if (line !== null && line.length > 0) witnessed.push(line);
       }
     }

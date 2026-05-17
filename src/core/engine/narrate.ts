@@ -5,7 +5,7 @@ import { log } from '@core/log';
 import type { LanguageModel } from './language-model';
 import { recallFor } from './memory';
 import type { HandlerRepo } from './repository';
-import { renderAttackMechanical, renderCreativeAttackMechanical, renderEmoteMechanical, renderSpeakMechanical } from './templates';
+import { renderAttackMechanical, renderCreativeAttackMechanical, renderEmoteMechanical, renderLookObserved, renderSpeakMechanical } from './templates';
 
 /**
  * The Narrator role (abstract-design §10).
@@ -34,6 +34,35 @@ Style:
 - Do not paraphrase or rewrite the spoken utterance — quote it verbatim once, exactly as supplied. The supplied utterance is already the final dialogue; do not prepend "I say" or wrap it further.
 - Do not address the reader. Do not give the player advice. Stay in the fiction.
 - The observer's mood/goal may colour word choice slightly; it must never contradict the facts.`;
+
+const LOOK_SYSTEM_PROMPT = `You are the narrator of a fantasy text adventure.
+A character just looked at or examined another character in the scene.
+Describe this as the observer perceives it — one sentence, present tense, second person ("you watch as...", "you notice...", "you feel...").
+
+Person of narration:
+- If the observer IS the target: use "you" for the target ("You feel Smolder's cold gaze settle on you.").
+- If the observer is a bystander: use "you" for the observer and refer to actor and target by name ("You watch as Smolder fixes Uncle Bob with a calculating stare.").
+
+Style:
+- At most 20 words.
+- Let the actor's mood colour the nature of the look (suspicious → scrutinising, wary → guarded, cheerful → warm, etc.).
+- Vary the phrasing — don't always say "looks at". Use: eyes, fixes, studies, regards, casts a glance at, trains a gaze on, turns to look at, sweeps a look over, etc.
+- Do not invent what any character thinks, says, or feels internally.`;
+
+function buildLookUserPrompt(actor: Agent, target: Agent, observer: Agent, location: Location): string {
+  const observerIsTarget = observer.id === target.id;
+  const lines: string[] = [
+    observerIsTarget
+      ? `POV: observer IS the target. Use "you" for ${target.label}. Refer to actor (${actor.label}) by name.`
+      : `POV: bystander. Use "you" for the observer. Refer to actor (${actor.label}) and target (${target.label}) by name.`,
+    '',
+    `Actor: ${actor.label}`,
+  ];
+  if (actor.mood) lines.push(`Actor mood: ${actor.mood}`);
+  lines.push(`Looking at: ${target.label}`);
+  lines.push(`Location: ${location.label}`);
+  return lines.join('\n');
+}
 
 interface NarrateContext {
   readonly event: DomainEvent;
@@ -195,9 +224,46 @@ export async function narrate(
     event.kind !== EventKind.Speak &&
     event.kind !== EventKind.Attack &&
     event.kind !== EventKind.CreativeAttack &&
-    event.kind !== EventKind.Emote
+    event.kind !== EventKind.Emote &&
+    event.kind !== EventKind.Look
   )
     return '';
+
+  // Look events: actor always sees their own result via render segments.
+  // For bystanders/targets, narrate agent-targeted looks via LLM; fall back
+  // to mechanical for room/item/exit targets.
+  if (event.kind === EventKind.Look) {
+    if (observer.id === event.actorId) return '';
+    const actor = await repo.getAgent(event.actorId);
+    if (event.target.kind !== ExaminableKind.Agent) {
+      // Non-agent look targets: use the existing mechanical template.
+      let targetPhrase: string | null = null;
+      if (event.target.kind === ExaminableKind.Item) {
+        try { const item = await repo.getItem(event.target.id); targetPhrase = `the ${item.label}`; } catch { /* fall through */ }
+      } else if (event.target.kind === ExaminableKind.Exit) {
+        try {
+          const exit = await repo.getExit(event.target.id);
+          targetPhrase = `the ${exit.label !== exit.direction ? exit.label : `${exit.direction} exit`}`;
+        } catch { /* fall through */ }
+      }
+      return renderLookObserved(actor, targetPhrase);
+    }
+    const target = await repo.getAgent(event.target.id);
+    const location = await repo.getLocation(actor.locationId);
+    if (!llm) return renderLookObserved(actor, target.label);
+    try {
+      const prose = await llm.completeText({
+        system: LOOK_SYSTEM_PROMPT,
+        user: buildLookUserPrompt(actor, target, observer, location),
+      });
+      const trimmed = prose.trim();
+      if (trimmed.length > 0) return trimmed;
+    } catch (err) {
+      log.warn(`[llm] look narrator error for event ${event.id}: ${String(err)}`);
+    }
+    return renderLookObserved(actor, target.label);
+  }
+
   const actor = await repo.getAgent(event.actorId);
   // Emote events may not have a target. Speak/Attack/CreativeAttack always do.
   let target: Agent | null = null;
