@@ -74,11 +74,11 @@ const makeRepo = (): MemoryRepository =>
 describe('decideNpcIntent', () => {
   it('returns the LLM response trimmed when the model produces text', async () => {
     const llm = makeFakeLanguageModel({
-      textResponder: () => '  I want to head north and scout the street.  ',
+      textResponder: () => '  I walk north to scout the street.  ',
     });
     const repo = makeRepo();
     const intent = await decideNpcIntent(SPARK_ID, repo, llm);
-    expect(intent).toEqual(['I want to head north and scout the street.']);
+    expect(intent).toEqual(['I walk north to scout the street.']);
     expect(llm.textCalls).toHaveLength(1);
     const call = llm.textCalls[0];
     if (!call) throw new Error('expected textCall');

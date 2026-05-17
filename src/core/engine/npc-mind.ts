@@ -16,6 +16,31 @@ import type { NpcDecisionRepository } from './npc-decision-repository';
 import { type PerceptionView, perceive } from './perception';
 import type { HandlerRepo } from './repository';
 
+async function generateFallbackEmote(
+  thought: string,
+  mood: string | null,
+  llm: LanguageModel,
+): Promise<string> {
+  const moodLine = mood ? `Mood: ${mood}.` : '';
+  try {
+    const result = await llm.completeText({
+      system: [
+        'You are a game master for a fantasy text adventure.',
+        'Given an NPC\'s internal thought and mood, write a single brief physical gesture (2–5 words, base verb form, no dialogue, no "I").',
+        'The gesture should be observable body language that expresses the inner state.',
+        'Examples: "shifts weight nervously", "scans the street warily", "exhales through gritted teeth", "clenches jaw and looks away", "taps fingers against thigh", "mumbles something under their breath".',
+        'Reply with ONLY the gesture phrase — no punctuation, no explanation.',
+      ].join('\n'),
+      user: `Thought: ${thought}\n${moodLine}`.trim(),
+    });
+    const trimmed = result.trim().replace(/[."']$/, '');
+    if (trimmed.length > 0 && trimmed.length < 60) return trimmed;
+  } catch {
+    // fall through to default
+  }
+  return 'stands quietly for a moment';
+}
+
 /**
  * The NPC mind role (abstract-design §10, "special case of the interpreter").
  *
@@ -670,6 +695,18 @@ export async function decideNpcIntent(
       log.warn(
         `[npc-mind] ${actor.label} emitted extra action lines beyond speech+action; dropping: ${JSON.stringify(dropped)}`,
       );
+    }
+    // If the action line starts with "I " but the verb isn't a known action it's a
+    // misformatted thought (e.g. "I wonder if…", "I think I should…").
+    // Lines that don't start with "I " are treated as shorthand and passed through.
+    const actionVerbRegex =
+      /^i\s+(move|go|walk|travel|look|examine|inspect|take|pick|grab|drop|give|hand|inventory|check|emote|attack|fight|strike|open|close|offer|buy|sell|wait|search|equip|unequip|wear|wield|remove|say|tell|ask|shout|whisper|mutter|reply|answer|cry|murmur|sing|greet|call|exclaim|respond)\b/i;
+    const startsWithI = /^i\s/i;
+    if (actionLine !== null && startsWithI.test(actionLine.trim()) && !actionVerbRegex.test(actionLine.trim())) {
+      log.warn(`[npc-mind] ${actor.label} emitted non-action as action: ${JSON.stringify(actionLine)}`);
+      const emote = await generateFallbackEmote(actionLine, actor.mood, llm);
+      actionLine = `I emote ${emote}`;
+      log.info(`[npc-mind] ${actor.label} replaced with emote: ${JSON.stringify(actionLine)}`);
     }
     const orderedLines: string[] = [];
     if (speechLine !== null) orderedLines.push(speechLine);
