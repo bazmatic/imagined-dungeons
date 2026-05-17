@@ -209,4 +209,24 @@ describe('handleLook', () => {
     }]);
     expect(spyAI.peekExit).toHaveBeenCalledWith(unlockedExit, locB, null);
   });
+
+  it('unlocked exit whose destination is missing falls back to unobstructed template', async () => {
+    // locB is intentionally absent from the repo — simulates a stale exit reference
+    const repo = new MemoryRepository(W, {
+      locations: [loc],
+      exits: [unlockedExit],
+      items: [],
+      agents: [paff],
+    });
+    const r = await handleLook(
+      { kind: 'look', actorId: paff.id, target: { kind: ExaminableKind.Exit, id: unlockedExit.id } },
+      repo,
+      { ai: nullGameAI },
+    );
+    if (!r.ok) throw new Error(r.error);
+    expect(r.value.render).toEqual([{
+      kind: SegmentKind.Narration,
+      text: 'The oak door leads north. It is unobstructed.',
+    }]);
+  });
 });
