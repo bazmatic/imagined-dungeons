@@ -31,7 +31,7 @@ async function locationOfItem(repo: HandlerRepo, itemId: ItemId): Promise<Locati
 /**
  * Translate the action-level convention ("null = leave unchanged, '' = clear")
  * into the repo-level convention ("undefined = skip, null = clear"). Used for
- * the new agent-only mood and shortTermIntent fields.
+ * the new agent-only mood and sideQuest fields.
  */
 function actionToRepoNullable(value: string | null): string | null | undefined {
   if (value === null) return undefined; // leave unchanged
@@ -48,7 +48,7 @@ export async function handleUpdateDescription(
   // still require at least one of the descriptions.
   const isAgent = action.target.kind === OwnerKind.Agent;
   const moodChanging = isAgent && action.mood !== null;
-  const intentChanging = isAgent && action.shortTermIntent !== null;
+  const intentChanging = isAgent && action.sideQuest !== null;
   if (
     action.shortDescription === null &&
     action.longDescription === null &&
@@ -56,14 +56,14 @@ export async function handleUpdateDescription(
     !intentChanging
   ) {
     return Err(
-      'update_description requires at least one of shortDescription, longDescription, mood, or shortTermIntent.',
+      'update_description requires at least one of shortDescription, longDescription, mood, or sideQuest.',
     );
   }
 
   let shortBefore: string;
   let longBefore: string;
   let moodBefore: string | null = null;
-  let shortTermIntentBefore: string | null = null;
+  let sideQuestBefore: string | null = null;
   let affectedLocationId: LocationId | null;
 
   switch (action.target.kind) {
@@ -86,7 +86,7 @@ export async function handleUpdateDescription(
       shortBefore = agent.shortDescription;
       longBefore = agent.longDescription;
       moodBefore = agent.mood;
-      shortTermIntentBefore = agent.shortTermIntent;
+      sideQuestBefore = agent.sideQuest;
       affectedLocationId = agent.locationId;
       break;
     }
@@ -112,14 +112,14 @@ export async function handleUpdateDescription(
         short?: string;
         long?: string;
         mood?: string | null;
-        shortTermIntent?: string | null;
+        sideQuest?: string | null;
       } = {};
       if (action.shortDescription !== null) patch.short = action.shortDescription;
       if (action.longDescription !== null) patch.long = action.longDescription;
       const moodPatch = actionToRepoNullable(action.mood);
       if (moodPatch !== undefined) patch.mood = moodPatch;
-      const intentPatch = actionToRepoNullable(action.shortTermIntent);
-      if (intentPatch !== undefined) patch.shortTermIntent = intentPatch;
+      const intentPatch = actionToRepoNullable(action.sideQuest);
+      if (intentPatch !== undefined) patch.sideQuest = intentPatch;
       await repo.updateAgentDescription(action.target.id, patch);
       break;
     }
@@ -132,12 +132,12 @@ export async function handleUpdateDescription(
   // Compute "after" values mirroring the repo write semantics.
   const moodAfter =
     isAgent && action.mood !== null ? (action.mood === '' ? null : action.mood) : moodBefore;
-  const shortTermIntentAfter =
-    isAgent && action.shortTermIntent !== null
-      ? action.shortTermIntent === ''
+  const sideQuestAfter =
+    isAgent && action.sideQuest !== null
+      ? action.sideQuest === ''
         ? null
-        : action.shortTermIntent
-      : shortTermIntentBefore;
+        : action.sideQuest
+      : sideQuestBefore;
 
   const event: DomainEvent = {
     id: nextEventId(),
@@ -153,8 +153,8 @@ export async function handleUpdateDescription(
     longAfter: action.longDescription ?? longBefore,
     moodBefore,
     moodAfter,
-    shortTermIntentBefore,
-    shortTermIntentAfter,
+    sideQuestBefore,
+    sideQuestAfter,
   };
   await repo.appendEvent(event);
   return Ok({ render: [{ kind: SegmentKind.Feedback, text: 'The description has been updated.' }], event });

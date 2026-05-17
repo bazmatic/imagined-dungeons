@@ -30,7 +30,7 @@ import type { HandlerRepo } from './repository';
 const SYSTEM_PROMPT_LINES: readonly string[] = [
   'You are the consequence engine of a fantasy text adventure.',
   '',
-  "Given a batch of events that just happened, decide whether the world's stored short/long descriptions should change to reflect those events durably, and whether any agent's mood should be updated. (Agents manage their own shortTermIntent — DO NOT touch it here.)",
+  "Given a batch of events that just happened, decide whether the world's stored short/long descriptions should change to reflect those events durably, and whether any agent's mood should be updated. (Agents manage their own sideQuest — DO NOT touch it here.)",
   '',
   'You can emit two kinds of consequence actions: `update_description` (mutate a stored description / mood) and `reveal_item` (flip a hidden item to visible). Be conservative — most batches need no consequences. Reply with a JSON object containing a `consequences` array (possibly empty).',
   '',
@@ -53,7 +53,7 @@ const SYSTEM_PROMPT_LINES: readonly string[] = [
   '- After a positive interaction: shift toward warmer or more relaxed.',
   '- Routine actions do NOT change mood.',
   '',
-  'shortTermIntent is OWNED BY THE AGENT THEMSELVES via the NPC-mind reply. Never set or clear it from a consequence. Always pass shortTermIntent: null on every consequence you emit (which means "leave unchanged" — the only legal value here).',
+  'sideQuest is OWNED BY THE AGENT THEMSELVES via the NPC-mind reply. Never set or clear it from a consequence. Always pass sideQuest: null on every consequence you emit (which means "leave unchanged" — the only legal value here).',
   '',
   'When NOT to emit a consequence:',
   '- Routine movement (move): people enter and leave rooms constantly; that does not change the room.',
@@ -65,9 +65,9 @@ const SYSTEM_PROMPT_LINES: readonly string[] = [
   '- Refer to entities by short natural-language names ("the workshop", "the lantern", "Paff Pinkerton") in the targetRef field.',
   '- targetKind must be exactly one of: "location", "item", "agent".',
   '- Set shortDescription or longDescription to the new prose, or null to leave that field unchanged.',
-  '- mood and shortTermIntent are only meaningful when targetKind is "agent". On a location or item they will be ignored.',
-  '- Use null for mood/shortTermIntent to leave that field unchanged. Use "" (empty string) to explicitly clear it. Use a short string to set it.',
-  "- A consequence must change SOMETHING — at least one of shortDescription, longDescription, mood, shortTermIntent must be non-null. (Empty string '' counts as a change for mood/shortTermIntent.)",
+  '- mood and sideQuest are only meaningful when targetKind is "agent". On a location or item they will be ignored.',
+  '- Use null for mood/sideQuest to leave that field unchanged. Use "" (empty string) to explicitly clear it. Use a short string to set it.',
+  "- A consequence must change SOMETHING — at least one of shortDescription, longDescription, mood, sideQuest must be non-null. (Empty string '' counts as a change for mood/sideQuest.)",
   '- Keep prose short, present tense, factual, and grounded in what actually happened in the events.',
   '- Maximum 3 entries in consequences.',
   '',
@@ -118,7 +118,7 @@ export const CONSEQUENCE_SCHEMA: JsonSchema = {
           {
             type: 'object',
             additionalProperties: false,
-            required: ['kind', 'targetKind', 'targetRef', 'shortDescription', 'longDescription', 'mood', 'shortTermIntent'],
+            required: ['kind', 'targetKind', 'targetRef', 'shortDescription', 'longDescription', 'mood', 'sideQuest'],
             properties: {
               kind: { type: 'string', enum: ['update_description'] },
               targetKind: { type: 'string', enum: ['location', 'item', 'agent'] },
@@ -126,7 +126,7 @@ export const CONSEQUENCE_SCHEMA: JsonSchema = {
               shortDescription: { anyOf: [{ type: 'string' }, { type: 'null' }] },
               longDescription: { anyOf: [{ type: 'string' }, { type: 'null' }] },
               mood: { anyOf: [{ type: 'string' }, { type: 'null' }] },
-              shortTermIntent: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+              sideQuest: { anyOf: [{ type: 'string' }, { type: 'null' }] },
             },
           },
           {
@@ -256,7 +256,7 @@ export type RawConsequence =
       readonly shortDescription: string | null;
       readonly longDescription: string | null;
       readonly mood: string | null;
-      readonly shortTermIntent: string | null;
+      readonly sideQuest: string | null;
     }
   | {
       readonly kind: 'reveal_item';
@@ -443,10 +443,10 @@ export function parseConsequenceResponse(parsed: unknown): readonly RawConsequen
     if (moodRaw !== null && typeof moodRaw !== 'string') continue;
     const isAgent = targetKind === OwnerKind.Agent;
     const mood = isAgent ? (moodRaw as string | null) : null;
-    const shortTermIntent = null;
+    const sideQuest = null;
     const agentSideChange = isAgent && mood !== null;
     if (shortDescription === null && longDescription === null && !agentSideChange) continue;
-    out.push({ kind: ActionKind.UpdateDescription, targetKind, targetRef, shortDescription, longDescription, mood, shortTermIntent });
+    out.push({ kind: ActionKind.UpdateDescription, targetKind, targetRef, shortDescription, longDescription, mood, sideQuest });
   }
   return out;
 }
@@ -1042,7 +1042,7 @@ export async function consequencesFor(
       shortDescription: raw.shortDescription,
       longDescription: raw.longDescription,
       mood: raw.mood,
-      shortTermIntent: raw.shortTermIntent,
+      sideQuest: raw.sideQuest,
     });
   }
   return actions;

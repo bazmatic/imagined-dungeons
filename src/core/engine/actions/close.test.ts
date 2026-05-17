@@ -31,7 +31,7 @@ const actor: Agent = {
   defense: 0,
   capacity: 10,
   mood: null,
-  shortTermIntent: null,
+  sideQuest: null,
   goal: null,
   autonomous: false,
   awake: false,

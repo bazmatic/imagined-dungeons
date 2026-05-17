@@ -14,7 +14,7 @@ const ITEM_ID = asItemId('item_x');
 const baseAgent = {
   worldId: W, shortDescription: '', longDescription: '', locationId: A,
   hp: 10, damage: 0, defense: 0, capacity: 10, mood: null,
-  shortTermIntent: null, goal: null, autonomous: false, awake: false, tags: [], gold: 0,
+  sideQuest: null, goal: null, autonomous: false, awake: false, tags: [], gold: 0,
 } as const;
 
 const buyer: Agent = { ...baseAgent, id: BUYER_ID, label: 'Paff', shortDescription: 'a scrappy adventurer', gold: 50 , secretDescription: ''};

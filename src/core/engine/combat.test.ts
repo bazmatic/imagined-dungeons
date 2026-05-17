@@ -25,7 +25,7 @@ const OTHER_ID = asAgentId('char_other');
 const player: Agent = {
   id: PLAYER_ID, worldId: W, label: 'Player', shortDescription: '', longDescription: '',
   locationId: LOC_A, hp: 10, damage: 2, defense: 1, capacity: 10,
-  mood: null, shortTermIntent: null, goal: null, autonomous: false, awake: false, gold: 0,
+  mood: null, sideQuest: null, goal: null, autonomous: false, awake: false, gold: 0,
   tags: [], secretDescription: '',
 };
 
@@ -33,7 +33,7 @@ function makeGoblin(overrides: Partial<Agent> = {}): Agent {
   return {
     id: GOBLIN_ID, worldId: W, label: 'Goblin', shortDescription: '', longDescription: '',
     locationId: LOC_A, hp: 5, damage: 2, defense: 1, capacity: 5,
-    mood: null, shortTermIntent: null, goal: null, autonomous: false, awake: true, gold: 0,
+    mood: null, sideQuest: null, goal: null, autonomous: false, awake: true, gold: 0,
     tags: [], secretDescription: '',
     ...overrides,
   };

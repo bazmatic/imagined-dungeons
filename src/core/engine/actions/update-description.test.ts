@@ -47,7 +47,7 @@ const paff: Agent = {
   defense: 0,
   capacity: 10,
   mood: null,
-  shortTermIntent: null,
+  sideQuest: null,
   goal: null,
   autonomous: false,
   awake: false,
@@ -67,7 +67,7 @@ const spark: Agent = {
   defense: 0,
   capacity: 10,
   mood: null,
-  shortTermIntent: null,
+  sideQuest: null,
   goal: null,
   autonomous: true,
   awake: true,
@@ -92,7 +92,7 @@ describe('handleUpdateDescription', () => {
         shortDescription: null,
         longDescription: 'long A, now scorched',
         mood: null,
-        shortTermIntent: null,
+        sideQuest: null,
       },
       repo,
     );
@@ -127,7 +127,7 @@ describe('handleUpdateDescription', () => {
         shortDescription: null,
         longDescription: null,
         mood: null,
-        shortTermIntent: null,
+        sideQuest: null,
       },
       repo,
     );
@@ -149,7 +149,7 @@ describe('handleUpdateDescription', () => {
         shortDescription: 'a soot-stained lantern',
         longDescription: null,
         mood: null,
-        shortTermIntent: null,
+        sideQuest: null,
       },
       repo,
     );
@@ -175,7 +175,7 @@ describe('handleUpdateDescription', () => {
         shortDescription: null,
         longDescription: 'visibly wounded',
         mood: null,
-        shortTermIntent: null,
+        sideQuest: null,
       },
       repo,
     );
@@ -199,7 +199,7 @@ describe('handleUpdateDescription', () => {
         shortDescription: null,
         longDescription: null,
         mood: 'wary',
-        shortTermIntent: null,
+        sideQuest: null,
       },
       repo,
     );
@@ -209,11 +209,11 @@ describe('handleUpdateDescription', () => {
     if (r.value.event.kind !== EventKind.DescriptionUpdated) throw new Error();
     expect(r.value.event.moodBefore).toBeNull();
     expect(r.value.event.moodAfter).toBe('wary');
-    expect(r.value.event.shortTermIntentBefore).toBeNull();
-    expect(r.value.event.shortTermIntentAfter).toBeNull();
+    expect(r.value.event.sideQuestBefore).toBeNull();
+    expect(r.value.event.sideQuestAfter).toBeNull();
   });
 
-  it("updates an agent's shortTermIntent and emits shortTermIntent before/after", async () => {
+  it("updates an agent's sideQuest and emits sideQuest before/after", async () => {
     const repo = new MemoryRepository(W, {
       locations: [loc],
       exits: [],
@@ -228,19 +228,19 @@ describe('handleUpdateDescription', () => {
         shortDescription: null,
         longDescription: null,
         mood: null,
-        shortTermIntent: 'take the fire map to the docks',
+        sideQuest: 'take the fire map to the docks',
       },
       repo,
     );
     if (!r.ok) throw new Error(r.error);
     const a = await repo.getAgent(spark.id);
-    expect(a.shortTermIntent).toBe('take the fire map to the docks');
+    expect(a.sideQuest).toBe('take the fire map to the docks');
     if (r.value.event.kind !== EventKind.DescriptionUpdated) throw new Error();
-    expect(r.value.event.shortTermIntentBefore).toBeNull();
-    expect(r.value.event.shortTermIntentAfter).toBe('take the fire map to the docks');
+    expect(r.value.event.sideQuestBefore).toBeNull();
+    expect(r.value.event.sideQuestAfter).toBe('take the fire map to the docks');
   });
 
-  it('updates mood and shortTermIntent at once', async () => {
+  it('updates mood and sideQuest at once', async () => {
     const repo = new MemoryRepository(W, {
       locations: [loc],
       exits: [],
@@ -255,14 +255,14 @@ describe('handleUpdateDescription', () => {
         shortDescription: null,
         longDescription: null,
         mood: 'angry',
-        shortTermIntent: 'find Paff',
+        sideQuest: 'find Paff',
       },
       repo,
     );
     if (!r.ok) throw new Error(r.error);
     const a = await repo.getAgent(spark.id);
     expect(a.mood).toBe('angry');
-    expect(a.shortTermIntent).toBe('find Paff');
+    expect(a.sideQuest).toBe('find Paff');
   });
 
   it('passing null for mood is a no-op even if shortDescription is provided', async () => {
@@ -281,7 +281,7 @@ describe('handleUpdateDescription', () => {
         shortDescription: 'a halfling, a bit singed',
         longDescription: null,
         mood: null,
-        shortTermIntent: null,
+        sideQuest: null,
       },
       repo,
     );
@@ -307,7 +307,7 @@ describe('handleUpdateDescription', () => {
         shortDescription: null,
         longDescription: null,
         mood: '',
-        shortTermIntent: null,
+        sideQuest: null,
       },
       repo,
     );
@@ -319,10 +319,10 @@ describe('handleUpdateDescription', () => {
     expect(r.value.event.moodAfter).toBeNull();
   });
 
-  it('passing "" for shortTermIntent clears the intent', async () => {
+  it('passing "" for sideQuest clears the intent', async () => {
     const sparkWithIntent: Agent = {
       ...spark,
-      shortTermIntent: 'take the map',
+      sideQuest: 'take the map',
     };
     const repo = new MemoryRepository(W, {
       locations: [loc],
@@ -338,16 +338,16 @@ describe('handleUpdateDescription', () => {
         shortDescription: null,
         longDescription: null,
         mood: null,
-        shortTermIntent: '',
+        sideQuest: '',
       },
       repo,
     );
     if (!r.ok) throw new Error(r.error);
     const a = await repo.getAgent(spark.id);
-    expect(a.shortTermIntent).toBeNull();
+    expect(a.sideQuest).toBeNull();
   });
 
-  it('mood/shortTermIntent set on a non-agent target are silently ignored', async () => {
+  it('mood/sideQuest set on a non-agent target are silently ignored', async () => {
     const repo = new MemoryRepository(W, {
       locations: [loc],
       exits: [],
@@ -362,7 +362,7 @@ describe('handleUpdateDescription', () => {
         shortDescription: 'a workshop, slightly redder',
         longDescription: null,
         mood: 'wary',
-        shortTermIntent: 'find the goblin',
+        sideQuest: 'find the goblin',
       },
       repo,
     );
@@ -370,7 +370,7 @@ describe('handleUpdateDescription', () => {
     if (r.value.event.kind !== EventKind.DescriptionUpdated) throw new Error();
     expect(r.value.event.moodBefore).toBeNull();
     expect(r.value.event.moodAfter).toBeNull();
-    expect(r.value.event.shortTermIntentBefore).toBeNull();
-    expect(r.value.event.shortTermIntentAfter).toBeNull();
+    expect(r.value.event.sideQuestBefore).toBeNull();
+    expect(r.value.event.sideQuestAfter).toBeNull();
   });
 });

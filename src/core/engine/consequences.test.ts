@@ -57,7 +57,7 @@ const paff: Agent = {
   defense: 0,
   capacity: 10,
   mood: null,
-  shortTermIntent: null,
+  sideQuest: null,
   goal: null,
   autonomous: false,
   awake: false,
@@ -174,7 +174,7 @@ describe('consequencesFor', () => {
               shortDescription: null,
               longDescription: null,
               mood: 'wary',
-              shortTermIntent: null,
+              sideQuest: null,
             },
           ],
         },
@@ -186,11 +186,11 @@ describe('consequencesFor', () => {
     if (!a || a.kind !== ActionKind.UpdateDescription) throw new Error();
     expect(a.target.kind).toBe(OwnerKind.Agent);
     expect(a.mood).toBe('wary');
-    expect(a.shortTermIntent).toBeNull();
+    expect(a.sideQuest).toBeNull();
   });
 
-  it('forces shortTermIntent to null even if the LLM emits one (agent owns intent)', async () => {
-    // shortTermIntent is set/cleared by the agent's own NPC-mind reply, not
+  it('forces sideQuest to null even if the LLM emits one (agent owns intent)', async () => {
+    // sideQuest is set/cleared by the agent's own NPC-mind reply, not
     // by the consequence engine. This is the hard guard: a consequence
     // emitting an intent string must be silently dropped, and on its own
     // it should not satisfy the "must change something" rule, so the
@@ -208,7 +208,7 @@ describe('consequencesFor', () => {
               shortDescription: null,
               longDescription: null,
               mood: null,
-              shortTermIntent: 'take the lantern to the docks',
+              sideQuest: 'take the lantern to the docks',
             },
           ],
         },
@@ -232,7 +232,7 @@ describe('consequencesFor', () => {
               shortDescription: null,
               longDescription: null,
               mood: 'thoughtful',
-              shortTermIntent: 'this should be ignored',
+              sideQuest: 'this should be ignored',
             },
           ],
         },
@@ -243,10 +243,10 @@ describe('consequencesFor', () => {
     const a = r[0];
     if (!a || a.kind !== ActionKind.UpdateDescription) throw new Error();
     expect(a.mood).toBe('thoughtful');
-    expect(a.shortTermIntent).toBeNull();
+    expect(a.sideQuest).toBeNull();
   });
 
-  it('strips mood/shortTermIntent set on a non-agent target rather than rejecting', async () => {
+  it('strips mood/sideQuest set on a non-agent target rather than rejecting', async () => {
     const repo = repoFor();
     const llm = makeFakeLanguageModel({
       responder: () => ({
@@ -260,7 +260,7 @@ describe('consequencesFor', () => {
               shortDescription: null,
               longDescription: 'an emptier workshop',
               mood: 'wary',
-              shortTermIntent: 'something',
+              sideQuest: 'something',
             },
           ],
         },
@@ -271,7 +271,7 @@ describe('consequencesFor', () => {
     const a = r[0];
     if (!a || a.kind !== ActionKind.UpdateDescription) throw new Error();
     expect(a.mood).toBeNull();
-    expect(a.shortTermIntent).toBeNull();
+    expect(a.sideQuest).toBeNull();
   });
 
   it('writes updatedStorySoFar to world_lore when LLM returns one', async () => {
@@ -439,7 +439,7 @@ describe('parseConsequenceResponse', () => {
         shortDescription: null,
         longDescription: 'scorched walls',
         mood: null,
-        shortTermIntent: null,
+        sideQuest: null,
       }],
     });
     expect(result).toHaveLength(1);
@@ -479,7 +479,7 @@ const CTX_AGENT_ID = asAgentId('char_p');
 const makeCtx = (overrides: Partial<ConsequenceContext> = {}): ConsequenceContext => ({
   locations: [{ id: CTX_LOC, worldId: asWorldId('w'), label: 'Workshop', shortDescription: '', longDescription: '', tags: [], secretDescription: '' }],
   items: [{ id: CTX_ITEM_ID, worldId: asWorldId('w'), label: 'lantern', shortDescription: '', longDescription: '', owner: { kind: OwnerKind.Location, id: CTX_LOC }, weight: 1, hidden: false, tags: [], equipped: false, container: false, opened: true, locked: false, lockedByItem: null, priceTag: null, weaponDamage: null, armorDefense: null }],
-  agents: [{ id: CTX_AGENT_ID, worldId: asWorldId('w'), label: 'Paff', shortDescription: '', longDescription: '', locationId: CTX_LOC, hp: 10, damage: 0, defense: 0, capacity: 10, mood: null, shortTermIntent: null, goal: null, autonomous: false, awake: false, gold: 0, tags: [], secretDescription: '' }],
+  agents: [{ id: CTX_AGENT_ID, worldId: asWorldId('w'), label: 'Paff', shortDescription: '', longDescription: '', locationId: CTX_LOC, hp: 10, damage: 0, defense: 0, capacity: 10, mood: null, sideQuest: null, goal: null, autonomous: false, awake: false, gold: 0, tags: [], secretDescription: '' }],
   hiddenItems: [],
   ...overrides,
 });
@@ -491,7 +491,7 @@ const descRaw = (targetKind: 'location' | 'item' | 'agent', targetRef: string) =
   shortDescription: null,
   longDescription: 'changed',
   mood: null,
-  shortTermIntent: null,
+  sideQuest: null,
 });
 
 describe('resolveConsequenceTarget', () => {

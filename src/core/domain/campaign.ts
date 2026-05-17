@@ -47,8 +47,8 @@ export interface CampaignSeedData {
     goal: string | null;
     autonomous: boolean;
     // Optional in the seed shape — auto-generated seed modules predate the
-    // shortTermIntent column. New NPCs always start with no short-term intent.
-    shortTermIntent?: string | null;
+    // sideQuest column. New NPCs always start with no side quest.
+    sideQuest?: string | null;
   }[];
 }
 

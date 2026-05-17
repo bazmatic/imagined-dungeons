@@ -99,7 +99,7 @@ export interface Agent {
   readonly defense: number;
   readonly capacity: number;
   readonly mood: string | null;
-  readonly shortTermIntent: string | null;
+  readonly sideQuest: string | null;
   readonly goal: string | null;
   /**
    * "Always awake." An autonomous agent ticks every turn they're co-located
@@ -111,7 +111,7 @@ export interface Agent {
    * Runtime "in the scene" flag. The scheduler ticks any agent that is
    * `autonomous || awake`. The engine sets this true when something
    * interacts with the agent (direct address, attack, emote-at, vocative
-   * broadcast) and clears it once `shortTermIntent` is null again — i.e.
+   * broadcast) and clears it once `sideQuest` is null again — i.e.
    * the agent has finished what they were drawn into.
    */
   readonly awake: boolean;

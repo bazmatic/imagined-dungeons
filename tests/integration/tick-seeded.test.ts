@@ -144,7 +144,7 @@ describe('runTick against the seeded burning district', () => {
     }
   });
 
-  it('Spark sets his own shortTermIntent via INTENT line, and his next-tick prompt reflects it', async () => {
+  it('Spark sets his own sideQuest via QUEST: line, and his next-tick prompt reflects it', async () => {
     const h = openDb(':memory:');
     try {
       await seedIfEmpty(h.db, BURNING_DISTRICT_CAMPAIGN);
@@ -161,9 +161,9 @@ describe('runTick against the seeded burning district', () => {
           if (req.system.includes('Spark')) {
             sparkSystemPrompts.push(req.system);
             sparkCallNo++;
-            // First Spark tick: declare a new intent. Second Spark tick: just wait.
+            // First Spark tick: declare a new side quest. Second Spark tick: just wait.
             if (sparkCallNo === 1) {
-              return 'INTENT: take the fire map to the docks\nI wait.';
+              return 'QUEST: take the fire map to the docks\nI wait.';
             }
             return 'wait';
           }
@@ -176,12 +176,12 @@ describe('runTick against the seeded burning district', () => {
       // Tick 1: NPC mind sets its own intent.
       await runTick(PAFF, 'say hello to spark', repo, { parse, ai: new LlmGameAI(llm) });
       const sparkAfter = await repo.getAgent(SPARK);
-      expect(sparkAfter.shortTermIntent).toBe('take the fire map to the docks');
+      expect(sparkAfter.sideQuest).toBe('take the fire map to the docks');
 
-      // Tick 2: Spark's prompt now exposes the intent in its header.
+      // Tick 2: Spark's prompt now exposes the side quest in its header.
       sparkSystemPrompts.length = 0;
       await runTick(PAFF, 'wait', repo, { parse, ai: new LlmGameAI(llm) });
-      const sparkPrompt = sparkSystemPrompts.find((p) => p.includes('Current short-term intent'));
+      const sparkPrompt = sparkSystemPrompts.find((p) => p.includes('Active side quest'));
       expect(sparkPrompt).toBeTruthy();
       expect(sparkPrompt).toContain('take the fire map to the docks');
     } finally {

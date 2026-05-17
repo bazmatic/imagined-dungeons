@@ -64,7 +64,7 @@ export interface HandlerRepo {
    * Toggle the runtime "in the scene" flag. The scheduler ticks any agent
    * that is `autonomous || awake`. The engine wakes an agent when something
    * draws their attention (interaction, threat, vocative) and sleeps them
-   * once their `shortTermIntent` is null again.
+   * once their `sideQuest` is null again.
    */
   setAgentAwake(id: AgentId, awake: boolean): Promise<void>;
   appendEvent(event: DomainEvent): Promise<void>;
@@ -99,7 +99,7 @@ export interface HandlerRepo {
       short?: string;
       long?: string;
       mood?: string | null;
-      shortTermIntent?: string | null;
+      sideQuest?: string | null;
     },
   ): Promise<void>;
   /**

@@ -43,7 +43,7 @@ export function renderLookTarget(item: Item): readonly Segment[] {
  * never gets an empty string back.
  *
  * Mood is intentionally surfaced ("They seem energetic"); the agent's
- * `shortTermIntent` is intentionally NOT surfaced — it is the NPC's private
+ * `sideQuest` is intentionally NOT surfaced — it is the NPC's private
  * internal plan and only informs their own next-tick prompt.
  */
 export function renderLookAgent(agent: Agent): readonly Segment[] {

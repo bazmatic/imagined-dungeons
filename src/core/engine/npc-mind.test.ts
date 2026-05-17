@@ -33,7 +33,7 @@ const spark: Agent = {
   defense: 14,
   capacity: 10,
   mood: 'Energetic',
-  shortTermIntent: null,
+  sideQuest: null,
   goal: 'Map out all safe routes in the district',
   autonomous: true,
   awake: true,
@@ -54,7 +54,7 @@ const paff: Agent = {
   defense: 12,
   capacity: 30,
   mood: null,
-  shortTermIntent: null,
+  sideQuest: null,
   goal: null,
   autonomous: false,
   awake: false,
@@ -145,11 +145,11 @@ describe('decideNpcIntent', () => {
     await expect(decideNpcIntent(SPARK_ID, repo, null)).resolves.toEqual(['wait']);
   });
 
-  it("includes 'Current short-term intent' in the system prompt when set", async () => {
+  it("includes 'Active side quest' in the system prompt when set", async () => {
     const llm = makeFakeLanguageModel({ textResponder: () => 'I wait.' });
     const sparkWithIntent: Agent = {
       ...spark,
-      shortTermIntent: 'deliver the fire map to the docks',
+      sideQuest: 'deliver the fire map to the docks',
     };
     const repo = new MemoryRepository(W, {
       locations: [loc],
@@ -160,25 +160,25 @@ describe('decideNpcIntent', () => {
     await decideNpcIntent(SPARK_ID, repo, llm);
     const call = llm.textCalls[0];
     if (!call) throw new Error('expected textCall');
-    expect(call.system).toContain('Current short-term intent: deliver the fire map to the docks');
+    expect(call.system).toContain('Active side quest: deliver the fire map to the docks');
   });
 
-  it("does NOT include 'Current short-term intent' when null", async () => {
+  it("does NOT include 'Active side quest' when null", async () => {
     const llm = makeFakeLanguageModel({ textResponder: () => 'I wait.' });
     const repo = makeRepo();
     await decideNpcIntent(SPARK_ID, repo, llm);
     const call = llm.textCalls[0];
     if (!call) throw new Error('expected textCall');
-    expect(call.system).not.toMatch(/Current short-term intent:/);
+    expect(call.system).not.toMatch(/Active side quest:/);
   });
 
-  it('clears own shortTermIntent when reply begins with INTENT_DONE; returns the trailing action', async () => {
+  it('clears own sideQuest when reply begins with QUEST_DONE; returns the trailing action', async () => {
     const llm = makeFakeLanguageModel({
-      textResponder: () => 'INTENT_DONE\nI wait.',
+      textResponder: () => 'QUEST_DONE\nI wait.',
     });
     const sparkWithIntent: Agent = {
       ...spark,
-      shortTermIntent: 'deliver the fire map to Captain Serena',
+      sideQuest: 'deliver the fire map to Captain Serena',
     };
     const repo = new MemoryRepository(W, {
       locations: [loc],
@@ -186,19 +186,19 @@ describe('decideNpcIntent', () => {
       items: [],
       agents: [sparkWithIntent, paff],
     });
-    expect((await repo.getAgent(SPARK_ID)).shortTermIntent).toBe(
+    expect((await repo.getAgent(SPARK_ID)).sideQuest).toBe(
       'deliver the fire map to Captain Serena',
     );
     const intent = await decideNpcIntent(SPARK_ID, repo, llm);
     expect(intent).toEqual(['I wait.']);
-    expect((await repo.getAgent(SPARK_ID)).shortTermIntent).toBeNull();
+    expect((await repo.getAgent(SPARK_ID)).sideQuest).toBeNull();
   });
 
-  it('falls back to "wait" when INTENT_DONE arrives with no following action', async () => {
-    const llm = makeFakeLanguageModel({ textResponder: () => 'INTENT_DONE' });
+  it('falls back to "wait" when QUEST_DONE arrives with no following action', async () => {
+    const llm = makeFakeLanguageModel({ textResponder: () => 'QUEST_DONE' });
     const sparkWithIntent: Agent = {
       ...spark,
-      shortTermIntent: 'deliver the fire map to Captain Serena',
+      sideQuest: 'deliver the fire map to Captain Serena',
     };
     const repo = new MemoryRepository(W, {
       locations: [loc],
@@ -208,48 +208,48 @@ describe('decideNpcIntent', () => {
     });
     const intent = await decideNpcIntent(SPARK_ID, repo, llm);
     expect(intent).toEqual([NpcFallbackIntent]);
-    expect((await repo.getAgent(SPARK_ID)).shortTermIntent).toBeNull();
+    expect((await repo.getAgent(SPARK_ID)).sideQuest).toBeNull();
   });
 
-  it('behavioural priorities tell the agent to manage their own short-term intent', async () => {
+  it('behavioural priorities tell the agent to manage their side quest', async () => {
     const llm = makeFakeLanguageModel({ textResponder: () => 'I wait.' });
     const repo = makeRepo();
     await decideNpcIntent(SPARK_ID, repo, llm);
     const call = llm.textCalls[0];
     if (!call) throw new Error('expected textCall');
-    expect(call.system).toContain('short-term intent');
-    expect(call.system).toMatch(/3\. Manage your own `Current short-term intent`/);
+    expect(call.system).toContain('side quest');
+    expect(call.system).toMatch(/3\. Manage your `Active side quest`/);
     expect(call.system).toMatch(/4\. Otherwise, pick something consistent with your long-term/);
   });
 
-  it('reply format documents INTENT and INTENT_DONE control lines', async () => {
+  it('reply format documents QUEST: and QUEST_DONE control lines', async () => {
     const llm = makeFakeLanguageModel({ textResponder: () => 'I wait.' });
     const repo = makeRepo();
     await decideNpcIntent(SPARK_ID, repo, llm);
     const call = llm.textCalls[0];
     if (!call) throw new Error('expected textCall');
-    expect(call.system).toContain('INTENT_DONE');
-    expect(call.system).toContain('INTENT: <full plan>');
+    expect(call.system).toContain('QUEST_DONE');
+    expect(call.system).toContain('QUEST: <full goal>');
   });
 
-  it('reply with `INTENT: <plan>` sets the agent shortTermIntent before the action runs', async () => {
+  it('reply with `QUEST: <plan>` sets the agent sideQuest before the action runs', async () => {
     const llm = makeFakeLanguageModel({
-      textResponder: () => 'INTENT: deliver the fire map to Captain Serena\nI take the fire map.',
+      textResponder: () => 'QUEST: deliver the fire map to Captain Serena\nI take the fire map.',
     });
     const repo = makeRepo();
-    expect((await repo.getAgent(SPARK_ID)).shortTermIntent).toBeNull();
+    expect((await repo.getAgent(SPARK_ID)).sideQuest).toBeNull();
     const intent = await decideNpcIntent(SPARK_ID, repo, llm);
     expect(intent).toEqual(['I take the fire map.']);
-    expect((await repo.getAgent(SPARK_ID)).shortTermIntent).toBe(
+    expect((await repo.getAgent(SPARK_ID)).sideQuest).toBe(
       'deliver the fire map to Captain Serena',
     );
   });
 
-  it('reply with `INTENT_DONE` followed by `INTENT: <new>` clears and re-sets in one tick', async () => {
+  it('reply with `QUEST_DONE` followed by `QUEST: <new>` clears and re-sets in one tick', async () => {
     const llm = makeFakeLanguageModel({
-      textResponder: () => 'INTENT_DONE\nINTENT: head back to the tavern\nI move north.',
+      textResponder: () => 'QUEST_DONE\nQUEST: head back to the tavern\nI move north.',
     });
-    const sparkWithIntent: Agent = { ...spark, shortTermIntent: 'deliver the map' };
+    const sparkWithIntent: Agent = { ...spark, sideQuest: 'deliver the map' };
     const repo = new MemoryRepository(W, {
       locations: [loc],
       exits: [],
@@ -258,7 +258,7 @@ describe('decideNpcIntent', () => {
     });
     const intent = await decideNpcIntent(SPARK_ID, repo, llm);
     expect(intent).toEqual(['I move north.']);
-    expect((await repo.getAgent(SPARK_ID)).shortTermIntent).toBe('head back to the tavern');
+    expect((await repo.getAgent(SPARK_ID)).sideQuest).toBe('head back to the tavern');
   });
 
   it('returns speech AND a non-speech action when the reply has both — speech first', async () => {

@@ -194,7 +194,7 @@ export class MemoryRepository implements Repository {
       short?: string;
       long?: string;
       mood?: string | null;
-      shortTermIntent?: string | null;
+      sideQuest?: string | null;
     },
   ): Promise<void> {
     const current = await this.getAgent(id);
@@ -203,7 +203,7 @@ export class MemoryRepository implements Repository {
       ...(patch.short !== undefined ? { shortDescription: patch.short } : {}),
       ...(patch.long !== undefined ? { longDescription: patch.long } : {}),
       ...(patch.mood !== undefined ? { mood: patch.mood } : {}),
-      ...(patch.shortTermIntent !== undefined ? { shortTermIntent: patch.shortTermIntent } : {}),
+      ...(patch.sideQuest !== undefined ? { sideQuest: patch.sideQuest } : {}),
     });
   }
 }

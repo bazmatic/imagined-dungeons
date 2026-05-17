@@ -76,7 +76,7 @@ describe('resolveOwnerSubtitle', () => {
       mood: null,
       goal: null,
       autonomous: false,
-      shortTermIntent: null,
+      sideQuest: null,
       awake: false,
       gold: 0,
       tags: [],

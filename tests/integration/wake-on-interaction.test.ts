@@ -54,7 +54,7 @@ const player: Agent = {
   defense: 12,
   capacity: 30,
   mood: null,
-  shortTermIntent: null,
+  sideQuest: null,
   goal: null,
   autonomous: false,
   awake: false,
@@ -75,7 +75,7 @@ const dormantSerena: Agent = {
   defense: 14,
   capacity: 10,
   mood: 'Cautious',
-  shortTermIntent: null,
+  sideQuest: null,
   goal: 'Return to the sea',
   autonomous: false,
   awake: false,
@@ -105,7 +105,7 @@ describe('wake-on-interaction', () => {
     await runTick(PLAYER, 'say "hello there"', repo, { parse, ai: null });
 
     const serena = await repo.getAgent(SERENA);
-    expect(serena.shortTermIntent).toBeNull();
+    expect(serena.sideQuest).toBeNull();
     expect(serena.awake).toBe(false);
     expect(serena.autonomous).toBe(false);
   });
@@ -120,7 +120,7 @@ describe('wake-on-interaction', () => {
     const parse = makeCompositeParser({ llm: null });
     await runTick(PLAYER, 'look', repo, { parse, ai: null });
     expect((await repo.getAgent(SERENA)).awake).toBe(false);
-    expect((await repo.getAgent(SERENA)).shortTermIntent).toBeNull();
+    expect((await repo.getAgent(SERENA)).sideQuest).toBeNull();
   });
 
   it('player leaving a location does NOT wake a dormant NPC left behind', async () => {

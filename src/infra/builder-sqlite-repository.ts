@@ -219,7 +219,7 @@ export class SqliteBuilderRepository implements BuilderRepository {
   }
   async upsertAgent(w: WorldId, i: UpsertAgentInput): Promise<void> {
     // Insert path: full row with runtime defaults.
-    // Update path: structural fields only — never touches hp/mood/short_term_intent/awake.
+    // Update path: structural fields only — never touches hp/mood/side_quest/awake.
     // This preserves gameplay state during publish merges.
     await this.db
       .insert(schema.agents)
@@ -235,7 +235,7 @@ export class SqliteBuilderRepository implements BuilderRepository {
         defense: i.defense,
         capacity: i.capacity,
         mood: i.mood,
-        shortTermIntent: null,
+        sideQuest: null,
         goal: i.goal,
         autonomous: i.autonomous,
         awake: false,
@@ -643,7 +643,7 @@ const toAgent = (r: typeof schema.agents.$inferSelect, w: WorldId): Agent => ({
   defense: r.defense,
   capacity: r.capacity,
   mood: r.mood,
-  shortTermIntent: r.shortTermIntent,
+  sideQuest: r.sideQuest,
   goal: r.goal,
   autonomous: r.autonomous,
   awake: r.awake,

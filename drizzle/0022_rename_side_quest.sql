@@ -1,0 +1,1 @@
+ALTER TABLE `agents` RENAME COLUMN `short_term_intent` TO `side_quest`;

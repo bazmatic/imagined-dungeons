@@ -112,7 +112,7 @@ export const agents = sqliteTable(
     defense: integer('defense').notNull(),
     capacity: integer('capacity').notNull(),
     mood: text('mood'),
-    shortTermIntent: text('short_term_intent'),
+    sideQuest: text('side_quest'),
     goal: text('goal'),
     autonomous: integer('autonomous', { mode: 'boolean' }).notNull(),
     awake: integer('awake', { mode: 'boolean' }).notNull(),

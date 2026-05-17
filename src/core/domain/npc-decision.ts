@@ -8,7 +8,7 @@ export interface DecisionSnapshot {
   readonly agentState: {
     readonly mood: string | null;
     readonly goal: string | null;
-    readonly shortTermIntent: string | null;
+    readonly sideQuest: string | null;
   };
   readonly perception: {
     readonly locationLabel: string;
@@ -23,8 +23,8 @@ export interface DecisionSnapshot {
   readonly response: {
     readonly rawText: string;
     readonly thought: string | null;
-    readonly intentBefore: string | null;
-    readonly intentAfter: string | null;
+    readonly sideQuestBefore: string | null;
+    readonly sideQuestAfter: string | null;
     readonly actions: readonly string[];
   };
   readonly fallback: boolean;

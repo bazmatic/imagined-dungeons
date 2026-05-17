@@ -55,7 +55,7 @@ const toAgent = (r: typeof schema.agents.$inferSelect, worldId: WorldId): Agent 
   defense: r.defense,
   capacity: r.capacity,
   mood: r.mood,
-  shortTermIntent: r.shortTermIntent,
+  sideQuest: r.sideQuest,
   goal: r.goal,
   autonomous: r.autonomous,
   awake: r.awake,
@@ -356,19 +356,19 @@ export class SqliteRepository implements Repository {
       short?: string;
       long?: string;
       mood?: string | null;
-      shortTermIntent?: string | null;
+      sideQuest?: string | null;
     },
   ): Promise<void> {
     const set: {
       shortDescription?: string;
       longDescription?: string;
       mood?: string | null;
-      shortTermIntent?: string | null;
+      sideQuest?: string | null;
     } = {};
     if (patch.short !== undefined) set.shortDescription = patch.short;
     if (patch.long !== undefined) set.longDescription = patch.long;
     if (patch.mood !== undefined) set.mood = patch.mood;
-    if (patch.shortTermIntent !== undefined) set.shortTermIntent = patch.shortTermIntent;
+    if (patch.sideQuest !== undefined) set.sideQuest = patch.sideQuest;
     if (Object.keys(set).length === 0) return;
     await this.db
       .update(schema.agents)

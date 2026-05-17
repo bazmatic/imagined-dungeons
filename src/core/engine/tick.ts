@@ -198,7 +198,7 @@ async function renderWitnessForPlayer(
       const descriptionChanged =
         event.shortBefore !== event.shortAfter || event.longBefore !== event.longAfter;
       const moodChanged = event.moodBefore !== event.moodAfter;
-      const intentChanged = event.shortTermIntentBefore !== event.shortTermIntentAfter;
+      const intentChanged = event.sideQuestBefore !== event.sideQuestAfter;
       if (descriptionChanged) return null;
       // For an agent target, surface the mood change as a visible expression
       // cue keyed on the *target* (whose mood changed), not the actor
@@ -332,7 +332,7 @@ const WAKING_EVENT_KINDS: ReadonlySet<DomainEvent['kind']> = new Set<DomainEvent
  * always-on autonomous agents.
  *
  * Sleeping is handled separately by sleepFinishedNpcs after the tick: an
- * NPC who is awake-not-autonomous and whose shortTermIntent has cleared is
+ * NPC who is awake-not-autonomous and whose sideQuest has cleared is
  * considered "done" and goes back to sleep.
  */
 async function wakeWitnessingNpcs(events: readonly DomainEvent[], repo: Repository): Promise<void> {
@@ -373,7 +373,7 @@ async function wakeWitnessingNpcs(events: readonly DomainEvent[], repo: Reposito
 
 /**
  * Sleep any NPC who was woken (awake && !autonomous) but no longer has a
- * short-term intent — they've finished what drew them in. Autonomous agents
+ * side quest — they've finished what drew them in. Autonomous agents
  * are never slept here; their `awake` flag is incidental.
  *
  * Critically, only NPCs who actually ticked this turn are eligible for the
@@ -394,7 +394,7 @@ async function sleepFinishedNpcs(
     if (a.autonomous) continue;
     if (!a.awake) continue;
     if (!tickedIds.has(a.id)) continue;
-    if (a.shortTermIntent !== null) continue;
+    if (a.sideQuest !== null) continue;
     await repo.setAgentAwake(a.id, false);
     log.info(`[sleep] ${a.label} returned to dormant (intent fulfilled)`);
   }
@@ -634,7 +634,7 @@ export async function runTick(
     }
   }
 
-  // 7. Sleep any woken NPCs (awake && !autonomous) whose shortTermIntent
+  // 7. Sleep any woken NPCs (awake && !autonomous) whose sideQuest
   // is now null — they've finished what drew them in.
   await sleepFinishedNpcs(repo, playerId, tickedIds);
 

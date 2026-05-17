@@ -47,8 +47,8 @@ export type DomainEvent =
     })
   /**
    * The event kind name `description_updated` is retained for compatibility
-   * with persisted history; the payload now also covers mood and short-term
-   * intent on agent targets. For non-agent targets the new mood/intent
+   * with persisted history; the payload now also covers mood and side quest
+   * on agent targets. For non-agent targets the new mood/side quest
    * before/after fields are always null.
    */
   | (BaseEvent & {
@@ -60,8 +60,8 @@ export type DomainEvent =
       longAfter: string | null;
       moodBefore: string | null;
       moodAfter: string | null;
-      shortTermIntentBefore: string | null;
-      shortTermIntentAfter: string | null;
+      sideQuestBefore: string | null;
+      sideQuestAfter: string | null;
     })
   | (BaseEvent & {
       kind: 'agent_spawned';

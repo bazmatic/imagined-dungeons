@@ -20,7 +20,7 @@ export function SensoriumDecisionDetail({ decision }: SensoriumDecisionDetailPro
         <dl className="sensorium-dl">
           <dt>Mood</dt><dd>{agentState.mood ?? '—'}</dd>
           <dt>Goal</dt><dd>{agentState.goal ?? '—'}</dd>
-          <dt>Short-term intent</dt><dd>{agentState.shortTermIntent ?? '—'}</dd>
+          <dt>Active side quest</dt><dd>{agentState.sideQuest ?? '—'}</dd>
         </dl>
       </SensoriumSection>
 
@@ -66,10 +66,10 @@ export function SensoriumDecisionDetail({ decision }: SensoriumDecisionDetailPro
       <SensoriumSection title="Response" defaultOpen>
         <dl className="sensorium-dl">
           <dt>Thought</dt><dd><em>{response.thought ?? '—'}</em></dd>
-          <dt>Intent change</dt>
-          <dd>{response.intentBefore === response.intentAfter
-            ? (response.intentAfter ?? 'none')
-            : `${response.intentBefore ?? 'none'} → ${response.intentAfter ?? 'none'}`}
+          <dt>Side quest change</dt>
+          <dd>{response.sideQuestBefore === response.sideQuestAfter
+            ? (response.sideQuestAfter ?? 'none')
+            : `${response.sideQuestBefore ?? 'none'} → ${response.sideQuestAfter ?? 'none'}`}
           </dd>
           <dt>Actions</dt>
           <dd>{response.actions.length > 0 ? response.actions.join(' / ') : '(wait)'}</dd>

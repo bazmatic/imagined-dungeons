@@ -176,7 +176,7 @@ export class MemoryBuilderRepository implements BuilderRepository {
       defense: i.defense,
       capacity: i.capacity,
       mood: existing ? existing.mood : i.mood,
-      shortTermIntent: existing ? existing.shortTermIntent : null,
+      sideQuest: existing ? existing.sideQuest : null,
       goal: i.goal,
       autonomous: i.autonomous,
       awake: existing ? existing.awake : false,

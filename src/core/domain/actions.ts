@@ -48,11 +48,11 @@ export type Action =
       /**
        * Agent-only fields. `null` means "leave the field unchanged"; the empty
        * string `""` means "clear the field" (the consequence engine uses this
-       * to mark a previously-set short-term intent as fulfilled). When the
+       * to mark a previously-completed side quest). When the
        * target is a location or item these are silently ignored by the handler.
        */
       mood: string | null;
-      shortTermIntent: string | null;
+      sideQuest: string | null;
     };
 
 export type ParseError =

@@ -11,7 +11,7 @@ const WORLD = 'w1';
 const AGENT = 'a1';
 
 const snapshot = (label: string): DecisionSnapshot => ({
-  agentState: { mood: null, goal: null, shortTermIntent: null },
+  agentState: { mood: null, goal: null, sideQuest: null },
   perception: {
     locationLabel: label,
     locationDescription: '',
@@ -25,8 +25,8 @@ const snapshot = (label: string): DecisionSnapshot => ({
   response: {
     rawText: 'wait',
     thought: null,
-    intentBefore: null,
-    intentAfter: null,
+    sideQuestBefore: null,
+    sideQuestAfter: null,
     actions: [],
   },
   fallback: false,

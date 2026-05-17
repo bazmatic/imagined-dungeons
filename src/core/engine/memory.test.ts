@@ -33,7 +33,7 @@ const mkAgent = (id: AgentId): Agent => ({
   defense: 10,
   capacity: 10,
   mood: null,
-  shortTermIntent: null,
+  sideQuest: null,
   goal: null,
   autonomous: false,
   awake: false,

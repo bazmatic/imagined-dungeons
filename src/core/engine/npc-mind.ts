@@ -40,7 +40,7 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
     lines.push(npc.longDescription);
   }
   if (npc.mood) lines.push(`Current mood: ${npc.mood}.`);
-  if (npc.shortTermIntent) lines.push(`Current short-term intent: ${npc.shortTermIntent}.`);
+  if (npc.sideQuest) lines.push(`Active side quest: ${npc.sideQuest}.`);
   if (npc.goal) lines.push(`Long-term goal: ${npc.goal}.`);
   lines.push('');
   lines.push('Decide what you want to do this turn given what you can perceive right now.');
@@ -51,10 +51,10 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
   );
   lines.push('- Then optional control lines (zero, one, or both, in either order):');
   lines.push(
-    '    INTENT_DONE              — clear your current short-term intent (use when you have just finished it).',
+    '    QUEST_DONE               — complete your current side quest (use ONLY when the end state is observably, unambiguously achieved in the world).',
   );
   lines.push(
-    '    INTENT: <full plan>      — set or replace your short-term intent. The intent MUST be a medium-term goal that takes several turns to achieve — it cannot be satisfied by the action you are taking this turn. Phrase it as the END STATE you are working toward ("deliver the fire map to Captain Serena near the docks", "find out what is behind the north door", "trade the dagger for enough gold to buy food"), NOT the immediate next step ("take the fire map", "open the door", "say hello"). If your goal can be fully achieved by one action right now, just take that action — do NOT set it as an intent. Use INTENT only when the goal will still be unfinished after this turn.',
+    '    QUEST: <full goal>       — set or replace your active side quest. A side quest is a SIGNIFICANT, MULTI-STEP GOAL WITH A REAL-WORLD OUTCOME — the kind of thing worth tracking across many turns. Phrase it as the END STATE you are working toward ("deliver the fire map to Captain Serena near the docks", "find out what is causing the fires in the east wing", "earn enough gold to buy passage out of the district"). NOT side quests: asking someone a question, picking up a nearby item, moving to an adjacent room, saying hello, or anything completable in one or two actions. If your goal can be carried out right now, just do it — do NOT open a side quest for it.',
   );
   lines.push(
     '- Then exactly one action command for this turn, in the first person, using one of the verbs below.',
@@ -62,15 +62,15 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
   lines.push('');
   lines.push('Examples:');
   lines.push(
-    '  THOUGHT: I notice the District Chart on the wall. I want to look at it. Looking takes one action — that is all. So I just look; no INTENT needed. After this action my goal is done.',
+    '  THOUGHT: I notice the District Chart on the wall. I want to look at it. Looking takes one action — that is all. So I just look; no QUEST needed. After this action my goal is done.',
   );
   lines.push('  I look at the District Chart.');
   lines.push('');
   lines.push(
     '  THOUGHT: Paff just asked me to deliver the fire map to Captain Serena. I do not have it yet.',
   );
-  lines.push('  THOUGHT: It is on the table here. I should take it first.');
-  lines.push('  INTENT: deliver the fire map to Captain Serena near the docks');
+  lines.push('  THOUGHT: It is on the table here. I should take it first. This will take several more steps after this turn.');
+  lines.push('  QUEST: deliver the fire map to Captain Serena near the docks');
   lines.push('  I take the fire map.');
   lines.push('');
   lines.push(
@@ -78,8 +78,8 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
   );
   lines.push('  I give the fire map to Captain Serena.');
   lines.push('');
-  lines.push('  THOUGHT: I just delivered the map. The end state is true now.');
-  lines.push('  INTENT_DONE');
+  lines.push('  THOUGHT: I just delivered the map. The end state is true now — a bystander would agree the quest is done.');
+  lines.push('  QUEST_DONE');
   lines.push('  I wait.');
   lines.push('');
   lines.push(
@@ -135,7 +135,7 @@ const SYSTEM_PROMPT = (npc: Agent): string => {
     '2. If someone is currently attacking you (and you have not yet retaliated), decide whether to fight back, flee through an exit, or speak.',
   );
   lines.push(
-    '3. Manage your own `Current short-term intent` (shown in the header above). Each turn, decide:\n   a. If you HAVE NO intent yet, ASK YOURSELF whether anything is worth doing right now — anything you observe, anything you remember, anything you just thought of (a question to ask, a person to find, a long-term goal to take a step toward, a curiosity to satisfy, a worry to address, a passive stance). If yes, set an intent — but ONLY if it will take MULTIPLE TURNS to achieve. An intent must survive past this turn. If your plan can be fully carried out right now in a single action, just take that action without declaring an intent. Good intents: "find Captain Serena and warn her about the fire", "explore the east wing and see what is there", "convince the merchant to lower her prices". Bad intents (single-action, will be immediately stale): "open the chest", "pick up the lantern", "say hello to the guard".\n   b. INTENT_DONE is ONLY for when the end state of your current intent is OBSERVABLY TRUE in this turn\'s events. Verbally agreeing to a task, beginning to work on it, taking the first step, arriving near the goal, or feeling confident you will succeed are NOT fulfilment — keep the intent in those cases. The test is: "if I look at what just happened, would another character watching agree this is finished?" If you cannot answer yes, omit INTENT_DONE.\n   c. If you HAVE an intent and your understanding of it has sharpened (new information, an obstacle, a refined plan), restate it with `INTENT: <refined plan>`.\n   d. If you HAVE an intent and it is still in progress, do not emit a control line — just take the next concrete step.\n   IMPORTANT: An empty `Current short-term intent` at the end of a turn means you go dormant. Declaring an intent is the way to stay in the scene. "I have something I want to pursue but did not declare it" is the failure mode to avoid.',
+    '3. Manage your `Active side quest` (shown in the header above). A side quest is a SIGNIFICANT, MULTI-STEP GOAL WITH A REAL-WORLD OUTCOME — the kind of thing worth tracking across many turns. Each turn, decide:\n   a. If you have NO side quest: set one ONLY if you have something worth pursuing that will take MULTIPLE TURNS AND MULTIPLE ACTIONS to complete. Good side quests: "deliver the fire map to Captain Serena", "find out what is causing the fires in the east wing", "earn enough gold to buy passage out of the district". NOT side quests: asking someone a question, picking up a nearby item, moving to an adjacent room, saying hello, or anything completable in one or two actions. If your goal can be carried out right now, just do it — do NOT open a side quest for it.\n   b. QUEST_DONE: emit this ONLY when the end state of your side quest is observably, unambiguously complete — the thing you set out to achieve has happened in the world. Getting a partial answer, beginning a task, or taking a first step are NOT completion. The test: would a bystander watching this turn agree "yes, that quest is done"?\n   c. If your side quest is still in progress, do not emit a control line — take the next concrete step toward it.\n   IMPORTANT: An empty side quest at the end of a turn means you go dormant. A side quest keeps you active in the scene.',
   );
   lines.push(
     "4. Otherwise, pick something consistent with your long-term goal — move toward something useful, examine your surroundings, pick up something you'd want, emote a small in-character gesture, or wait. Don't repeat or rephrase things you've already said, and do NOT volunteer follow-up speech about earlier exchanges.",
@@ -447,13 +447,13 @@ async function buildUserPrompt(
   }
 
   // Note: we used to derive "commitments" by pattern-matching recent self-
-  // speech here. That mechanism overlapped with `Agent.shortTermIntent` (which
+  // speech here. That mechanism overlapped with `Agent.sideQuest` (which
   // the consequence engine sets durably and structurally) and produced false
   // positives ("I run around a lot" read as a commitment). Removed in favour
   // of a single source of truth: the consequence engine watches outgoing
   // speech and decides what is or isn't a commitment, persisting it as
-  // shortTermIntent. The NPC mind's prompt header already surfaces that field
-  // as "Current short-term intent" and priority #3 (below) acts on it.
+  // sideQuest. The NPC mind's prompt header already surfaces that field
+  // as "Active side quest" and priority #3 (below) acts on it.
 
   const memorySummaries: string[] = [];
   if (memory.length > 0) {
@@ -503,7 +503,7 @@ async function buildUserPrompt(
     agentState: {
       mood: actor.mood ?? null,
       goal: actor.goal ?? null,
-      shortTermIntent: actor.shortTermIntent ?? null,
+      sideQuest: actor.sideQuest ?? null,
     },
     perception: {
       locationLabel: view.location.label,
@@ -596,8 +596,8 @@ export async function decideNpcIntent(
             response: {
               rawText: prose,
               thought: null,
-              intentBefore: actor.shortTermIntent ?? null,
-              intentAfter: actor.shortTermIntent ?? null,
+              sideQuestBefore: actor.sideQuest ?? null,
+              sideQuestAfter: actor.sideQuest ?? null,
               actions: [],
             },
             fallback: true,
@@ -607,11 +607,11 @@ export async function decideNpcIntent(
       }
       return [NpcFallbackIntent];
     }
-    // The NPC mind owns its own shortTermIntent and reasons out loud before
+    // The NPC mind owns its own sideQuest and reasons out loud before
     // acting. The reply format is:
     //   THOUGHT: <reasoning>   — private reasoning. Logged, not dispatched.
-    //   INTENT_DONE            — clear the current intent.
-    //   INTENT: <text>         — set or replace the intent.
+    //   QUEST_DONE             — complete the current side quest.
+    //   QUEST: <text>          — set or replace the side quest.
     //   <action command>       — exactly one action line, in first person.
     //
     // Thoughts and control lines can be interleaved in any order; everything
@@ -628,11 +628,11 @@ export async function decideNpcIntent(
         thoughts.push(thoughtMatch[1]);
         continue;
       }
-      if (/^INTENT_DONE\b/.test(line)) {
+      if (/^QUEST_DONE\b/.test(line)) {
         cleared = true;
         continue;
       }
-      const setMatch = line.match(/^INTENT:\s*(.+?)\s*$/);
+      const setMatch = line.match(/^QUEST:\s*(.+?)\s*$/);
       if (setMatch?.[1]) {
         setTo = setMatch[1];
         continue;
@@ -675,21 +675,21 @@ export async function decideNpcIntent(
     if (speechLine !== null) orderedLines.push(speechLine);
     if (actionLine !== null) orderedLines.push(actionLine);
     body = orderedLines.join(' && ');
-    if (cleared && setTo === null && actor.shortTermIntent !== null) {
-      await repo.updateAgentDescription(actorId, { shortTermIntent: null });
-      log.info(`[npc-mind] ${actor.label} cleared own intent: "${actor.shortTermIntent}"`);
+    if (cleared && setTo === null && actor.sideQuest !== null) {
+      await repo.updateAgentDescription(actorId, { sideQuest: null });
+      log.info(`[npc-mind] ${actor.label} cleared own side quest: "${actor.sideQuest}"`);
     }
-    if (setTo !== null && setTo !== actor.shortTermIntent) {
-      await repo.updateAgentDescription(actorId, { shortTermIntent: setTo });
+    if (setTo !== null && setTo !== actor.sideQuest) {
+      await repo.updateAgentDescription(actorId, { sideQuest: setTo });
       log.info(
-        `[npc-mind] ${actor.label} set own intent: "${actor.shortTermIntent ?? '(none)'}" -> "${setTo}"`,
+        `[npc-mind] ${actor.label} set own side quest: "${actor.sideQuest ?? '(none)'}" -> "${setTo}"`,
       );
     }
-    // Final state for diagnostic purposes: the agent's intent after this
+    // Final state for diagnostic purposes: the agent's side quest after this
     // tick's parse, plus the action we're about to dispatch.
-    const finalIntent = setTo !== null ? setTo : cleared ? null : (actor.shortTermIntent ?? null);
+    const finalIntent = setTo !== null ? setTo : cleared ? null : (actor.sideQuest ?? null);
     log.info(
-      `[npc-mind] ${actor.label} intent now: ${finalIntent === null ? '(none)' : `"${finalIntent}"`}; action: ${
+      `[npc-mind] ${actor.label} side quest now: ${finalIntent === null ? '(none)' : `"${finalIntent}"`}; action: ${
         body.length === 0 ? '(wait — empty after control lines)' : JSON.stringify(body)
       }`,
     );
@@ -699,8 +699,8 @@ export async function decideNpcIntent(
         response: {
           rawText: prose,
           thought: thoughts.length > 0 ? thoughts.join('\n') : null,
-          intentBefore: actor.shortTermIntent ?? null,
-          intentAfter: finalIntent,
+          sideQuestBefore: actor.sideQuest ?? null,
+          sideQuestAfter: finalIntent,
           actions: orderedLines,
         },
         fallback: false,
@@ -720,8 +720,8 @@ export async function decideNpcIntent(
           response: {
             rawText: '',
             thought: null,
-            intentBefore: actor.shortTermIntent ?? null,
-            intentAfter: actor.shortTermIntent ?? null,
+            sideQuestBefore: actor.sideQuest ?? null,
+            sideQuestAfter: actor.sideQuest ?? null,
             actions: [],
           },
           fallback: true,

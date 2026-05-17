@@ -14,12 +14,12 @@ const locB: Location = { id: B, worldId: W, label: 'B', shortDescription: '', lo
 
 const paff = (overrides: Partial<Agent> = {}): Agent => ({
   id: asAgentId('char_p'), worldId: W, label: 'Paff', shortDescription: '', longDescription: '',
-  locationId: A, hp: 10, damage: 3, defense: 4, capacity: 10, mood: null, shortTermIntent: null,
+  locationId: A, hp: 10, damage: 3, defense: 4, capacity: 10, mood: null, sideQuest: null,
   goal: null, autonomous: false, awake: false, gold: 0, tags: [], secretDescription: '', ...overrides,
 });
 const orc = (overrides: Partial<Agent> = {}): Agent => ({
   id: asAgentId('char_orc'), worldId: W, label: 'Orc', shortDescription: '', longDescription: '',
-  locationId: A, hp: 10, damage: 5, defense: 3, capacity: 10, mood: null, shortTermIntent: null,
+  locationId: A, hp: 10, damage: 5, defense: 3, capacity: 10, mood: null, sideQuest: null,
   goal: null, autonomous: false, awake: false, gold: 0, tags: [], secretDescription: '', ...overrides,
 });
 
