@@ -1,6 +1,6 @@
 import type { Agent, Location } from '@core/domain/entities';
-import { asAgentId, asLocationId, asWorldId } from '@core/domain/ids';
-import { NpcFallbackIntent } from '@core/domain/kinds';
+import { asAgentId, asEventId, asLocationId, asWorldId } from '@core/domain/ids';
+import { EventKind, NpcFallbackIntent } from '@core/domain/kinds';
 import { MemoryRepository } from '@infra/memory-repository';
 import { describe, expect, it, vi } from 'vitest';
 import { makeFakeLanguageModel } from '../../../tests/helpers/fake-language-model';
@@ -288,5 +288,113 @@ describe('decideNpcIntent', () => {
     });
     const intents = await decideNpcIntent(SPARK_ID, repo, llm);
     expect(intents).toEqual(['I move north.']);
+  });
+});
+
+describe('decideNpcIntent — tick-grouped memory prompt', () => {
+  function makeSpyLlm(capturedPrompts: string[]) {
+    return {
+      completeText: async ({ user }: { system: string; user: string }) => {
+        capturedPrompts.push(user);
+        return 'I wait.';
+      },
+      complete: async () => ({ raw: '', parsed: {} }),
+    };
+  }
+
+  function makeEvent(
+    id: string,
+    tickId: number | null,
+    locationLabel: string | null,
+    actorId = SPARK_ID,
+  ) {
+    return {
+      id: asEventId(id),
+      worldId: W,
+      actorId,
+      kind: EventKind.Inventory,
+      witnesses: [SPARK_ID],
+      createdAt: new Date(2000 + Number(id.replace(/\D/g, ''))),
+      tickId,
+      locationLabel,
+    };
+  }
+
+  it('renders single tick group as "This turn" block', async () => {
+    const repo = new MemoryRepository(W);
+    repo.seed({ locations: [loc], agents: [spark], items: [], exits: [] });
+    repo.seedEvents([makeEvent('e1', 7, 'Town Hall')]);
+    const captured: string[] = [];
+    await decideNpcIntent(SPARK_ID, repo, makeSpyLlm(captured) as any, { memoryLimit: 8 });
+    expect(captured[0]).toContain('What you have witnessed, oldest to most recent:');
+    expect(captured[0]).toContain('This turn — Town Hall:');
+    expect(captured[0]).not.toContain('What you have witnessed recently:');
+  });
+
+  it('renders multiple groups oldest-first with correct labels', async () => {
+    const repo = new MemoryRepository(W);
+    repo.seed({ locations: [loc], agents: [spark], items: [], exits: [] });
+    repo.seedEvents([
+      makeEvent('e1', 5, 'Market'),
+      makeEvent('e2', 6, 'Alley'),
+      makeEvent('e3', 7, 'Tavern'),
+    ]);
+    const captured: string[] = [];
+    await decideNpcIntent(SPARK_ID, repo, makeSpyLlm(captured) as any, { memoryLimit: 8 });
+    const prompt = captured[0] ?? '';
+    const twoIdx = prompt.indexOf('Two turns ago — Market:');
+    const lastIdx = prompt.indexOf('Last turn — Alley:');
+    const thisIdx = prompt.indexOf('This turn — Tavern:');
+    expect(twoIdx).toBeGreaterThan(-1);
+    expect(lastIdx).toBeGreaterThan(twoIdx);
+    expect(thisIdx).toBeGreaterThan(lastIdx);
+  });
+
+  it('renders null-tickId events under "Earlier:"', async () => {
+    const repo = new MemoryRepository(W);
+    repo.seed({ locations: [loc], agents: [spark], items: [], exits: [] });
+    repo.seedEvents([makeEvent('e1', null, null)]);
+    const captured: string[] = [];
+    await decideNpcIntent(SPARK_ID, repo, makeSpyLlm(captured) as any, { memoryLimit: 8 });
+    expect(captured[0]).toContain('Earlier:');
+  });
+
+  it('caps groups to maxTurnDepth, keeping the most recent', async () => {
+    const repo = new MemoryRepository(W);
+    repo.seed({ locations: [loc], agents: [spark], items: [], exits: [] });
+    repo.seedEvents([
+      makeEvent('e1', 1, 'Place A'),
+      makeEvent('e2', 2, 'Place B'),
+      makeEvent('e3', 3, 'Place C'),
+      makeEvent('e4', 4, 'Place D'),
+    ]);
+    const captured: string[] = [];
+    await decideNpcIntent(SPARK_ID, repo, makeSpyLlm(captured) as any, {
+      memoryLimit: 8,
+      maxTurnDepth: 2,
+    });
+    const prompt = captured[0] ?? '';
+    expect(prompt).not.toContain('Place A');
+    expect(prompt).not.toContain('Place B');
+    expect(prompt).toContain('Place C');
+    expect(prompt).toContain('Place D');
+  });
+
+  it('omits memory section entirely when memory is empty', async () => {
+    const repo = new MemoryRepository(W);
+    repo.seed({ locations: [loc], agents: [spark], items: [], exits: [] });
+    const captured: string[] = [];
+    await decideNpcIntent(SPARK_ID, repo, makeSpyLlm(captured) as any, { memoryLimit: 8 });
+    expect(captured[0]).not.toContain('What you have witnessed');
+  });
+
+  it('omits location from header when locationLabel is null', async () => {
+    const repo = new MemoryRepository(W);
+    repo.seed({ locations: [loc], agents: [spark], items: [], exits: [] });
+    repo.seedEvents([makeEvent('e1', 7, null)]);
+    const captured: string[] = [];
+    await decideNpcIntent(SPARK_ID, repo, makeSpyLlm(captured) as any, { memoryLimit: 8 });
+    expect(captured[0]).toContain('This turn:');
+    expect(captured[0]).not.toContain('This turn — ');
   });
 });

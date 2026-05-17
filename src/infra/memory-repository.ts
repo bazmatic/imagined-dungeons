@@ -22,13 +22,29 @@ export class MemoryRepository implements Repository {
   private readonly events: DomainEvent[] = [];
   private rngSeed: number;
 
-  constructor(worldId: WorldId, seed: SeedData) {
+  constructor(worldId: WorldId, seedData?: SeedData) {
     this.worldId = worldId;
-    for (const l of seed.locations) this.locations.set(l.id, l);
-    for (const e of seed.exits) this.exits.set(e.id, e);
-    for (const i of seed.items) this.items.set(i.id, i);
-    for (const a of seed.agents) this.agents.set(a.id, a);
-    this.rngSeed = seed.rngSeed ?? 1;
+    this.rngSeed = seedData?.rngSeed ?? 1;
+    if (seedData) {
+      for (const l of seedData.locations) this.locations.set(l.id, l);
+      for (const e of seedData.exits) this.exits.set(e.id, e);
+      for (const i of seedData.items) this.items.set(i.id, i);
+      for (const a of seedData.agents) this.agents.set(a.id, a);
+    }
+  }
+
+  /** Populate the repository with world objects (usable in tests after construction). */
+  seed(data: SeedData): void {
+    for (const l of data.locations) this.locations.set(l.id, l);
+    for (const e of data.exits) this.exits.set(e.id, e);
+    for (const i of data.items) this.items.set(i.id, i);
+    for (const a of data.agents) this.agents.set(a.id, a);
+    if (data.rngSeed !== undefined) this.rngSeed = data.rngSeed;
+  }
+
+  /** Pre-populate events (usable in tests to set up memory state). */
+  seedEvents(events: readonly DomainEvent[]): void {
+    for (const e of events) this.events.push(e);
   }
 
   async getWorldId(): Promise<WorldId> {

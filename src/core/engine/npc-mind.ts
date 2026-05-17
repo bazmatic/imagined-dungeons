@@ -368,6 +368,7 @@ async function buildUserPrompt(
   ctx: NpcMindContext,
   selfId: AgentId,
   repo: HandlerRepo,
+  opts: Pick<NpcMindOptions, 'maxTurnDepth'>,
 ): Promise<UserPromptResult> {
   const { actor, view, inventory, memory } = ctx;
   const selfNameRegex = new RegExp(
@@ -444,12 +445,45 @@ async function buildUserPrompt(
 
   const memorySummaries: string[] = [];
   if (memory.length > 0) {
-    lines.push('');
-    lines.push('What you have witnessed recently:');
+    const maxDepth = opts.maxTurnDepth ?? DEFAULT_MAX_TURN_DEPTH;
+
+    // Group events by tickId. null key = pre-migration or unstamped.
+    const groupMap = new Map<number | null, DomainEvent[]>();
     for (const m of memory) {
-      const summary = await summariseEvent(m, selfId, repo);
-      memorySummaries.push(summary);
-      lines.push(`- ${summary}`);
+      const key = m.tickId ?? null;
+      const bucket = groupMap.get(key);
+      if (bucket) bucket.push(m);
+      else groupMap.set(key, [m]);
+    }
+
+    // Sort oldest-first: null group comes first, then ascending tickId.
+    const sorted: Array<[number | null, DomainEvent[]]> = [];
+    if (groupMap.has(null)) sorted.push([null, groupMap.get(null)!]);
+    const tickIds = [...groupMap.keys()]
+      .filter((k): k is number => k !== null)
+      .sort((a, b) => a - b);
+    for (const tid of tickIds) sorted.push([tid, groupMap.get(tid)!]);
+
+    // Keep at most maxDepth groups, dropping the oldest.
+    const capped = sorted.length > maxDepth ? sorted.slice(sorted.length - maxDepth) : sorted;
+    const n = capped.length;
+
+    lines.push('');
+    lines.push('What you have witnessed, oldest to most recent:');
+    for (let i = 0; i < n; i++) {
+      const [key, events] = capped[i]!;
+      const distFromEnd = n - 1 - i;
+      const timeLabel =
+        key === null ? 'Earlier' : (TICK_LABEL[distFromEnd] ?? `${distFromEnd} turns ago`);
+      const locLabel = events[0]?.locationLabel;
+      const header = locLabel ? `${timeLabel} — ${locLabel}:` : `${timeLabel}:`;
+      lines.push('');
+      lines.push(header);
+      for (const m of events) {
+        const summary = await summariseEvent(m, selfId, repo);
+        memorySummaries.push(summary);
+        lines.push(`- ${summary}`);
+      }
     }
   }
   const baseSnapshot: Omit<DecisionSnapshot, 'response' | 'fallback'> = {
@@ -481,11 +515,21 @@ async function buildUserPrompt(
 export interface NpcMindOptions {
   /** Cap on recent-memory entries fed into the prompt. */
   readonly memoryLimit?: number;
+  /** Maximum number of distinct tick-groups to show in the memory section. Oldest are dropped. */
+  readonly maxTurnDepth?: number;
   /** When provided, each decision is persisted as a snapshot for the Sensorium. */
   readonly decisionRepo?: NpcDecisionRepository | null;
 }
 
 const DEFAULT_MEMORY_LIMIT = 8;
+const DEFAULT_MAX_TURN_DEPTH = 5;
+
+const TICK_LABEL: Readonly<Record<number, string>> = {
+  0: 'This turn',
+  1: 'Last turn',
+  2: 'Two turns ago',
+  3: 'Three turns ago',
+};
 
 /**
  * Returns up to two intent lines for the NPC to execute this turn. Speech
@@ -520,7 +564,7 @@ export async function decideNpcIntent(
   };
 
   const systemPrompt = SYSTEM_PROMPT(actor);
-  const { prompt: userPrompt, baseSnapshot } = await buildUserPrompt(ctx, actorId, repo);
+  const { prompt: userPrompt, baseSnapshot } = await buildUserPrompt(ctx, actorId, repo, opts);
   // Verbose prompt logging is gated because the prompt is long. Set
   // NPC_MIND_DEBUG=1 (or =prompts) to see it in the dev terminal.
   const debug = process.env.NPC_MIND_DEBUG;
