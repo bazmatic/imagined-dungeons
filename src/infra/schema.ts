@@ -11,6 +11,7 @@ export const worlds = sqliteTable('worlds', {
   displayName: text('display_name').notNull().default(''),
   playerAgentId: text('player_agent_id'),
   coverImageUrl: text('cover_image_url'),
+  tickCount: integer('tick_count').notNull().default(0),
 });
 
 // locations / exits / items / agents share entity ids across worlds (a draft and
@@ -135,6 +136,8 @@ export const events = sqliteTable('events', {
   witnesses: text('witnesses', { mode: 'json' }).notNull(),
   createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
   narrations: text('narrations', { mode: 'json' }),
+  tickId: integer('tick_id'),
+  locationLabel: text('location_label'),
 });
 
 export const worldSnapshots = sqliteTable('world_snapshots', {
