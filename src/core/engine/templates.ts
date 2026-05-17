@@ -66,9 +66,14 @@ export function renderLookAgent(agent: Agent): readonly Segment[] {
  * Exits don't have a separate longDescription column today (see
  * burning-district-data.md), so this is the canonical examination prose.
  */
-export function renderLookExit(exit: Exit): readonly Segment[] {
-  const status = exit.locked ? 'It is locked.' : 'It is unobstructed.';
-  return [{ kind: SegmentKind.Narration, text: `The ${exit.label} leads ${exit.direction}. ${status}` }];
+export function renderLookExit(exit: Exit, destinationLabel?: string): readonly Segment[] {
+  if (exit.locked) {
+    return [{ kind: SegmentKind.Narration, text: `The ${exit.label} leads ${exit.direction}. It is locked.` }];
+  }
+  if (destinationLabel) {
+    return [{ kind: SegmentKind.Narration, text: `The ${exit.label} leads ${exit.direction} to ${destinationLabel}.` }];
+  }
+  return [{ kind: SegmentKind.Narration, text: `The ${exit.label} leads ${exit.direction}. It is unobstructed.` }];
 }
 
 export function renderMoveSelf(dir: Direction): readonly Segment[] {
@@ -289,7 +294,8 @@ export function renderDropObserved(actor: Agent, item: Item): string {
   return `${actor.label} drops ${item.label}.`;
 }
 
-export function renderLookObserved(actor: Agent): string {
+export function renderLookObserved(actor: Agent, targetPhrase?: string | null): string {
+  if (targetPhrase) return `${actor.label} looks at ${targetPhrase}.`;
   return `${actor.label} looks around.`;
 }
 

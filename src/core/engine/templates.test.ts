@@ -10,6 +10,7 @@ import {
   renderEmoteMechanical,
   renderInventory,
   renderLook,
+  renderLookExit,
   renderMoveSelf,
   renderParseError,
   renderTakeSelf,
@@ -148,6 +149,29 @@ describe('templates', () => {
 
   it('renderActionError returns the supplied reason', () => {
     expect(renderActionError("You can't go that way.")).toEqual([{ kind: SegmentKind.Error, text: "You can't go that way." }]);
+  });
+
+  describe('renderLookExit', () => {
+    it('locked exit — shows locked status regardless of destination', () => {
+      expect(renderLookExit(exitN)).toEqual([{
+        kind: SegmentKind.Narration,
+        text: 'The Tavern Back Door leads north. It is locked.',
+      }]);
+    });
+
+    it('unlocked exit with no destinationLabel — shows unobstructed', () => {
+      expect(renderLookExit(exitS)).toEqual([{
+        kind: SegmentKind.Narration,
+        text: 'The Tavern Front Door leads south. It is unobstructed.',
+      }]);
+    });
+
+    it('unlocked exit with destinationLabel — shows destination name', () => {
+      expect(renderLookExit(exitS, 'Merchant Quarter')).toEqual([{
+        kind: SegmentKind.Narration,
+        text: 'The Tavern Front Door leads south to Merchant Quarter.',
+      }]);
+    });
   });
 });
 
