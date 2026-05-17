@@ -220,7 +220,8 @@ async function summariseEvent(
       if (t.kind === ExaminableKind.Item) {
         try {
           const item = await repo.getItem(t.id);
-          return `${actorLabel} examined the ${item.label}`;
+          const desc = item.shortDescription ? ` — ${item.shortDescription}` : '';
+          return `${actorLabel} examined the ${item.label}${desc}`;
         } catch {
           return `${actorLabel} examined an item`;
         }
@@ -228,7 +229,8 @@ async function summariseEvent(
       if (t.kind === ExaminableKind.Agent) {
         try {
           const a = await repo.getAgent(t.id);
-          return `${actorLabel} looked at ${a.label}`;
+          const desc = a.shortDescription ? ` — ${a.shortDescription}` : '';
+          return `${actorLabel} looked at ${a.label}${desc}`;
         } catch {
           return `${actorLabel} looked at someone`;
         }

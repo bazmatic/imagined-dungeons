@@ -18,10 +18,10 @@ import { renderAttackMechanical, renderCreativeAttackMechanical, renderEmoteMech
 const SYSTEM_PROMPT = `You are the narrator of a fantasy text adventure.
 You narrate a single event from one specific observer's point of view.
 
-Person of narration is determined strictly by who the observer is:
-- If the observer IS the actor, narrate in second person ("You say...", "You swing at...").
-- If the observer IS the target, narrate in second person addressed to them ("Spark says to you...").
-- Otherwise, narrate in third person using names ("Paff says to Spark...").
+Person of narration is always from the observer's point of view in second person ("you"):
+- If the observer IS the actor, use "you" for the actor ("You say...", "You swing at...").
+- If the observer IS the target, use "you" for the target ("Spark says to you...").
+- If the observer is a bystander (neither actor nor target), use "you" for the observer and refer to the actor and target by name ("You see Pip flicker excitedly.", "You watch as Spark says to Paff..."). Do NOT name the observer character. Do NOT invent what the observer says, thinks, or feels — only describe what they perceive.
 
 Style:
 - One short paragraph, present tense.
@@ -59,10 +59,12 @@ function buildUserPrompt(ctx: NarrateContext, recentMemory: readonly string[]): 
   } else {
     if (target) {
       lines.push(
-        `POV: third person. Refer to actor ("${actor.label}") and target ("${target.label}") by name.`,
+        `POV: second person bystander. Use "you" for the observer. Refer to actor ("${actor.label}") and target ("${target.label}") by name. Do not name or describe the observer.`,
       );
     } else {
-      lines.push(`POV: third person. Refer to the actor ("${actor.label}") by name.`);
+      lines.push(
+        `POV: second person bystander. Use "you" for the observer. Refer to the actor ("${actor.label}") by name. Do not name or describe the observer.`,
+      );
     }
   }
   lines.push('');

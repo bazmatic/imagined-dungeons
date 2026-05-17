@@ -3,7 +3,7 @@ import type { Action } from '@core/domain/actions';
 import type { Agent } from '@core/domain/entities';
 import type { DomainEvent } from '@core/domain/events';
 import { type AgentId, type LocationId, SYSTEM_AGENT_ID, type WorldId } from '@core/domain/ids';
-import { EventKind, NpcFallbackIntent, OwnerKind } from '@core/domain/kinds';
+import { EventKind, ExaminableKind, NpcFallbackIntent, OwnerKind } from '@core/domain/kinds';
 import { type Segment, SegmentKind } from '@core/domain/segments';
 import { log } from '@core/log';
 import { generateSpawnNarration } from '@core/spawning/narration';
@@ -163,8 +163,26 @@ async function renderWitnessForPlayer(
       if (event.targetAgentId === playerId) return renderGiveByActor(actor, item);
       return renderGiveObserved(actor, item, recipient);
     }
-    case EventKind.Look:
-      return renderLookObserved(actor);
+    case EventKind.Look: {
+      let targetPhrase: string | null = null;
+      if (event.target.kind === ExaminableKind.Item) {
+        try {
+          const item = await repo.getItem(event.target.id);
+          targetPhrase = `the ${item.label}`;
+        } catch { /* target no longer accessible; fall through to "looks around" */ }
+      } else if (event.target.kind === ExaminableKind.Agent) {
+        try {
+          const target = await repo.getAgent(event.target.id);
+          targetPhrase = target.label;
+        } catch { /* fall through */ }
+      } else if (event.target.kind === ExaminableKind.Exit) {
+        try {
+          const exit = await repo.getExit(event.target.id);
+          targetPhrase = `the ${exit.label !== exit.direction ? exit.label : `${exit.direction} exit`}`;
+        } catch { /* fall through */ }
+      }
+      return renderLookObserved(actor, targetPhrase);
+    }
     case EventKind.Inventory:
       // Inventory checks are private — the player wouldn't notice.
       return null;
