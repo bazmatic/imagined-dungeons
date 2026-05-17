@@ -1,11 +1,10 @@
 import type { Agent, Exit, Item, Location } from '@core/domain/entities';
 import { asAgentId, asExitId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
-import { Direction } from '@core/domain/kinds';
+import { Direction, ExaminableKind } from '@core/domain/kinds';
 import { SegmentKind } from '@core/domain/segments';
 import { MemoryRepository } from '@infra/memory-repository';
 import { describe, expect, it, vi } from 'vitest';
 import { nullGameAI } from '../game-ai';
-import { ExaminableKind } from '@core/domain/kinds';
 import { handleLook } from './look';
 
 const W = asWorldId('w');
