@@ -4,6 +4,7 @@ import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { asAgentId, asEventId, asWorldId } from '@core/domain/ids';
 import { EventKind } from '@core/domain/kinds';
+import { WorldKind } from '@core/domain/builder-kinds';
 import * as schema from './schema';
 import { SqliteRepository } from './sqlite-repository';
 
@@ -24,7 +25,7 @@ async function seedWorld(db: ReturnType<typeof openTestDb>['db']) {
     id: W,
     label: 'Test World',
     rngSeed: 1,
-    kind: 'live',
+    kind: WorldKind.Live,
     displayName: 'Test',
   });
   await db.insert(schema.locations).values({

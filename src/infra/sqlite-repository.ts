@@ -6,6 +6,7 @@ import {
   type ItemId,
   type LocationId,
   type WorldId,
+  SYSTEM_AGENT_ID,
   asAgentId,
   asEventId,
   asExitId,
@@ -279,23 +280,19 @@ export class SqliteRepository implements Repository {
   async appendEvent(event: DomainEvent): Promise<void> {
     const { id, worldId, actorId, kind, witnesses, createdAt, narrations, ...rest } = event;
     let locationLabel: string | null = null;
-    if (this.currentTickId !== null) {
-      try {
-        const rows = await this.db
-          .select({ label: schema.locations.label })
-          .from(schema.agents)
-          .innerJoin(
-            schema.locations,
-            and(
-              eq(schema.locations.id, schema.agents.locationId),
-              eq(schema.locations.worldId, schema.agents.worldId),
-            ),
-          )
-          .where(and(eq(schema.agents.worldId, this.worldId), eq(schema.agents.id, actorId)));
-        locationLabel = rows[0]?.label ?? null;
-      } catch {
-        // best-effort: leave null if agent or location not found (e.g. SYSTEM_AGENT_ID)
-      }
+    if (this.currentTickId !== null && actorId !== SYSTEM_AGENT_ID) {
+      const rows = await this.db
+        .select({ label: schema.locations.label })
+        .from(schema.agents)
+        .innerJoin(
+          schema.locations,
+          and(
+            eq(schema.locations.id, schema.agents.locationId),
+            eq(schema.locations.worldId, schema.agents.worldId),
+          ),
+        )
+        .where(and(eq(schema.agents.worldId, this.worldId), eq(schema.agents.id, actorId)));
+      locationLabel = rows[0]?.label ?? null;
     }
     await this.db.insert(schema.events).values({
       id,
