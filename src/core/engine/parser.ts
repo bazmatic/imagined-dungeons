@@ -323,7 +323,7 @@ export function parse(
       if (targetRef.length === 0) return { kind: ParseErrorKind.MissingArgument, verb: first };
       const r = resolveAgent(targetRef, view.agents);
       if (!r.ok) return r.error;
-      if (utterance.length === 0) return { kind: ParseErrorKind.MissingArgument, verb: first };
+      if (utterance.length === 0) return { kind: ParseErrorKind.NoUtterance, targetAgentId: r.agent.id };
       return {
         kind: ActionKind.Speak,
         actorId: actor.id,

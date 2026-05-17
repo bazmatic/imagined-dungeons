@@ -1,7 +1,8 @@
 import type { ParseError } from '@core/domain/actions';
 import type { Agent, Item } from '@core/domain/entities';
-import { ParseErrorKind } from '@core/domain/kinds';
+import { ActionKind, ParseErrorKind } from '@core/domain/kinds';
 import { log } from '@core/log';
+import { generateOpening } from '../generate-opening';
 import type { LanguageModel } from '../language-model';
 import { llmInterpret } from '../llm-interpret';
 import { type ParseResult, parse as ruleParseDefault } from '../parser';
@@ -40,6 +41,20 @@ export function makeCompositeParser(deps: CompositeParserDeps): ParseFn {
   return async function parse(text, actor, view, inventory) {
     const ruleResult = ruleParse(text, actor, view, inventory);
     if ('actorId' in ruleResult) return ruleResult;
+    // "talk to <agent>" with no utterance — generate an opening line via LLM.
+    if (ruleResult.kind === ParseErrorKind.NoUtterance && deps.llm) {
+      const target = view.agents.find((a) => a.id === ruleResult.targetAgentId);
+      if (target) {
+        const utterance = await generateOpening(actor, target, view, deps.llm);
+        log.info(`[parser] generated opening for ${actor.label} -> ${target.label}: "${utterance}"`);
+        return {
+          kind: ActionKind.Speak,
+          actorId: actor.id,
+          targetAgentId: target.id,
+          utterance,
+        };
+      }
+    }
     if (!shouldFallback(ruleResult)) return ruleResult;
     if (!deps.llm) return ruleResult;
     log.info(

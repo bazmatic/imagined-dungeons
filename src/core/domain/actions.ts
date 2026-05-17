@@ -63,4 +63,5 @@ export type ParseError =
   | { kind: 'no_such_target'; ref: string; verb?: string }
   | { kind: 'ambiguous_target'; ref: string; candidates: string[] }
   | { kind: 'already_carried'; ref: string; label: string }
-  | { kind: 'impossible_action'; reason: string };
+  | { kind: 'impossible_action'; reason: string }
+  | { kind: 'no_utterance'; targetAgentId: AgentId };

@@ -60,6 +60,8 @@ export const ParseErrorKind = {
    * the reason. Surfaced as a failed event with the reason as render text.
    */
   ImpossibleAction: 'impossible_action',
+  /** "talk to <agent>" with no utterance — target is known, speech must be generated. */
+  NoUtterance: 'no_utterance',
 } as const;
 export type ParseErrorKind = (typeof ParseErrorKind)[keyof typeof ParseErrorKind];
 
