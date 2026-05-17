@@ -1,5 +1,7 @@
 // src/core/domain/npc-decision.ts
 
+import type { Direction } from './kinds';
+
 export const DECISION_HISTORY_LIMIT = 20;
 
 export interface DecisionSnapshot {
@@ -11,19 +13,19 @@ export interface DecisionSnapshot {
   readonly perception: {
     readonly locationLabel: string;
     readonly locationDescription: string;
-    readonly visibleItems: string[];
+    readonly visibleItems: readonly string[];
     readonly visibleAgents: ReadonlyArray<{ label: string; mood?: string }>;
-    readonly exits: ReadonlyArray<{ direction: string; label: string; locked: boolean }>;
-    readonly inventory: string[];
-    readonly unansweredAddresses: string[];
+    readonly exits: ReadonlyArray<{ direction: Direction; label: string; locked: boolean }>;
+    readonly inventory: readonly string[];
+    readonly unansweredAddresses: readonly string[];
   };
-  readonly memory: string[];
+  readonly memory: readonly string[];
   readonly response: {
     readonly rawText: string;
     readonly thought: string | null;
     readonly intentBefore: string | null;
     readonly intentAfter: string | null;
-    readonly actions: string[];
+    readonly actions: readonly string[];
   };
   readonly fallback: boolean;
 }
