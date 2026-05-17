@@ -1,8 +1,11 @@
-import type { Agent, Item, Location } from '@core/domain/entities';
-import { asAgentId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
+import type { Agent, Exit, Item, Location } from '@core/domain/entities';
+import { asAgentId, asExitId, asItemId, asLocationId, asWorldId } from '@core/domain/ids';
+import { Direction } from '@core/domain/kinds';
 import { SegmentKind } from '@core/domain/segments';
 import { MemoryRepository } from '@infra/memory-repository';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { nullGameAI } from '../game-ai';
+import { ExaminableKind } from '@core/domain/kinds';
 import { handleLook } from './look';
 
 const W = asWorldId('w');
@@ -56,6 +59,47 @@ const paff: Agent = {
   secretDescription: '',
 };
 
+const B = asLocationId('loc_b');
+const locB: Location = {
+  id: B,
+  worldId: W,
+  label: 'Merchant Quarter',
+  shortDescription: 'A busy trading district.',
+  longDescription: 'Canvas stalls line every wall.',
+  tags: [],
+  secretDescription: '',
+};
+const unlockedExit: Exit = {
+  id: asExitId('exit_north'),
+  worldId: W,
+  from: A,
+  to: B,
+  direction: Direction.North,
+  label: 'oak door',
+  locked: false,
+  lockedByItem: null,
+};
+const lockedExit: Exit = {
+  id: asExitId('exit_south'),
+  worldId: W,
+  from: A,
+  to: B,
+  direction: Direction.South,
+  label: 'iron gate',
+  locked: true,
+  lockedByItem: null,
+};
+const nullDestExit: Exit = {
+  id: asExitId('exit_east'),
+  worldId: W,
+  from: A,
+  to: null,
+  direction: Direction.East,
+  label: 'dark passage',
+  locked: false,
+  lockedByItem: null,
+};
+
 describe('handleLook', () => {
   it('with no target, returns the room view', async () => {
     const repo = new MemoryRepository(W, {
@@ -84,5 +128,86 @@ describe('handleLook', () => {
     );
     if (!r.ok) throw new Error();
     expect(r.value.render).toEqual([{ kind: SegmentKind.Narration, text: 'A real-time map.' }]);
+  });
+
+  it('looking at a locked exit returns mechanical locked template', async () => {
+    const repo = new MemoryRepository(W, {
+      locations: [loc, locB],
+      exits: [lockedExit],
+      items: [],
+      agents: [paff],
+    });
+    const r = await handleLook(
+      { kind: 'look', actorId: paff.id, target: { kind: ExaminableKind.Exit, id: lockedExit.id } },
+      repo,
+      { ai: nullGameAI },
+    );
+    if (!r.ok) throw new Error(r.error);
+    expect(r.value.render).toEqual([{
+      kind: SegmentKind.Narration,
+      text: 'The iron gate leads south. It is locked.',
+    }]);
+  });
+
+  it('looking at an exit with null destination returns unobstructed template', async () => {
+    const repo = new MemoryRepository(W, {
+      locations: [loc],
+      exits: [nullDestExit],
+      items: [],
+      agents: [paff],
+    });
+    const r = await handleLook(
+      { kind: 'look', actorId: paff.id, target: { kind: ExaminableKind.Exit, id: nullDestExit.id } },
+      repo,
+      { ai: nullGameAI },
+    );
+    if (!r.ok) throw new Error(r.error);
+    expect(r.value.render).toEqual([{
+      kind: SegmentKind.Narration,
+      text: 'The dark passage leads east. It is unobstructed.',
+    }]);
+  });
+
+  it('unlocked exit with nullGameAI falls back to template with destination name', async () => {
+    const repo = new MemoryRepository(W, {
+      locations: [loc, locB],
+      exits: [unlockedExit],
+      items: [],
+      agents: [paff],
+    });
+    const r = await handleLook(
+      { kind: 'look', actorId: paff.id, target: { kind: ExaminableKind.Exit, id: unlockedExit.id } },
+      repo,
+      { ai: nullGameAI },
+    );
+    if (!r.ok) throw new Error(r.error);
+    expect(r.value.render).toEqual([{
+      kind: SegmentKind.Narration,
+      text: 'The oak door leads north to Merchant Quarter.',
+    }]);
+  });
+
+  it('unlocked exit with AI uses generated prose', async () => {
+    const repo = new MemoryRepository(W, {
+      locations: [loc, locB],
+      exits: [unlockedExit],
+      items: [],
+      agents: [paff],
+    });
+    const spyAI = {
+      ...nullGameAI,
+      peekExit: vi.fn().mockResolvedValue('You see a bustling market beyond the door.'),
+    };
+    const r = await handleLook(
+      { kind: 'look', actorId: paff.id, target: { kind: ExaminableKind.Exit, id: unlockedExit.id } },
+      repo,
+      { ai: spyAI },
+    );
+    if (!r.ok) throw new Error(r.error);
+    expect(r.value.render).toEqual([{
+      kind: SegmentKind.Narration,
+      text: 'You see a bustling market beyond the door.',
+    }]);
+    expect(spyAI.peekExit).toHaveBeenCalledWith(unlockedExit, locB, null);
   });
 });
