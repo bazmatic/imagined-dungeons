@@ -415,6 +415,8 @@ export async function runTick(
   repo: Repository,
   opts: RunTickOptions,
 ): Promise<TickResult> {
+  await repo.incrementTickCount();
+
   const { parse, ai, llm } = opts;
   const cap = opts.npcCap ?? MAX_NPCS_PER_TICK;
   // A single shared counter across the whole tick — search/failed-look from
