@@ -278,7 +278,10 @@ export function parse(
 
     case 'tell':
     case 'speak':
-    case 'talk': {
+    case 'talk':
+    case 'chat':
+    case 'greet':
+    case 'approach': {
       // "tell <agent>, <utterance>"  or  "tell <agent> <utterance>"
       // "speak to <agent>, <utterance>"  or  "talk to <agent>, <utterance>"
       // Strip leading "to" after the verb (it's a stop-word but we keep it
