@@ -6,10 +6,11 @@ import {
   type NpcTurnChunk,
   type PlayerTurnChunk,
 } from '@core/engine/tick-stream-types';
+import { SqliteNpcDecisionRepository } from '@infra/sqlite-npc-decision-repository';
 import { createFileRoute } from '@tanstack/react-router';
 import { buildSurroundings, type SurroundingsView } from '~/server/surroundings';
 import { getBuilderRepo } from '~/server/admin/repo';
-import { PLAYER_ID, getNarratorLlm, getParse, getRepo } from '~/server/world';
+import { PLAYER_ID, getDb, getNarratorLlm, getParse, getRepo } from '~/server/world';
 
 export type CompleteChunk = {
   kind: typeof TickChunkKind.Complete;
@@ -31,6 +32,8 @@ export const Route = createFileRoute('/api/stream-command')({
         const { text } = (await request.json()) as { text: string };
         const repo = await getRepo();
         const builderRepo = await getBuilderRepo();
+        const db = await getDb();
+        const decisionRepo = new SqliteNpcDecisionRepository(db);
         const parse = getParse();
         const rawLlm = getNarratorLlm();
         const ai = rawLlm ? new LlmGameAI(rawLlm) : nullGameAI;
@@ -45,6 +48,7 @@ export const Route = createFileRoute('/api/stream-command')({
                 parse,
                 ai,
                 builderRepo,
+                decisionRepo,
                 onChunk: (chunk) => controller.enqueue(encode(chunk)),
               });
               const inventoryItems = await repo.itemsOwnedBy({

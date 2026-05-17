@@ -3,7 +3,7 @@ import { BURNING_DISTRICT_CAMPAIGN } from '@campaigns/burning-district';
 import type { AgentId } from '@core/domain/ids';
 import type { LanguageModel } from '@core/engine/language-model';
 import { type ParseFn, makeCompositeParser } from '@core/engine/parser/composite';
-import { type DbHandle, openDb } from '@infra/db';
+import { type DB, type DbHandle, openDb } from '@infra/db';
 import { makeOpenAILanguageModel } from '@infra/language-model/openai';
 import { seedIfEmpty } from '@infra/seed/seeder';
 import { SqliteRepository } from '@infra/sqlite-repository';
@@ -31,6 +31,14 @@ function getLlm(): LanguageModel | null {
     llmInitialised = true;
   }
   return llmInstance;
+}
+
+export async function getDb(): Promise<DB> {
+  if (!handle) {
+    handle = openDb(DB_PATH);
+    await seedIfEmpty(handle.db, CAMPAIGN);
+  }
+  return handle.db;
 }
 
 export async function getRepo(): Promise<SqliteRepository> {
