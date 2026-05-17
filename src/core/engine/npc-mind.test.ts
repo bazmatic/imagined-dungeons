@@ -397,4 +397,22 @@ describe('decideNpcIntent — tick-grouped memory prompt', () => {
     expect(captured[0]).toContain('This turn:');
     expect(captured[0]).not.toContain('This turn — ');
   });
+
+  it('renders null-tickId group as "Earlier" alongside a stamped group', async () => {
+    const repo = new MemoryRepository(W);
+    repo.seed({ locations: [loc], agents: [spark], items: [], exits: [] });
+    repo.seedEvents([
+      makeEvent('e1', null, null),    // pre-migration event
+      makeEvent('e2', 7, 'The Keep'), // current tick
+    ]);
+    const captured: string[] = [];
+    await decideNpcIntent(SPARK_ID, repo, makeSpyLlm(captured) as any, { memoryLimit: 8 });
+    const prompt = captured[0] ?? '';
+    const earlierIdx = prompt.indexOf('Earlier:');
+    const thisTurnIdx = prompt.indexOf('This turn — The Keep:');
+    expect(earlierIdx).toBeGreaterThan(-1);
+    expect(thisTurnIdx).toBeGreaterThan(-1);
+    // "Earlier" must appear before "This turn"
+    expect(earlierIdx).toBeLessThan(thisTurnIdx);
+  });
 });

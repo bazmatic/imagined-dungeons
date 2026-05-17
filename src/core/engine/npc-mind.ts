@@ -364,6 +364,16 @@ interface UserPromptResult {
   readonly baseSnapshot: Omit<DecisionSnapshot, 'response' | 'fallback'>;
 }
 
+const DEFAULT_MEMORY_LIMIT = 8;
+const DEFAULT_MAX_TURN_DEPTH = 5;
+
+const TICK_LABEL: Readonly<Record<number, string>> = {
+  0: 'This turn',
+  1: 'Last turn',
+  2: 'Two turns ago',
+  3: 'Three turns ago',
+};
+
 async function buildUserPrompt(
   ctx: NpcMindContext,
   selfId: AgentId,
@@ -475,6 +485,7 @@ async function buildUserPrompt(
       const distFromEnd = n - 1 - i;
       const timeLabel =
         key === null ? 'Earlier' : (TICK_LABEL[distFromEnd] ?? `${distFromEnd} turns ago`);
+      // All events in a tick group share the same location for a given observer.
       const locLabel = events[0]?.locationLabel;
       const header = locLabel ? `${timeLabel} — ${locLabel}:` : `${timeLabel}:`;
       lines.push('');
@@ -520,16 +531,6 @@ export interface NpcMindOptions {
   /** When provided, each decision is persisted as a snapshot for the Sensorium. */
   readonly decisionRepo?: NpcDecisionRepository | null;
 }
-
-const DEFAULT_MEMORY_LIMIT = 8;
-const DEFAULT_MAX_TURN_DEPTH = 5;
-
-const TICK_LABEL: Readonly<Record<number, string>> = {
-  0: 'This turn',
-  1: 'Last turn',
-  2: 'Two turns ago',
-  3: 'Three turns ago',
-};
 
 /**
  * Returns up to two intent lines for the NPC to execute this turn. Speech
