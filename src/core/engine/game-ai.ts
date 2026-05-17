@@ -1,9 +1,9 @@
-import type { Agent } from '@core/domain/entities';
+import type { Agent, Exit, Location } from '@core/domain/entities';
 import type { DomainEvent } from '@core/domain/events';
 import type { AgentId } from '@core/domain/ids';
 import { NpcFallbackIntent } from '@core/domain/kinds';
 import type { Action } from '@core/domain/actions';
-import type { DiscoveryRequest, DiscoveryResponse } from '@core/domain/builder-types';
+import type { DiscoveryRequest, DiscoveryResponse, LoreContext } from '@core/domain/builder-types';
 import type { ConsequenceLoreSink } from './consequences';
 import { consequencesFor } from './consequences';
 import { FALLBACK_RESPONSE, runDiscovery } from './discovery';
@@ -11,6 +11,7 @@ import type { LanguageModel } from './language-model';
 import { narrate } from './narrate';
 import type { NpcMindOptions } from './npc-mind';
 import { decideNpcIntent } from './npc-mind';
+import { peekExit as peekExitLlm } from './peek-exit';
 import type { HandlerRepo } from './repository';
 import { type TradeDecideRequest, type TradeDecision, tradeDecide } from './trade-decide';
 
@@ -31,6 +32,7 @@ export interface GameAI {
   ): Promise<readonly Action[]>;
   npcIntent(actorId: AgentId, repo: HandlerRepo, opts?: NpcMindOptions): Promise<readonly string[]>;
   discover(req: DiscoveryRequest): Promise<DiscoveryResponse>;
+  peekExit(exit: Exit, destination: Location, lore: LoreContext | null): Promise<string | null>;
 }
 
 export const nullGameAI: GameAI = {
@@ -39,6 +41,7 @@ export const nullGameAI: GameAI = {
   consequences: async () => [],
   npcIntent: async () => [NpcFallbackIntent],
   discover: async () => FALLBACK_RESPONSE,
+  peekExit: async () => null,
 };
 
 export class LlmGameAI implements GameAI {
@@ -66,5 +69,9 @@ export class LlmGameAI implements GameAI {
 
   discover(req: DiscoveryRequest): Promise<DiscoveryResponse> {
     return runDiscovery(req, this.llm);
+  }
+
+  peekExit(exit: Exit, destination: Location, lore: LoreContext | null): Promise<string | null> {
+    return peekExitLlm(exit, destination, lore, this.llm);
   }
 }
