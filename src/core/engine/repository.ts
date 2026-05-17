@@ -114,4 +114,10 @@ export interface HandlerRepo {
 export interface Repository extends HandlerRepo {
   /** Every agent in the world (used by the scheduler to tick offstage NPCs). */
   allAgents(): Promise<readonly Agent[]>;
+  /**
+   * Atomically increments the world tick counter, stores the new value
+   * internally for use by appendEvent, and returns it.
+   * Must be called once at the start of each runTick before any appendEvent calls.
+   */
+  incrementTickCount(): Promise<number>;
 }
