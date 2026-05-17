@@ -14,6 +14,8 @@ export interface BaseEvent {
   readonly witnesses: readonly AgentId[];
   readonly createdAt: Date;
   readonly narrations?: Readonly<Record<string, string>>;
+  readonly tickId?: number | null;
+  readonly locationLabel?: string | null;
 }
 
 export type DomainEvent =
