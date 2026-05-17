@@ -604,58 +604,22 @@ const brassKey: Item = {
 };
 
 describe('buy / sell / offer verbs', () => {
-  it('parses "buy the brass key from spark"', () => {
+  it('returns UnknownVerb for buy — delegated to LLM', () => {
     const r = parse('buy the brass key from spark', ACTOR, view([brassKey], [spark]), inv());
-    if (r.kind !== ActionKind.Buy) throw new Error('expected buy');
-    expect(r.sellerId).toBe(spark.id);
-    expect(r.itemId).toBe(brassKey.id);
+    if ('actorId' in r) throw new Error('expected error, got action');
+    expect(r.kind).toBe(ParseErrorKind.UnknownVerb);
   });
 
-  it('parses "sell the cloak to spark"', () => {
+  it('returns UnknownVerb for sell — delegated to LLM', () => {
     const r = parse('sell the cloak to spark', ACTOR, view([], [spark]), inv([cloak]));
-    if (r.kind !== ActionKind.Sell) throw new Error('expected sell');
-    expect(r.buyerId).toBe(spark.id);
-    expect(r.itemId).toBe(cloak.id);
+    if ('actorId' in r) throw new Error('expected error, got action');
+    expect(r.kind).toBe(ParseErrorKind.UnknownVerb);
   });
 
-  it('parses "offer the cloak for 5 gold"', () => {
+  it('returns UnknownVerb for offer — delegated to LLM', () => {
     const r = parse('offer the cloak for 5 gold', ACTOR, view([], [spark]), inv([cloak]));
-    if (r.kind !== ActionKind.Offer) throw new Error('expected offer');
-    expect(r.itemId).toBe(cloak.id);
-    expect(r.price).toBe(5);
-  });
-
-  it('parses "offer the cloak for 5" (bare number, no "gold")', () => {
-    const r = parse('offer the cloak for 5', ACTOR, view([], [spark]), inv([cloak]));
-    if (r.kind !== ActionKind.Offer) throw new Error('expected offer');
-    expect(r.price).toBe(5);
-  });
-
-  it('parses "price the cloak at 3"', () => {
-    const r = parse('price the cloak at 3', ACTOR, view([], [spark]), inv([cloak]));
-    if (r.kind !== ActionKind.Offer) throw new Error('expected offer');
-    expect(r.price).toBe(3);
-  });
-
-  it('parses "buy the brass key from spark" when key is only in spark\'s agent inventory', () => {
-    // Real merchant scenario: item owned by agent, not in view.items
-    const agentItems = new Map<AgentId, readonly Item[]>([[spark.id, [brassKey]]]);
-    const r = parse('buy the brass key from spark', ACTOR, view([], [spark], agentItems), inv());
-    if (r.kind !== ActionKind.Buy) throw new Error('expected buy');
-    expect(r.sellerId).toBe(spark.id);
-    expect(r.itemId).toBe(brassKey.id);
-  });
-
-  it('returns MissingArgument for "buy the brass key" (no seller)', () => {
-    const r = parse('buy the brass key', ACTOR, view([brassKey], [spark]), inv());
-    if ('actorId' in r) throw new Error('expected error');
-    expect(r.kind).toBe(ParseErrorKind.MissingArgument);
-  });
-
-  it('returns ImpossibleAction for "offer the cloak for 0"', () => {
-    const r = parse('offer the cloak for 0', ACTOR, view([], [spark]), inv([cloak]));
-    if ('actorId' in r) throw new Error('expected error');
-    expect(r.kind).toBe(ParseErrorKind.ImpossibleAction);
+    if ('actorId' in r) throw new Error('expected error, got action');
+    expect(r.kind).toBe(ParseErrorKind.UnknownVerb);
   });
 });
 
