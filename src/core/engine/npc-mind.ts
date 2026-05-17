@@ -361,8 +361,7 @@ interface NpcMindContext {
 
 interface UserPromptResult {
   readonly prompt: string;
-  readonly unansweredSummaries: string[];
-  readonly memorySummaries: string[];
+  readonly baseSnapshot: Omit<DecisionSnapshot, 'response' | 'fallback'>;
 }
 
 async function buildUserPrompt(
@@ -453,7 +452,30 @@ async function buildUserPrompt(
       lines.push(`- ${summary}`);
     }
   }
-  return { prompt: lines.join('\n'), unansweredSummaries, memorySummaries };
+  const baseSnapshot: Omit<DecisionSnapshot, 'response' | 'fallback'> = {
+    agentState: {
+      mood: actor.mood ?? null,
+      goal: actor.goal ?? null,
+      shortTermIntent: actor.shortTermIntent ?? null,
+    },
+    perception: {
+      locationLabel: view.location.label,
+      locationDescription: view.location.shortDescription,
+      visibleItems: view.items.map((i) => i.label),
+      visibleAgents: view.agents.map((a) =>
+        a.mood ? { label: a.label, mood: a.mood } : { label: a.label },
+      ),
+      exits: view.exits.map((e) => ({
+        direction: e.direction,
+        label: e.label,
+        locked: e.locked,
+      })),
+      inventory: inventory.map((i) => i.label),
+      unansweredAddresses: unansweredSummaries,
+    },
+    memory: memorySummaries,
+  };
+  return { prompt: lines.join('\n'), baseSnapshot };
 }
 
 export interface NpcMindOptions {
@@ -498,7 +520,7 @@ export async function decideNpcIntent(
   };
 
   const systemPrompt = SYSTEM_PROMPT(actor);
-  const { prompt: userPrompt, unansweredSummaries, memorySummaries } = await buildUserPrompt(ctx, actorId, repo);
+  const { prompt: userPrompt, baseSnapshot } = await buildUserPrompt(ctx, actorId, repo);
   // Verbose prompt logging is gated because the prompt is long. Set
   // NPC_MIND_DEBUG=1 (or =prompts) to see it in the dev terminal.
   const debug = process.env.NPC_MIND_DEBUG;
@@ -511,30 +533,6 @@ export async function decideNpcIntent(
   const decisionRepo = opts.decisionRepo ?? null;
   const worldId = decisionRepo ? await repo.getWorldId() : null;
   const rawPrompt: RawPrompt = { system: systemPrompt, user: userPrompt };
-
-  const baseSnapshot = {
-    agentState: {
-      mood: actor.mood ?? null,
-      goal: actor.goal ?? null,
-      shortTermIntent: actor.shortTermIntent ?? null,
-    },
-    perception: {
-      locationLabel: view.location.label,
-      locationDescription: view.location.shortDescription,
-      visibleItems: view.items.map((i) => i.label),
-      visibleAgents: view.agents.map((a) =>
-        a.mood ? { label: a.label, mood: a.mood } : { label: a.label },
-      ),
-      exits: view.exits.map((e) => ({
-        direction: e.direction,
-        label: e.label,
-        locked: e.locked,
-      })),
-      inventory: inventory.map((i) => i.label),
-      unansweredAddresses: unansweredSummaries,
-    },
-    memory: memorySummaries,
-  };
 
   try {
     const prose = await llm.completeText({ system: systemPrompt, user: userPrompt });
