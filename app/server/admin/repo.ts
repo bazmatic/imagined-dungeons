@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { BURNING_DISTRICT_CAMPAIGN } from '@campaigns/burning-district';
 import { SqliteBuilderRepository } from '@infra/builder-sqlite-repository';
-import { type DbHandle, openDb } from '@infra/db';
+import { type DB, type DbHandle, openDb } from '@infra/db';
 import { seedIfEmpty } from '@infra/seed/seeder';
 
 const DB_PATH = process.env.DB_PATH ?? './imagined-dungeons.db';
@@ -22,4 +22,13 @@ export async function getBuilderRepo(): Promise<SqliteBuilderRepository> {
     seeded = true;
   }
   return new SqliteBuilderRepository(handle.db);
+}
+
+export async function getAdminDb(): Promise<DB> {
+  if (!handle) handle = openDb(DB_PATH);
+  if (!seeded) {
+    await seedIfEmpty(handle.db, BURNING_DISTRICT_CAMPAIGN);
+    seeded = true;
+  }
+  return handle.db;
 }
