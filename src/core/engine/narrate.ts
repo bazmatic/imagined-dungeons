@@ -51,7 +51,7 @@ function buildUserPrompt(ctx: NarrateContext, recentMemory: readonly string[]): 
 
   const lines: string[] = [];
   if (observerIsActor) {
-    lines.push(`POV: second person. The observer IS the actor. Use "you" for the actor.`);
+    lines.push(`POV: second person. You ARE the actor. Use "you" — do NOT write the actor's name ("${actor.label}") anywhere in the narration.`);
     if (target) lines.push(`Refer to the target ("${target.label}") by name.`);
   } else if (observerIsTarget && target) {
     lines.push(`POV: second person. The observer IS the target. Use "you" for the target.`);
