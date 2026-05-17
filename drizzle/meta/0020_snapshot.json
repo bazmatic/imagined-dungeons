@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "1843e948-1a0f-4d7e-a88e-0c0d6004d662",
+  "id": "4ab59a3d-8143-423e-a9ba-0579f36c086e",
   "prevId": "9f2a3b4c-5d6e-7f8a-9b0c-1d2e3f4a5b6c",
   "tables": {
     "agents": {
@@ -873,8 +873,32 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
-      "foreignKeys": {},
+      "indexes": {
+        "npc_decisions_world_agent_idx": {
+          "name": "npc_decisions_world_agent_idx",
+          "columns": [
+            "world_id",
+            "agent_id",
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "npc_decisions_world_id_worlds_id_fk": {
+          "name": "npc_decisions_world_id_worlds_id_fk",
+          "tableFrom": "npc_decisions",
+          "tableTo": "worlds",
+          "columnsFrom": [
+            "world_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
