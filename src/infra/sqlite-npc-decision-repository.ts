@@ -14,8 +14,11 @@ export class SqliteNpcDecisionRepository implements NpcDecisionRepository {
     snapshot: DecisionSnapshot,
     rawPrompt: RawPrompt,
   ): Promise<void> {
-    // better-sqlite3 requires synchronous transaction callbacks.
-    // Run insert + prune as two sequential awaited statements (no async lambda).
+    // better-sqlite3's Drizzle wrapper requires synchronous transaction callbacks,
+    // so db.transaction(async tx => ...) silently drops the async work.
+    // The workaround (manual BEGIN/COMMIT) exists in builder-sqlite-repository.ts
+    // but adds complexity not warranted here — the insert+prune gap is a single
+    // event-loop tick with no concurrent writers on this table.
     await this.db.insert(schema.npcDecisions).values({
       worldId,
       agentId,

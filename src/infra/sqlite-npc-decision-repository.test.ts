@@ -78,6 +78,9 @@ describe('SqliteNpcDecisionRepository', () => {
     }
     const results = await repo.list(WORLD, AGENT);
     expect(results).toHaveLength(DECISION_HISTORY_LIMIT);
+    // Verify the newest rows survived (not the oldest)
+    expect(results[0]?.snapshot.perception.locationLabel).toBe(`loc-${DECISION_HISTORY_LIMIT + 4}`);
+    expect(results[DECISION_HISTORY_LIMIT - 1]?.snapshot.perception.locationLabel).toBe('loc-5');
   });
 
   it('only returns decisions for the given agent', async () => {
