@@ -198,6 +198,15 @@ export const worldLore = sqliteTable('world_lore', {
   storySoFar: text('story_so_far').notNull().default(''),
 });
 
+export const npcDecisions = sqliteTable('npc_decisions', {
+  id:        integer('id').primaryKey({ autoIncrement: true }),
+  worldId:   text('world_id').notNull(),
+  agentId:   text('agent_id').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  snapshot:  text('snapshot',   { mode: 'json' }).$type<import('@core/domain/npc-decision').DecisionSnapshot>().notNull(),
+  rawPrompt: text('raw_prompt', { mode: 'json' }).$type<import('@core/domain/npc-decision').RawPrompt>().notNull(),
+});
+
 export const tagLore = sqliteTable(
   'tag_lore',
   {
