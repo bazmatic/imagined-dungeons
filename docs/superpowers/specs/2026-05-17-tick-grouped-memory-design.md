@@ -21,29 +21,34 @@ tickCount: integer('tick_count').notNull().default(0),
 
 This is a monotonically increasing counter per world, incremented once at the start of each `runTick` call. It is the source of truth for tick identity.
 
-### events table — new column
+### events table — new columns
 
-Add `tickId` to the `events` table:
-
-```ts
-tickId: integer('tick_id'),   // nullable — null for events predating this migration
-```
-
-No foreign key. `NULL` for all pre-migration rows; new rows get the current world `tickCount` at the time of the tick.
-
-### DomainEvent — new field
+Add two columns to the `events` table:
 
 ```ts
-readonly tickId: number | null;
+tickId:     integer('tick_id'),      // nullable — null for events predating this migration
+locationId: text('location_id'),     // nullable — the actor's location when the event occurred
 ```
 
-`null` for pre-migration events loaded from the DB. All new events written during a tick carry the tick's `tickCount` value.
+No foreign keys. `NULL` for all pre-migration rows. New rows carry the current tick's `tickCount` and the location of the acting agent at the moment the event is appended.
+
+All events witnessed by an agent in a given tick occur in the same location (agents act at most once per tick and witness only events from their current location). So `locationId` is consistent across all events in a tick group for a given observer — the first event's `locationId` is sufficient for the group header.
+
+### DomainEvent — new fields
+
+```ts
+readonly tickId:     number | null;
+readonly locationId: string | null;   // LocationId, stored as string
+```
+
+Both `null` for pre-migration events loaded from the DB.
 
 ### Migrations
 
-Two new Drizzle migration files (next available numbers after `0020`):
+Three new Drizzle migration files (next available numbers after `0020`):
 - `0021_*` — `ALTER TABLE worlds ADD COLUMN tick_count integer NOT NULL DEFAULT 0`
 - `0022_*` — `ALTER TABLE events ADD COLUMN tick_id integer`
+- `0023_*` — `ALTER TABLE events ADD COLUMN location_id text`
 
 ---
 
@@ -56,19 +61,19 @@ Two new Drizzle migration files (next available numbers after `0020`):
 incrementTickCount(): Promise<number>;
 ```
 
-`appendEvent` gains an optional `tickId` parameter:
+`appendEvent` gains optional metadata parameters:
 
 ```ts
-appendEvent(event: DomainEvent, tickId?: number): Promise<void>;
+appendEvent(event: DomainEvent, tickId?: number, locationId?: string): Promise<void>;
 ```
 
 ### SQLite implementation (`src/infra/sqlite-repository.ts`)
 
 `incrementTickCount` issues a single `UPDATE worlds SET tick_count = tick_count + 1 WHERE id = ? RETURNING tick_count` and returns the result.
 
-`appendEvent` passes `tickId` (or `null`) to the insert.
+`appendEvent` passes `tickId` and `locationId` (both defaulting to `null`) to the insert.
 
-`recentEvents` maps the new column: `tickId: r.tickId ?? null`.
+`recentEvents` maps the new columns: `tickId: r.tickId ?? null`, `locationId: r.locationId ?? null`.
 
 ---
 
@@ -80,7 +85,7 @@ At the very top of `runTick`, before any events are written:
 const tickId = await repo.incrementTickCount();
 ```
 
-Every `appendEvent` call within `runTick` (player turn, consequence pass, NPC turns) receives `tickId`. The value flows through as a parameter — no global state.
+Every `appendEvent` call within `runTick` (player turn, consequence pass, NPC turns) receives `tickId` and the acting agent's current `locationId`. Both flow as parameters — no global state.
 
 ---
 
@@ -121,24 +126,24 @@ After `recallFor` returns the event window (already bounded by `memoryLimit`):
 | N ≥ 4             | "N turns ago"    |
 | null group        | "Earlier"        |
 
-5. Render each group as a labelled block:
+5. Render each group as a labelled block. The location for the header comes from `events[0].locationId` for that group (all events in the group share the same location for a given observer). If `locationId` is null, the location is omitted from the header.
 
 ```
 What you have witnessed, oldest to most recent:
 
-Three turns ago:
+Three turns ago — Wavering Street:
 - Uncle Bob looked around
 - the world changed (location description updated)
 
-Two turns ago:
+Two turns ago — Wavering Street:
 - Paff Pinkerton ate the charred ration
 - you examined the Glowing Archway
 
-Last turn:
-- Paff Pinkerton looked around
+Last turn — The Serpent:
+- Captain Serena said "Who are you?"
 
-This turn:
-- Scorch Wraith moved closer to you
+This turn — The Serpent:
+- you said "I'm a traveller"
 ```
 
 ### Edge cases
@@ -162,4 +167,4 @@ The `memory` field in `DecisionSnapshot` stores the already-formatted strings (t
 - Showing tick numbers in the Sensorium history list (deferred)
 - Exposing `tickCount` via the admin API
 - Per-NPC tick tracking (the counter is world-level)
-- Retroactively assigning `tickId` to pre-migration events
+- Retroactively assigning `tickId` or `locationId` to pre-migration events
