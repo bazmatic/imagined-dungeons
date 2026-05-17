@@ -9,8 +9,10 @@ import {
   OwnerKind,
 } from '@core/domain/kinds';
 import { log } from '@core/log';
+import type { DecisionSnapshot, RawPrompt } from '@core/domain/npc-decision';
 import type { LanguageModel } from './language-model';
 import { recallFor } from './memory';
+import type { NpcDecisionRepository } from './npc-decision-repository';
 import { type PerceptionView, perceive } from './perception';
 import type { HandlerRepo } from './repository';
 
@@ -357,11 +359,17 @@ interface NpcMindContext {
   readonly location: Location;
 }
 
+interface UserPromptResult {
+  readonly prompt: string;
+  readonly unansweredSummaries: string[];
+  readonly memorySummaries: string[];
+}
+
 async function buildUserPrompt(
   ctx: NpcMindContext,
   selfId: AgentId,
   repo: HandlerRepo,
-): Promise<string> {
+): Promise<UserPromptResult> {
   const { actor, view, inventory, memory } = ctx;
   const selfNameRegex = new RegExp(
     `\\b${actor.label.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`,
@@ -415,11 +423,14 @@ async function buildUserPrompt(
       );
     if (!respondedAfter) unanswered.push(m);
   }
+  const unansweredSummaries: string[] = [];
   if (unanswered.length > 0) {
     lines.push('');
     lines.push('IMPORTANT — recent events directed AT YOU that you have NOT yet responded to:');
     for (const m of unanswered) {
-      lines.push(`- ${await summariseEvent(m, selfId, repo)}`);
+      const summary = await summariseEvent(m, selfId, repo);
+      unansweredSummaries.push(summary);
+      lines.push(`- ${summary}`);
     }
   }
 
@@ -432,17 +443,24 @@ async function buildUserPrompt(
   // shortTermIntent. The NPC mind's prompt header already surfaces that field
   // as "Current short-term intent" and priority #3 (below) acts on it.
 
+  const memorySummaries: string[] = [];
   if (memory.length > 0) {
     lines.push('');
     lines.push('What you have witnessed recently:');
-    for (const m of memory) lines.push(`- ${await summariseEvent(m, selfId, repo)}`);
+    for (const m of memory) {
+      const summary = await summariseEvent(m, selfId, repo);
+      memorySummaries.push(summary);
+      lines.push(`- ${summary}`);
+    }
   }
-  return lines.join('\n');
+  return { prompt: lines.join('\n'), unansweredSummaries, memorySummaries };
 }
 
 export interface NpcMindOptions {
   /** Cap on recent-memory entries fed into the prompt. */
   readonly memoryLimit?: number;
+  /** When provided, each decision is persisted as a snapshot for the Sensorium. */
+  readonly decisionRepo?: NpcDecisionRepository | null;
 }
 
 const DEFAULT_MEMORY_LIMIT = 8;
@@ -480,7 +498,7 @@ export async function decideNpcIntent(
   };
 
   const systemPrompt = SYSTEM_PROMPT(actor);
-  const userPrompt = await buildUserPrompt(ctx, actorId, repo);
+  const { prompt: userPrompt, unansweredSummaries, memorySummaries } = await buildUserPrompt(ctx, actorId, repo);
   // Verbose prompt logging is gated because the prompt is long. Set
   // NPC_MIND_DEBUG=1 (or =prompts) to see it in the dev terminal.
   const debug = process.env.NPC_MIND_DEBUG;
@@ -490,12 +508,58 @@ export async function decideNpcIntent(
     );
   }
 
+  const decisionRepo = opts.decisionRepo ?? null;
+  const worldId = decisionRepo ? await repo.getWorldId() : null;
+  const rawPrompt: RawPrompt = { system: systemPrompt, user: userPrompt };
+
+  const baseSnapshot = {
+    agentState: {
+      mood: actor.mood ?? null,
+      goal: actor.goal ?? null,
+      shortTermIntent: actor.shortTermIntent ?? null,
+    },
+    perception: {
+      locationLabel: view.location.label,
+      locationDescription: view.location.shortDescription,
+      visibleItems: view.items.map((i) => i.label),
+      visibleAgents: view.agents.map((a) =>
+        a.mood ? { label: a.label, mood: a.mood } : { label: a.label },
+      ),
+      exits: view.exits.map((e) => ({
+        direction: e.direction,
+        label: e.label,
+        locked: e.locked,
+      })),
+      inventory: inventory.map((i) => i.label),
+      unansweredAddresses: unansweredSummaries,
+    },
+    memory: memorySummaries,
+  };
+
   try {
     const prose = await llm.completeText({ system: systemPrompt, user: userPrompt });
     let body = prose.trim();
     log.info(`[npc-mind] ${actor.label} raw reply: ${JSON.stringify(prose)}`);
     if (body.length === 0) {
       log.warn(`[npc-mind] empty response for ${actor.label}; falling back to wait`);
+      if (decisionRepo && worldId) {
+        await decisionRepo.save(
+          worldId,
+          actorId as string,
+          {
+            ...baseSnapshot,
+            response: {
+              rawText: prose,
+              thought: null,
+              intentBefore: actor.shortTermIntent ?? null,
+              intentAfter: actor.shortTermIntent ?? null,
+              actions: [],
+            },
+            fallback: true,
+          },
+          rawPrompt,
+        );
+      }
       return [NpcFallbackIntent];
     }
     // The NPC mind owns its own shortTermIntent and reasons out loud before
@@ -584,10 +648,42 @@ export async function decideNpcIntent(
         body.length === 0 ? '(wait — empty after control lines)' : JSON.stringify(body)
       }`,
     );
+    if (decisionRepo && worldId) {
+      const snapshot: DecisionSnapshot = {
+        ...baseSnapshot,
+        response: {
+          rawText: prose,
+          thought: thoughts[0] ?? null,
+          intentBefore: actor.shortTermIntent ?? null,
+          intentAfter: finalIntent,
+          actions: orderedLines,
+        },
+        fallback: false,
+      };
+      await decisionRepo.save(worldId, actorId as string, snapshot, rawPrompt);
+    }
     if (orderedLines.length === 0) return [NpcFallbackIntent];
     return orderedLines;
   } catch (err) {
     log.warn(`[npc-mind] error deciding intent for ${actor.label}: ${String(err)}`);
+    if (decisionRepo && worldId) {
+      await decisionRepo.save(
+        worldId,
+        actorId as string,
+        {
+          ...baseSnapshot,
+          response: {
+            rawText: '',
+            thought: null,
+            intentBefore: actor.shortTermIntent ?? null,
+            intentAfter: actor.shortTermIntent ?? null,
+            actions: [],
+          },
+          fallback: true,
+        },
+        rawPrompt,
+      );
+    }
     return [NpcFallbackIntent];
   }
 }
