@@ -13,6 +13,7 @@ import { dispatch } from './actions/registry';
 import { type ConsequenceLoreSink, MAX_CONSEQUENCE_DEPTH } from './consequences';
 import type { GameAI } from './game-ai';
 import type { LanguageModel } from './language-model';
+import type { NpcDecisionRepository } from './npc-decision-repository';
 import { TickChunkKind, type NpcTurnChunk, type PlayerTurnChunk } from './tick-stream-types';
 import { MAX_NPCS_PER_TICK, scheduleNpcs } from './npc-scheduler';
 import type { ParseFn } from './parser/composite';
@@ -122,6 +123,7 @@ export interface RunTickOptions {
    * witnessed event this tick.
    */
   readonly onChunk?: (chunk: PlayerTurnChunk | NpcTurnChunk) => void;
+  readonly decisionRepo?: NpcDecisionRepository | null;
 }
 
 /**
@@ -137,6 +139,7 @@ async function renderWitnessForPlayer(
   repo: Repository,
 ): Promise<string | null> {
   if (event.actorId === playerId) return null; // player's own action — already in `render`
+  if (event.actorId === SYSTEM_AGENT_ID) return null; // synthetic; never narrate as a witnessed actor
   if (!event.witnesses.some((w) => w === playerId)) return null;
 
   const actor = await repo.getAgent(event.actorId);
@@ -515,7 +518,9 @@ export async function runTick(
     // non-speech action line). Dispatch them in order so the NPC can
     // both talk and do something.
     const npcWitnessed: string[] = [];
-    const intents = ai ? await ai.npcIntent(npcId, repo) : [NpcFallbackIntent];
+    const intents = ai
+      ? await ai.npcIntent(npcId, repo, opts.decisionRepo ? { decisionRepo: opts.decisionRepo } : undefined)
+      : [NpcFallbackIntent];
     for (const intention of intents) {
       log.info(`[npc] ${npc.label} action: "${intention}"`);
 
