@@ -1,7 +1,7 @@
 import type { WorldTree } from '@core/domain/builder-types';
 import { type ReactNode, useState } from 'react';
 import { upsertTagLore } from '~/server/admin/lore';
-import { AgentForm } from './AgentForm';
+import { AgentTabs } from './AgentTabs';
 import { CreateAffordance } from './CreateAffordance';
 import { ItemForm } from './ItemForm';
 import { LocationForm } from './LocationForm';
@@ -192,7 +192,7 @@ function renderDetail(args: {
   }
   if (category === CategoryKind.Agents) {
     return (
-      <AgentForm
+      <AgentTabs
         key={selectedId}
         tree={tree}
         agentId={selectedId}
