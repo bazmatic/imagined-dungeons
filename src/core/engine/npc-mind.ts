@@ -543,7 +543,7 @@ export async function decideNpcIntent(
       if (decisionRepo && worldId) {
         await decisionRepo.save(
           worldId,
-          actorId as string,
+          String(actorId),
           {
             ...baseSnapshot,
             response: {
@@ -651,14 +651,14 @@ export async function decideNpcIntent(
         ...baseSnapshot,
         response: {
           rawText: prose,
-          thought: thoughts[0] ?? null,
+          thought: thoughts.length > 0 ? thoughts.join('\n') : null,
           intentBefore: actor.shortTermIntent ?? null,
           intentAfter: finalIntent,
           actions: orderedLines,
         },
         fallback: false,
       };
-      await decisionRepo.save(worldId, actorId as string, snapshot, rawPrompt);
+      await decisionRepo.save(worldId, String(actorId), snapshot, rawPrompt);
     }
     if (orderedLines.length === 0) return [NpcFallbackIntent];
     return orderedLines;
@@ -667,7 +667,7 @@ export async function decideNpcIntent(
     if (decisionRepo && worldId) {
       await decisionRepo.save(
         worldId,
-        actorId as string,
+        String(actorId),
         {
           ...baseSnapshot,
           response: {
