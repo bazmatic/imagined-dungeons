@@ -14,7 +14,7 @@ import {
 } from '@core/domain/ids';
 import { OwnerKind } from '@core/domain/kinds';
 import type { Repository } from '@core/engine/repository';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import type { DB } from './db';
 import * as schema from './schema';
 
@@ -100,6 +100,8 @@ export class SqliteRepository implements Repository {
     private readonly worldId: WorldId,
   ) {}
 
+  private currentTickId: number | null = null;
+
   async getWorldId(): Promise<WorldId> {
     return this.worldId;
   }
@@ -172,6 +174,21 @@ export class SqliteRepository implements Repository {
       .from(schema.agents)
       .where(eq(schema.agents.worldId, this.worldId));
     return rows.map((r) => toAgent(r, this.worldId));
+  }
+
+  async incrementTickCount(): Promise<number> {
+    await this.db
+      .update(schema.worlds)
+      .set({ tickCount: sql`${schema.worlds.tickCount} + 1` })
+      .where(eq(schema.worlds.id, this.worldId));
+    const rows = await this.db
+      .select({ tickCount: schema.worlds.tickCount })
+      .from(schema.worlds)
+      .where(eq(schema.worlds.id, this.worldId));
+    const count = rows[0]?.tickCount;
+    if (count === undefined) throw new Error(`world not found: ${this.worldId}`);
+    this.currentTickId = count;
+    return count;
   }
 
   async exitsFrom(loc: LocationId): Promise<readonly Exit[]> {
@@ -261,6 +278,25 @@ export class SqliteRepository implements Repository {
 
   async appendEvent(event: DomainEvent): Promise<void> {
     const { id, worldId, actorId, kind, witnesses, createdAt, narrations, ...rest } = event;
+    let locationLabel: string | null = null;
+    if (this.currentTickId !== null) {
+      try {
+        const rows = await this.db
+          .select({ label: schema.locations.label })
+          .from(schema.agents)
+          .innerJoin(
+            schema.locations,
+            and(
+              eq(schema.locations.id, schema.agents.locationId),
+              eq(schema.locations.worldId, schema.agents.worldId),
+            ),
+          )
+          .where(and(eq(schema.agents.worldId, this.worldId), eq(schema.agents.id, actorId)));
+        locationLabel = rows[0]?.label ?? null;
+      } catch {
+        // best-effort: leave null if agent or location not found (e.g. SYSTEM_AGENT_ID)
+      }
+    }
     await this.db.insert(schema.events).values({
       id,
       worldId,
@@ -270,6 +306,8 @@ export class SqliteRepository implements Repository {
       createdAt,
       payload: rest,
       narrations: narrations ? { ...narrations } : null,
+      tickId: this.currentTickId,
+      locationLabel,
     });
   }
 
@@ -358,6 +396,8 @@ export class SqliteRepository implements Repository {
         kind: r.kind as DomainEvent['kind'],
         witnesses: (r.witnesses as string[]).map(asAgentId),
         createdAt: r.createdAt,
+        tickId: r.tickId ?? null,
+        locationLabel: r.locationLabel ?? null,
         ...(narrations ? { narrations } : {}),
         ...payload,
       } as DomainEvent;

@@ -130,6 +130,10 @@ export class MemoryRepository implements Repository {
     this.agents.set(id, { ...a, awake });
   }
 
+  async incrementTickCount(): Promise<number> {
+    return 0;
+  }
+
   async appendEvent(event: DomainEvent): Promise<void> {
     this.events.push(event);
   }
