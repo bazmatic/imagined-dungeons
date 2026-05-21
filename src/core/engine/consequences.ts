@@ -4,7 +4,7 @@ import type { Agent, Item, Location } from '@core/domain/entities';
 import type { DomainEvent } from '@core/domain/events';
 import { asAgentId, asExitId, asItemId, asLocationId, type AgentId, type ExitId, type ItemId, type LocationId, SYSTEM_AGENT_ID, type WorldId } from '@core/domain/ids';
 import { expandSpawn } from '@core/spawning/expand';
-import { ActionKind, AttackOutcome, EventKind, OwnerKind } from '@core/domain/kinds';
+import { ActionKind, AttackOutcome, EntityKind, EventKind, OwnerKind } from '@core/domain/kinds';
 import { log } from '@core/log';
 import type { JsonSchema, LanguageModel } from './language-model';
 import { resolveAgent, resolveItem } from './parser';
@@ -42,9 +42,13 @@ const SYSTEM_PROMPT_LINES: readonly string[] = [
   '- For a reveal action, set kind="reveal_item", targetRef = the natural-language name of the hidden item the engine should reveal, targetKind="item", and the description / mood fields all null. The engine resolves targetRef against the currently-hidden items at the locations where the events happened.',
   '- Do NOT use reveal_item when a normal search already matched the hidden item; the search handler reveals it directly. Reveal is for INDIRECT discoveries — actions that incidentally expose something.',
   '',
-  'When to emit a description update:',
-  '- Only update a description for DURABLE changes — alterations that will still be true an hour from now even if everyone leaves and comes back. Examples: an attack leaves wreckage, blood, or scarring; a key item is destroyed; fire damage marks a wall; a permanent fixture has been added or removed.',
-  "- Prefer updating the location's longDescription when the room itself is now durably different.",
+  'When to emit `record_effect`:',
+  "- Use for specific, visible physical traces that compound incrementally — a carving, a spill, a scorch mark with a particular shape, graffiti, a fresh stain. The `effect` string must describe exactly what a bystander arriving later would see (e.g. \"a crude carving reading 'Paff woz ere' scratched into the cobblestones\"; \"a spreading wine stain on the rug\"). Preserve specific names, texts, shapes, and colours verbatim — do not paraphrase.",
+  '- Prefer `record_effect` for most durable changes. Traces accumulate and are shown together when a player examines the entity.',
+  '',
+  'When to emit a description update (`update_description`):',
+  '- Only for major structural changes that make the existing description misleading or wrong — a wall collapses, a building burns to the ground, a key fixture is destroyed. This rewrites the baseline; use it sparingly.',
+  "- Prefer updating the location's longDescription when the room itself is now fundamentally different.",
   '- Do NOT bake TRANSIENT state into a stored description. Transient state is anything the simulation tracks elsewhere and recomputes each turn — who is currently in the room, what items are currently lying about, who is carrying what, who is awake or asleep, current moods, current intents, current HP. The renderer surfaces all of that live; duplicating it into a stored description is wrong because the description goes stale the next turn (someone walks in or out and the description now lies). If the only thing that changed is who/what is currently somewhere, emit no consequence.',
   '',
   'When to update mood (agent target only):',
@@ -68,7 +72,7 @@ const SYSTEM_PROMPT_LINES: readonly string[] = [
   '- mood and sideQuest are only meaningful when targetKind is "agent". On a location or item they will be ignored.',
   '- Use null for mood/sideQuest to leave that field unchanged. Use "" (empty string) to explicitly clear it. Use a short string to set it.',
   "- A consequence must change SOMETHING — at least one of shortDescription, longDescription, mood, sideQuest must be non-null. (Empty string '' counts as a change for mood/sideQuest.)",
-  '- Keep prose short, present tense, factual, and grounded in what actually happened in the events.',
+  '- For `update_description` prose: short, present tense, factual. Describe the new baseline state, not the event that caused it.',
   '- Maximum 3 entries in consequences.',
   '',
   'updatedStorySoFar:',
@@ -171,6 +175,17 @@ export const CONSEQUENCE_SCHEMA: JsonSchema = {
           {
             type: 'object',
             additionalProperties: false,
+            required: ['kind', 'targetKind', 'targetRef', 'effect'],
+            properties: {
+              kind: { type: 'string', enum: ['record_effect'] },
+              targetKind: { type: 'string', enum: ['location', 'item', 'agent'] },
+              targetRef: { type: 'string' },
+              effect: { type: 'string', minLength: 1 },
+            },
+          },
+          {
+            type: 'object',
+            additionalProperties: false,
             required: ['kind', 'id', 'label', 'shortDescription', 'longDescription', 'secretDescription', 'tags'],
             properties: {
               kind: { type: 'string', enum: ['create_location'] },
@@ -248,6 +263,8 @@ export const MAX_CONSEQUENCES_PER_PASS = 5;
 /** Cap on consequence-pass recursion depth (§9 termination). */
 export const MAX_CONSEQUENCE_DEPTH = 1;
 
+export const MAX_ENTITY_TRACES = 10;
+
 export type RawConsequence =
   | {
       readonly kind: 'update_description';
@@ -312,6 +329,12 @@ export type RawConsequence =
       readonly kind: 'delete_entity';
       readonly targetKind: 'location' | 'exit' | 'agent' | 'item';
       readonly entityId: string;
+    }
+  | {
+      readonly kind: 'record_effect';
+      readonly targetKind: EntityKind;
+      readonly targetRef: string;
+      readonly effect: string;
     };
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>
@@ -427,6 +450,19 @@ export function parseConsequenceResponse(parsed: unknown): readonly RawConsequen
       if (typeof entityId !== 'string' || entityId.length === 0) continue;
       if (targetKind !== 'location' && targetKind !== 'exit' && targetKind !== 'agent' && targetKind !== 'item') continue;
       out.push({ kind: ActionKind.DeleteEntity, targetKind, entityId });
+      continue;
+    }
+
+    if (kind === ActionKind.RecordEffect) {
+      const targetKind = entry.targetKind as EntityKind;
+      const targetRef = entry.targetRef as string;
+      const effect = entry.effect as string;
+      if (
+        targetKind !== EntityKind.Location && targetKind !== EntityKind.Agent && targetKind !== EntityKind.Item
+      ) continue;
+      if (typeof targetRef !== 'string' || targetRef.length === 0) continue;
+      if (typeof effect !== 'string' || effect.length === 0) continue;
+      out.push({ kind: ActionKind.RecordEffect, targetKind, targetRef, effect });
       continue;
     }
 
@@ -655,10 +691,10 @@ async function summarise(event: DomainEvent, repo: HandlerRepo): Promise<string>
     case EventKind.Emote: {
       const actor = await labelOf(event.actorId);
       if (event.targetAgentId === null) {
-        return `${actor} ${event.description} (for show, no state change)`;
+        return `${actor} ${event.description}`;
       }
       const target = await labelOf(event.targetAgentId);
-      return `${actor} ${event.description} at ${target} (for show, no state change)`;
+      return `${actor} ${event.description} at ${target}`;
     }
     case EventKind.Attack: {
       const actor = await labelOf(event.actorId);
@@ -1007,6 +1043,28 @@ export async function consequencesFor(
       await applyWorldExpansion(raws, lore, playerLocId);
     } catch (err) {
       log.warn(`[consequence] applyWorldExpansion error: ${String(err)}`);
+    }
+  }
+
+  for (const raw of raws) {
+    if (raw.kind !== ActionKind.RecordEffect) continue;
+    const target = resolveConsequenceTarget(
+      {
+        kind: ActionKind.UpdateDescription,
+        targetKind: raw.targetKind,
+        targetRef: raw.targetRef,
+        shortDescription: null,
+        longDescription: null,
+        mood: null,
+        sideQuest: null,
+      },
+      ctx,
+    );
+    if (!target) continue;
+    try {
+      await repo.recordEntityTrace(target.kind as EntityKind, target.id, raw.effect);
+    } catch (err) {
+      log.warn(`[consequence] record_effect failed: ${String(err)}`);
     }
   }
 

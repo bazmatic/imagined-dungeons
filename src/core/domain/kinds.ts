@@ -41,6 +41,7 @@ export const ActionKind = {
   CreateAgent: 'create_agent',
   CreateItem: 'create_item',
   DeleteEntity: 'delete_entity',
+  RecordEffect: 'record_effect',
 } as const;
 export type ActionKind = (typeof ActionKind)[keyof typeof ActionKind];
 
