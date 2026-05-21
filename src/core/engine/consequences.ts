@@ -30,9 +30,9 @@ import type { HandlerRepo } from './repository';
 const SYSTEM_PROMPT_LINES: readonly string[] = [
   'You are the consequence engine of a fantasy text adventure.',
   '',
-  "Given a batch of events that just happened, decide whether the world's stored short/long descriptions should change to reflect those events durably, and whether any agent's mood should be updated. (Agents manage their own sideQuest — DO NOT touch it here.)",
+  "Given a batch of events that just happened, decide what durable changes the world should reflect: updated descriptions, mood shifts, visible traces, newly revealed or created entities. (Agents manage their own sideQuest — DO NOT touch it here.)",
   '',
-  'You can emit two kinds of consequence actions: `update_description` (mutate a stored description / mood) and `reveal_item` (flip a hidden item to visible). Be conservative — most batches need no consequences. Reply with a JSON object containing a `consequences` array (possibly empty).',
+  'Reply with a JSON object containing a `consequences` array (possibly empty). Available kinds: `update_description`, `reveal_item`, `record_effect`, `create_item`, `create_location`, `create_exit`, `create_agent`, `delete_entity`. Be conservative — most batches need no consequences.',
   '',
   'GM-only notes: Some locations carry `GM-only notes` — secret information about hidden dynamics, things behind the wall, factional alignments the player has not learned, items waiting to be discovered, etc. ONLY YOU see these notes; the player, the narrator, and the NPC minds never do. Use the notes to inform what you reveal, spawn, or change in response to player actions. Never echo a GM-only note verbatim into a description; that would leak it. Use the notes as inspiration; surface their content only when the player has earned it through their actions.',
   '',
