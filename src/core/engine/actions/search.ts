@@ -17,10 +17,11 @@ import {
   asItemId,
   asLocationId,
 } from '@core/domain/ids';
-import { EventKind, ExaminableKind, OwnerKind } from '@core/domain/kinds';
+import { EntityKind, EventKind, ExaminableKind, OwnerKind } from '@core/domain/kinds';
 import { Ok, type Result } from '@core/domain/result';
 import { type Segment, SegmentKind } from '@core/domain/segments';
 import { loadLoreContext } from '@core/lore/context';
+import { MAX_ENTITY_TRACES } from '../consequences';
 import type { GameAI } from '../game-ai';
 import { nextEventId } from '../ids-gen';
 import { perceive, type PerceptionView } from '../perception';
@@ -164,6 +165,7 @@ export async function handleSearch(
     tags: [],
     locationId,
   });
+  const locationTraces = await repo.getEntityTraces(EntityKind.Location, locationId, MAX_ENTITY_TRACES);
   const request: DiscoveryRequest = {
     trigger: DiscoveryTriggerKind.Search,
     actorId: action.actorId,
@@ -174,6 +176,7 @@ export async function handleSearch(
     visibleItems: view.items,
     visibleAgents: view.agents,
     undiscoveredItems,
+    locationTraces,
   };
 
   const response = await ai.discover(request);

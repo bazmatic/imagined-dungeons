@@ -194,6 +194,14 @@ function buildUserPrompt(req: DiscoveryRequest): string {
     }
   }
 
+  if (req.locationTraces.length > 0) {
+    lines.push('');
+    lines.push('Visible physical traces at this location (effects left by recent events):');
+    for (const t of req.locationTraces) {
+      lines.push(`- ${t}`);
+    }
+  }
+
   if (req.undiscoveredItems.length > 0) {
     lines.push('');
     lines.push(

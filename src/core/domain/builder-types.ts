@@ -149,6 +149,8 @@ export interface DiscoveryRequest {
    * flips the hidden flag and routes through the normal look path.
    */
   readonly undiscoveredItems: readonly Item[];
+  /** Recent visible-effect traces at the current location. */
+  readonly locationTraces: readonly string[];
 }
 
 export interface DiscoveryResponse {

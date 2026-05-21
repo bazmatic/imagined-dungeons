@@ -66,6 +66,7 @@ const baseReq = (): DiscoveryRequest => ({
   visibleItems: [lantern],
   visibleAgents: [guard],
   undiscoveredItems: [],
+  locationTraces: [],
 });
 
 describe('runDiscovery', () => {
