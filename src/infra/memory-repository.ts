@@ -159,6 +159,35 @@ export class MemoryRepository implements Repository {
     return this.events.slice(-limit);
   }
 
+  private readonly traces: Array<{
+    worldId: WorldId;
+    entityKind: 'location' | 'agent' | 'item';
+    entityId: string;
+    effect: string;
+  }> = [];
+
+  async recordEntityTrace(
+    entityKind: 'location' | 'agent' | 'item',
+    entityId: string,
+    effect: string,
+  ): Promise<void> {
+    this.traces.push({ worldId: this.worldId, entityKind, entityId, effect });
+  }
+
+  async getEntityTraces(
+    entityKind: 'location' | 'agent' | 'item',
+    entityId: string,
+    limit: number,
+  ): Promise<readonly string[]> {
+    const matching = this.traces.filter(
+      (t) =>
+        t.worldId === this.worldId &&
+        t.entityKind === entityKind &&
+        t.entityId === entityId,
+    );
+    return matching.slice(-limit).map((t) => t.effect);
+  }
+
   async getRngSeed(): Promise<number> {
     return this.rngSeed;
   }

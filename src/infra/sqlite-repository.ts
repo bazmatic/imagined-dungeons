@@ -15,7 +15,7 @@ import {
 } from '@core/domain/ids';
 import { OwnerKind } from '@core/domain/kinds';
 import type { Repository } from '@core/engine/repository';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import type { DB } from './db';
 import * as schema from './schema';
 
@@ -374,6 +374,41 @@ export class SqliteRepository implements Repository {
       .update(schema.agents)
       .set(set)
       .where(and(eq(schema.agents.worldId, this.worldId), eq(schema.agents.id, id)));
+  }
+
+  async recordEntityTrace(
+    entityKind: 'location' | 'agent' | 'item',
+    entityId: string,
+    effect: string,
+  ): Promise<void> {
+    await this.db.insert(schema.entityTraces).values({
+      id: `trace_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      worldId: this.worldId,
+      entityKind,
+      entityId,
+      effect,
+      createdAt: new Date(),
+    });
+  }
+
+  async getEntityTraces(
+    entityKind: 'location' | 'agent' | 'item',
+    entityId: string,
+    limit: number,
+  ): Promise<readonly string[]> {
+    const rows = await this.db
+      .select({ effect: schema.entityTraces.effect })
+      .from(schema.entityTraces)
+      .where(
+        and(
+          eq(schema.entityTraces.worldId, this.worldId),
+          eq(schema.entityTraces.entityKind, entityKind),
+          eq(schema.entityTraces.entityId, entityId),
+        ),
+      )
+      .orderBy(desc(schema.entityTraces.createdAt))
+      .limit(limit);
+    return rows.map((r) => r.effect).reverse();
   }
 
   async recentEvents(limit: number): Promise<readonly DomainEvent[]> {

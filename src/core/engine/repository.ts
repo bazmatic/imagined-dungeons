@@ -108,6 +108,16 @@ export interface HandlerRepo {
    * need it; the scheduler also uses it indirectly.
    */
   recentEvents(limit: number): Promise<readonly DomainEvent[]>;
+  recordEntityTrace(
+    entityKind: 'location' | 'agent' | 'item',
+    entityId: string,
+    effect: string,
+  ): Promise<void>;
+  getEntityTraces(
+    entityKind: 'location' | 'agent' | 'item',
+    entityId: string,
+    limit: number,
+  ): Promise<readonly string[]>;
 }
 
 /** Full repository contract. Extends HandlerRepo with scheduler-only methods. */
