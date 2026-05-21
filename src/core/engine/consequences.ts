@@ -85,6 +85,7 @@ const SYSTEM_PROMPT_LINES: readonly string[] = [
   '',
   "IDs: Invent a short snake_case id prefixed by kind (loc_, agent_, item_, exit_). You may reference a just-created ID in a later action in the same batch.",
   '',
+  "Creating items: When the player physically dislodges, pries loose, breaks off, or removes a tangible object from the environment (a cobblestone from the street, a brick from a wall, a loose board from a floor, a shard of glass), use create_item with ownerKind='location' and ownerId set to the location's id from the prompt. Set hidden=false so it is immediately visible and the player can pick it up.",
   "Spawning agents: Use create_agent with an existing templateKey from the world's monster templates. Do not invent stats. If no template fits, prefer description updates over spawning.",
   '',
   'Enriching sparse locations: When a location has empty or minimal descriptions (a newly generated stub), treat any player action there as a signal to generate full content — proper label, descriptions, atmosphere, and any items or agents that belong there. You may plant exits with to=null to suggest depth beyond the current scene.',
@@ -872,7 +873,7 @@ async function buildUserPrompt(events: readonly DomainEvent[], repo: HandlerRepo
     lines.push('');
     lines.push('Current stored descriptions for involved locations:');
     for (const l of locs) {
-      lines.push(`- LOCATION ${l.label}`);
+      lines.push(`- LOCATION ${l.label} (id: ${l.id})`);
       lines.push(`    short: ${l.shortDescription}`);
       lines.push(`    long: ${l.longDescription}`);
       // GM-only secret notes. Surfaced ONLY to the consequence engine; the
