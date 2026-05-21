@@ -33,6 +33,7 @@ export interface GameAI {
   npcIntent(actorId: AgentId, repo: HandlerRepo, opts?: NpcMindOptions): Promise<readonly string[]>;
   discover(req: DiscoveryRequest): Promise<DiscoveryResponse>;
   peekExit(exit: Exit, destination: Location, lore: LoreContext | null): Promise<string | null>;
+  narrateRoomWithTraces(descriptionAndTraces: string): Promise<string>;
 }
 
 export const nullGameAI: GameAI = {
@@ -42,6 +43,7 @@ export const nullGameAI: GameAI = {
   npcIntent: async () => [NpcFallbackIntent],
   discover: async () => FALLBACK_RESPONSE,
   peekExit: async () => null,
+  narrateRoomWithTraces: async () => '',
 };
 
 export class LlmGameAI implements GameAI {
@@ -73,5 +75,12 @@ export class LlmGameAI implements GameAI {
 
   peekExit(exit: Exit, destination: Location, lore: LoreContext | null): Promise<string | null> {
     return peekExitLlm(exit, destination, lore, this.llm);
+  }
+
+  narrateRoomWithTraces(descriptionAndTraces: string): Promise<string> {
+    return this.llm.completeText({
+      system: `You are the narrator of a fantasy text adventure. The player looks around a room. Describe what they see in one short paragraph, present tense, second person ("you see..."). Incorporate both the room's established atmosphere and any specific physical traces left by recent events. Mention the traces concretely — do not paraphrase or generalise them. Do not invent anything not in the provided material.`,
+      user: descriptionAndTraces,
+    });
   }
 }

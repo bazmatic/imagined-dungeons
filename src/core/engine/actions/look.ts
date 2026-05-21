@@ -1,6 +1,6 @@
 import type { Action } from '@core/domain/actions';
 import type { DomainEvent } from '@core/domain/events';
-import { EventKind, ExaminableKind } from '@core/domain/kinds';
+import { EntityKind, EventKind, ExaminableKind } from '@core/domain/kinds';
 import { Err, Ok, type Result } from '@core/domain/result';
 import type { Exit, Location } from '@core/domain/entities';
 import { SegmentKind, type Segment } from '@core/domain/segments';
@@ -8,6 +8,7 @@ import type { WorldId } from '@core/domain/ids';
 import type { LoreContext } from '@core/domain/builder-types';
 import type { BuilderRepository } from '@core/builder/repository';
 import { loadLoreContext } from '@core/lore/context';
+import { MAX_ENTITY_TRACES } from '../consequences';
 import { nextEventId } from '../ids-gen';
 import { perceive, type PerceptionView } from '../perception';
 import type { HandlerRepo } from '../repository';
@@ -80,6 +81,37 @@ export async function handleLook(
         target: { kind: ExaminableKind.Room },
       };
       await repo.appendEvent(event);
+
+      if (deps?.ai) {
+        const traces = await repo.getEntityTraces(EntityKind.Location, view.location.id, MAX_ENTITY_TRACES);
+        if (traces.length > 0) {
+          const contextLines = [
+            `Room: ${view.location.label}`,
+            `Description: ${view.location.longDescription}`,
+            '',
+            'Physical traces left by recent events:',
+            ...traces.map((t) => `- ${t}`),
+          ];
+          try {
+            const prose = await deps.ai.narrateRoomWithTraces(contextLines.join('\n'));
+            if (prose.trim().length > 0) {
+              const base = renderLook(view);
+              const [nameSegment, , ...rest] = base;
+              const enriched: readonly Segment[] = nameSegment
+                ? [
+                    nameSegment,
+                    { kind: SegmentKind.LocationDescription, text: prose.trim() },
+                    ...rest,
+                  ]
+                : base;
+              return Ok({ render: enriched, event });
+            }
+          } catch {
+            // fall through to mechanical render
+          }
+        }
+      }
+
       return Ok({ render: renderLook(view), event });
     }
     case ExaminableKind.Item: {
