@@ -230,3 +230,20 @@ export const tagLore = sqliteTable(
     uniqueIndex('tag_lore_world_tag_unique').on(t.worldId, t.tag),
   ],
 );
+
+export const entityTraces = sqliteTable(
+  'entity_traces',
+  {
+    id: text('id').primaryKey(),
+    worldId: text('world_id')
+      .notNull()
+      .references(() => worlds.id),
+    entityKind: text('entity_kind', { enum: ['location', 'agent', 'item'] }).notNull(),
+    entityId: text('entity_id').notNull(),
+    effect: text('effect').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (t) => [
+    index('entity_traces_entity_idx').on(t.worldId, t.entityKind, t.entityId, t.createdAt),
+  ],
+);

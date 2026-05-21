@@ -162,6 +162,13 @@
       "when": 1779100000000,
       "tag": "0022_rename_side_quest",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1779359861661,
+      "tag": "0023_misty_sue_storm",
+      "breakpoints": true
     }
   ]
 }
