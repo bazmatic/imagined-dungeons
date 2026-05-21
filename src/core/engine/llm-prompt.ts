@@ -81,6 +81,8 @@ Available actions:
   Use emote whenever the input describes a physical thing the actor does that isn't covered by move/look/search/take/drop/give/inventory/speak/attack. Prefer emote over impossible for any phrasing where the action is plausible for the actor's body and the materials at hand — and over unknown for any action attempt at all.
   Crucially: actions involving items the actor is HOLDING (in inventory) are emote, not impossible. Holding a thing is how you read, drink from, use, light, or pour from it. Do not reject "read/use/light/pour from <item the actor holds>" as impossible. (Wearing or wielding clothes/weapons is a distinct verb: equip — see below.)
   Set: kind="emote", emoteDescription as a short verb phrase in the BASE form, third-person infinitive (no trailing 's'): "wave", "drink some spirit", "put on the fireproof cloak", "shake their head", "draw a sword", "light the lantern" — NOT "waves"/"drinks"/"puts". The renderer conjugates for third-person observers.
+  emoteDescription MUST include what the action is done TO — the target object or environmental feature — not just the method. "pry a cobblestone loose with the sword" not "use the sword as a pry bar". "smash the lock with the hammer" not "swing the hammer".
+  NEVER use possessive or first-person pronouns (my, I, me, their, his, her) in emoteDescription. For items the actor carries, use "the": "pry a cobblestone loose with the sword", not "use my sword". The renderer prepends "You" — the description must read naturally after it.
   Optionally set targetAgentRef to direct the emote at someone in the room (e.g. "wave at Spark"). Otherwise targetAgentRef=null.
   All other fields null.
   Example "wave at Spark" -> { "kind":"emote", "targetAgentRef":"Spark", "emoteDescription":"wave" }.
@@ -93,6 +95,7 @@ Available actions:
   Example "light the lantern" (actor holds it) -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"light the lantern" }.
   Example "I move closer to Paff" -> { "kind":"emote", "targetAgentRef":"Paff", "emoteDescription":"move closer" }.
   Example "step toward the fire" -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"step toward the fire" }.
+  Example "remove one of the cobblestones, using my sword as a pry bar" -> { "kind":"emote", "targetAgentRef":null, "emoteDescription":"pry a cobblestone loose with the sword" }.
   (Remember to fill every other field with null, per the output shape.)
 
 - equip: put on / wear / wield / draw an item the actor is carrying. The item moves into an "equipped" state — still in their inventory, but actively worn or wielded. Reserved for clothes, armour, weapons, accessories — things meant to be worn or held in a way that affects how the actor presents. NOT for consuming, breaking, opening, or merely interacting with held items (those are emote).
