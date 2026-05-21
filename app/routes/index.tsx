@@ -170,7 +170,7 @@ function Page() {
     const base = e.label ? `${e.direction} (${e.label})` : e.direction;
     return e.locked ? `${base} 🔒` : base;
   };
-  // (renderCharacter removed — sidebar now renders label / short / mood on separate lines.)
+
 
   const styleForSegment = (kind: SegmentKind): React.CSSProperties => {
     switch (kind) {
@@ -237,7 +237,24 @@ function Page() {
 
   return (
     <main style={{ display: 'flex', flexDirection: 'column', height: '100vh', padding: 16 }}>
-      <h1 style={{ fontSize: 14, opacity: 0.6, margin: '0 0 12px' }}>{initial.displayName}</h1>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <h1 style={{ fontSize: 14, opacity: 0.6, margin: 0 }}>{initial.displayName}</h1>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          style={{
+            background: 'none',
+            border: '1px solid #333',
+            color: '#666',
+            fontSize: 12,
+            padding: '3px 10px',
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+          }}
+        >
+          ↺ refresh
+        </button>
+      </div>
       <div style={{ flex: 1, display: 'flex', gap: 16, minHeight: 0 }}>
         <div
           style={{

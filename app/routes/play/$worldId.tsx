@@ -171,8 +171,6 @@ function Page() {
     const base = e.label ? `${e.direction} (${e.label})` : e.direction;
     return e.locked ? `${base} 🔒` : base;
   };
-  // (renderCharacter removed — sidebar now renders label / short / mood on separate lines.)
-
   const styleForSegment = (kind: SegmentKind): React.CSSProperties => {
     switch (kind) {
       case SegmentKind.LocationName:
