@@ -8,7 +8,7 @@ import {
   asLocationId,
   asWorldId,
 } from '@core/domain/ids';
-import { EventKind, ExaminableKind, OwnerKind } from '@core/domain/kinds';
+import { EntityKind, EventKind, ExaminableKind, OwnerKind } from '@core/domain/kinds';
 import { SegmentKind } from '@core/domain/segments';
 import { MemoryBuilderRepository } from '@infra/builder-memory-repository';
 import { MemoryRepository } from '@infra/memory-repository';
@@ -385,5 +385,48 @@ describe('runTick', () => {
     const repo = makeWorld();
     const parse = makeCompositeParser({ llm: null });
     await expect(runTick(PLAYER, 'look', repo, { parse, ai: null })).resolves.toBeTruthy();
+  });
+
+  it('record_effect consequence stores a trace that appears in a subsequent look description', async () => {
+    const GRAFFITI = "a crude carving reading 'Paff woz ere' scratched into the wall";
+    const NARRATED = `You look around the tavern. ${GRAFFITI}.`;
+
+    const repo = makeWorld([player]);
+    const llm = makeFakeLanguageModel({
+      // consequence engine call: return a record_effect for the tavern
+      responder: () => ({
+        raw: '',
+        parsed: {
+          updatedStorySoFar: null,
+          consequences: [
+            {
+              kind: 'record_effect',
+              targetKind: EntityKind.Location,
+              targetRef: 'Tavern',
+              effect: GRAFFITI,
+            },
+          ],
+        },
+      }),
+      // narrateRoomWithTraces call (completeText)
+      textResponder: () => NARRATED,
+    });
+    const parse = makeCompositeParser({ llm: null });
+
+    // Emote tick — consequence engine processes the emote event and stores the trace
+    await runTick(player.id, 'emote carves graffiti into the wall', repo, {
+      parse,
+      ai: new LlmGameAI(llm),
+    });
+
+    // Trace must now be persisted
+    const traces = await repo.getEntityTraces(EntityKind.Location, A, 10);
+    expect(traces).toContain(GRAFFITI);
+
+    // Subsequent look must incorporate the trace via narrateRoomWithTraces
+    const look = await runTick(player.id, 'look', repo, { parse, ai: new LlmGameAI(llm) });
+    const descSegment = look.render.find((s) => s.kind === SegmentKind.LocationDescription);
+    expect(descSegment).toBeDefined();
+    expect(descSegment?.text).toContain(GRAFFITI);
   });
 });
