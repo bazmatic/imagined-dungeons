@@ -1,6 +1,7 @@
 import type { Agent, Exit, Item, Location, Owner } from '@core/domain/entities';
 import type { DomainEvent } from '@core/domain/events';
 import type { AgentId, ExitId, ItemId, LocationId, WorldId } from '@core/domain/ids';
+import type { EntityKind } from '@core/domain/kinds';
 import type { Repository } from '@core/engine/repository';
 
 export interface SeedData {
@@ -161,13 +162,13 @@ export class MemoryRepository implements Repository {
 
   private readonly traces: Array<{
     worldId: WorldId;
-    entityKind: 'location' | 'agent' | 'item';
+    entityKind: EntityKind;
     entityId: string;
     effect: string;
   }> = [];
 
   async recordEntityTrace(
-    entityKind: 'location' | 'agent' | 'item',
+    entityKind: EntityKind,
     entityId: string,
     effect: string,
   ): Promise<void> {
@@ -175,7 +176,7 @@ export class MemoryRepository implements Repository {
   }
 
   async getEntityTraces(
-    entityKind: 'location' | 'agent' | 'item',
+    entityKind: EntityKind,
     entityId: string,
     limit: number,
   ): Promise<readonly string[]> {

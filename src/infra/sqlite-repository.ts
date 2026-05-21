@@ -13,7 +13,7 @@ import {
   asItemId,
   asLocationId,
 } from '@core/domain/ids';
-import { OwnerKind } from '@core/domain/kinds';
+import { type EntityKind, OwnerKind } from '@core/domain/kinds';
 import type { Repository } from '@core/engine/repository';
 import { and, desc, eq, sql } from 'drizzle-orm';
 import type { DB } from './db';
@@ -377,7 +377,7 @@ export class SqliteRepository implements Repository {
   }
 
   async recordEntityTrace(
-    entityKind: 'location' | 'agent' | 'item',
+    entityKind: EntityKind,
     entityId: string,
     effect: string,
   ): Promise<void> {
@@ -392,7 +392,7 @@ export class SqliteRepository implements Repository {
   }
 
   async getEntityTraces(
-    entityKind: 'location' | 'agent' | 'item',
+    entityKind: EntityKind,
     entityId: string,
     limit: number,
   ): Promise<readonly string[]> {

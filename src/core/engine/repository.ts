@@ -1,6 +1,7 @@
 import type { Agent, Exit, Item, Location, Owner } from '@core/domain/entities';
 import type { DomainEvent } from '@core/domain/events';
 import type { AgentId, ExitId, ItemId, LocationId, WorldId } from '@core/domain/ids';
+import type { EntityKind } from '@core/domain/kinds';
 
 /**
  * Narrow interface for action handlers and the perception layer.
@@ -109,12 +110,12 @@ export interface HandlerRepo {
    */
   recentEvents(limit: number): Promise<readonly DomainEvent[]>;
   recordEntityTrace(
-    entityKind: 'location' | 'agent' | 'item',
+    entityKind: EntityKind,
     entityId: string,
     effect: string,
   ): Promise<void>;
   getEntityTraces(
-    entityKind: 'location' | 'agent' | 'item',
+    entityKind: EntityKind,
     entityId: string,
     limit: number,
   ): Promise<readonly string[]>;

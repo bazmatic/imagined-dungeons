@@ -113,6 +113,17 @@ export const OwnerKind = {
 } as const;
 export type OwnerKind = (typeof OwnerKind)[keyof typeof OwnerKind];
 
+/**
+ * Discriminator for entity trace records — which table/kind of entity
+ * a trace entry is associated with.
+ */
+export const EntityKind = {
+  Location: 'location',
+  Agent: 'agent',
+  Item: 'item',
+} as const;
+export type EntityKind = (typeof EntityKind)[keyof typeof EntityKind];
+
 export const AttackOutcome = {
   Hit: 'hit',
   Miss: 'miss',
