@@ -12,6 +12,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { buildSurroundings, type SurroundingsView } from '~/server/surroundings';
 import { getBuilderRepo } from '~/server/admin/repo';
 import { getDb, getNarratorLlm, getParse, getWorldContext } from '~/server/world';
+import { mapInventoryItem } from '~/server/initial-view';
 
 export type CompleteChunk = {
   kind: typeof TickChunkKind.Complete;
@@ -63,11 +64,7 @@ export const Route = createFileRoute('/api/stream-command')({
               controller.enqueue(
                 encode({
                   kind: TickChunkKind.Complete,
-                  inventory: inventoryItems.map((i) => ({
-                    id: i.id as string,
-                    label: i.label,
-                    equipped: i.equipped,
-                  })),
+                  inventory: inventoryItems.map(mapInventoryItem),
                   surroundings,
                 }),
               );
